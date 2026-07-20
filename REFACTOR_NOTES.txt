@@ -1,0 +1,1 @@
+Design preserved. CSS moved to css/styles.css and JavaScript moved to js/script*.js. HTML structure remains unchanged.
