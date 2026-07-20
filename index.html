@@ -81,11 +81,11 @@
     </button>
     <button class="sidebar-btn" onclick="go('s-f-credits')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      Credits
+      Points
     </button>
     <button class="sidebar-btn" onclick="go('s-add-credit')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      Add Credits
+      Add Points
     </button>
     <button class="sidebar-btn" onclick="go('s-f-devotional')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -154,10 +154,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       Balances
     </button>
-    <button class="sidebar-btn" onclick="go('s-a-leaderboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/></svg>
-      Leaderboard
-    </button>
   </div>
 
   <div class="sidebar-bottom" id="sidebar-bottom" style="display:none">
@@ -202,7 +198,7 @@
   <div class="portal-cards">
     <button class="portal-btn pb-f" onclick="go('s-faculty-login')">
       <div class="pb-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <div class="pb-text"><div class="pb-title">Faculty &amp; Staff</div><div class="pb-sub">Lessons · Table · LC Credits</div></div>
+      <div class="pb-text"><div class="pb-title">Faculty &amp; Staff</div><div class="pb-sub">Lessons · Table · Points</div></div>
       <svg class="arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
     <button class="portal-btn pb-a" onclick="go('s-admin-login')">
@@ -290,7 +286,7 @@
     </button>
     <button class="menu-item" onclick="go('s-f-credits')">
       <div class="mi-icon" style="background:#fef9e0"><svg viewBox="0 0 24 24" stroke="#c9960c" fill="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-      <div class="mi-text"><div class="mi-title">LC Credits</div><div class="mi-sub">Add &amp; view student credits</div></div>
+      <div class="mi-text"><div class="mi-title">Points</div><div class="mi-sub">Add &amp; view student points</div></div>
       <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
     <button class="menu-item" onclick="go('s-f-devotional')">
@@ -391,22 +387,22 @@
 </div>
 
 <!-- ══════════════════════════════════════════
-     FACULTY LC CREDITS
+     FACULTY POINTS
 ══════════════════════════════════════════ -->
 <div class="screen" id="s-f-credits">
   <div class="topbar" style="background:var(--navy)">
     <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="f-credits-topbar">LC Credits</span>
+    <span class="topbar-title" id="f-credits-topbar">Points</span>
   </div>
   <div class="body">
-    <button class="btn-primary" style="background:var(--navy);border-radius:var(--radius);margin-bottom:14px" onclick="go('s-add-credit')">+ Add Credits to a Student</button>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-align:right">Sorted by highest credits</div>
+    <button class="btn-primary" style="background:var(--navy);border-radius:var(--radius);margin-bottom:14px" onclick="go('s-add-credit')">+ Add Points to a Student</button>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-align:right">Sorted by highest points</div>
     <div class="card" style="padding:0 16px" id="f-credits-list"></div>
   </div>
   <div class="bnav" style="--active-color:var(--navy)">
     <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
     <button class="ni" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Credits</button>
+    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Points</button>
     <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
   </div>
 </div>
@@ -415,7 +411,7 @@
 <div class="screen" id="s-add-credit">
   <div class="topbar" style="background:var(--navy)">
     <button class="topbar-back" onclick="go('s-f-credits')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Add Credits</span>
+    <span class="topbar-title">Add Points</span>
   </div>
   <div class="body">
     <div class="card">
@@ -431,14 +427,14 @@
       <div id="credit-other-wrap" style="display:none;margin-bottom:12px">
         <input type="text" id="credit-other-text" placeholder="Describe reason..." style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font)">
       </div>
-      <div class="field"><label>Credits to Add</label><input type="number" id="credit-amount" value="5" min="1" max="50"></div>
-      <button class="btn-primary" style="background:var(--navy)" onclick="doAddCredit()">Add Credits</button>
+      <div class="field"><label>Points to Add</label><input type="number" id="credit-amount" value="5" min="1" max="50"></div>
+      <button class="btn-primary" style="background:var(--navy)" onclick="doAddCredit()">Add Points</button>
     </div>
   </div>
   <div class="bnav" style="--active-color:var(--navy)">
     <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
     <button class="ni" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Credits</button>
+    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Points</button>
     <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
   </div>
 </div>
@@ -500,7 +496,7 @@
       <div class="slabel">My Table</div>
       <button class="menu-item" onclick="go('s-faculty-home')">
         <div class="mi-icon" style="background:#e8f0fb"><svg viewBox="0 0 24 24" stroke="#1e3a8a" fill="none"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-        <div class="mi-text"><div class="mi-title" id="a-my-table-title">Table Guide View</div><div class="mi-sub">Manage attendance, payments &amp; credits for your own table</div></div>
+        <div class="mi-text"><div class="mi-title" id="a-my-table-title">Table Guide View</div><div class="mi-sub">Manage attendance, payments &amp; points for your own table</div></div>
         <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
@@ -534,7 +530,7 @@
     </button>
     <button class="menu-item" onclick="go('s-a-leaderboard')">
       <div class="mi-icon" style="background:#fff5e0"><svg viewBox="0 0 24 24" stroke="#c9960c" fill="none"><polyline points="18 15 12 9 6 15"/></svg></div>
-      <div class="mi-text"><div class="mi-title">LC Credits Leaderboard</div><div class="mi-sub">Highest credits across all tables</div></div>
+      <div class="mi-text"><div class="mi-title">Points Leaderboard</div><div class="mi-sub">Highest points across all tables</div></div>
       <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
     <button class="menu-item" onclick="go('s-a-devotional')">
@@ -694,10 +690,10 @@
     <div id="a-td-present-stat"></div>
     <div class="stat-grid" id="a-td-stats"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="slabel" style="margin-bottom:0">Students — sorted by highest credits</div>
+      <div class="slabel" style="margin-bottom:0">Students — sorted by highest points</div>
       <button onclick="openTableAddCredit()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add LC Credits
+        Add Points
       </button>
     </div>
     <div class="card" style="padding:0 16px" id="a-td-list"></div>
@@ -712,8 +708,8 @@
 
 <div id="modal-table-credit" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:flex-end;justify-content:center">
   <div style="background:#fff;border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:480px;box-shadow:0 -4px 30px rgba(0,0,0,0.2)">
-    <div id="modal-table-credit-title" style="font-size:15px;font-weight:700;color:var(--text1);margin-bottom:4px">Add LC Credits to Table</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Credits are awarded to the whole table group</div>
+    <div id="modal-table-credit-title" style="font-size:15px;font-weight:700;color:var(--text1);margin-bottom:4px">Add Points — </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Points are awarded to the whole table group</div>
     <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px">Reason</div>
 <div class="reason-grid">
   <button class="reason-btn selected" onclick="selectReason(this,'Attendance')">📋 Attendance</button>
@@ -725,10 +721,10 @@
 <div id="modal-other-wrap" style="display:none;margin-bottom:12px">
   <input type="text" id="modal-other-text" placeholder="Describe reason..." style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font)">
 </div>
-    <div class="field"><label>Credits to Add</label><input type="number" id="modal-credit-amount" value="5" min="1" max="500"></div>
+    <div class="field"><label>Points to Add</label><input type="number" id="modal-credit-amount" value="5" min="1" max="500"></div>
     <div style="display:flex;gap:10px;margin-top:4px">
       <button onclick="closeTableCreditModal()" style="flex:1;padding:11px;border:1.5px solid #ddd;border-radius:10px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2)">Cancel</button>
-      <button id="modal-add-credit-btn" onclick="doTableAddCredit()" style="flex:2;padding:11px;border:none;border-radius:10px;background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer">Add Credits to Table</button>
+      <button id="modal-add-credit-btn" onclick="doTableAddCredit()" style="flex:2;padding:11px;border:none;border-radius:10px;background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer">Add Points to Table</button>
     </div>
   </div>
 </div>
@@ -739,12 +735,12 @@
 <div class="screen" id="s-a-leaderboard">
   <div class="topbar" style="background:var(--green)">
     <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">LC Credits Leaderboard</span>
+    <span class="topbar-title">Points Leaderboard</span>
   </div>
   <div class="body">
     <div class="card-hero" style="background:linear-gradient(135deg,#c9960c,#e8b820);text-align:center">
       <div style="font-size:32px;margin-bottom:4px">🏆</div>
-      <div style="font-family:var(--font-head);font-size:16px;font-weight:700;color:#fff">LC Credits Rankings</div>
+      <div style="font-family:var(--font-head);font-size:16px;font-weight:700;color:#fff">Points Rankings</div>
       <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:3px">Who's leading the pack?</div>
     </div>
     <!-- Tab bar -->
@@ -1504,7 +1500,7 @@
   <div class="gp-result-banner" id="gp-result">
     <div class="gp-rb-icon" id="gp-rb-icon">✅</div>
     <div class="gp-rb-title" id="gp-rb-title">Correct!</div>
-    <div class="gp-rb-sub" id="gp-rb-sub">+100 LC Credits</div>
+    <div class="gp-rb-sub" id="gp-rb-sub">+100 Points</div>
     <button class="gs-btn gs-btn-gold gp-rb-close" style="width:160px;margin-top:18px" onclick="gsDismissResult()">Continue</button>
   </div>
   <canvas id="gs-firework" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:200"></canvas>
@@ -1540,10 +1536,10 @@
   </div>
   <div class="gs-rhost-body">
     <div style="background:#12122a;border-radius:11px;padding:14px;border:1.5px solid rgba(255,215,0,0.18);margin-bottom:14px">
-      <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:10px">Credits to award when a table buzzes in first:</p>
+      <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:10px">Points to award when a table buzzes in first:</p>
       <div style="display:flex;gap:8px;align-items:flex-end">
         <div style="flex:1">
-          <label style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:0.5px;display:block;margin-bottom:5px">LC CREDITS</label>
+          <label style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:0.5px;display:block;margin-bottom:5px">POINTS</label>
           <input type="number" id="gsrq-credits" value="100" min="50" step="50" style="width:100%;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px;outline:none;box-sizing:border-box">
         </div>
         <button class="gs-btn gs-btn-gold" style="width:auto;padding:10px 16px;margin-top:0;flex-shrink:0" onclick="gsStartRandom()">GO 🚀</button>
@@ -1554,7 +1550,7 @@
       <div class="gs-empty" style="padding:16px 0"><div class="ge-icon">⏳</div><p>Start a round to see who buzzes first</p></div>
     </div>
     <div id="gs-random-winner-actions" style="display:none">
-      <button class="gs-btn gs-btn-green" style="margin-top:10px" onclick="gsAwardRandomTable()">✅ Award Table Credits</button>
+      <button class="gs-btn gs-btn-green" style="margin-top:10px" onclick="gsAwardRandomTable()">✅ Award Table Points</button>
       <button class="gs-btn gs-btn-plain" style="margin-top:8px" onclick="gsClearRandom()">🔄 New Round</button>
     </div>
   </div>
@@ -1568,7 +1564,7 @@
     <button class="gs-back-btn" onclick="gsGo('s-gs-random-host')">←</button>
     <div><h2>Who Answered?</h2><div class="gs-sub" id="gs-award-table-label">Table — select student</div></div>
   </div>
-  <p style="padding:12px 14px 4px;font-size:12px;color:rgba(255,255,255,0.5)">Table credits already awarded. Pick the student who answered to give them personal LC Credits too:</p>
+  <p style="padding:12px 14px 4px;font-size:12px;color:rgba(255,255,255,0.5)">Table credits already awarded. Pick the student who answered to give them personal Points too:</p>
   <div id="gs-student-list" class="gs-student-list"></div>
 </div>
 
@@ -1659,7 +1655,7 @@
     <div><h2 id="gsrb-table">Table —</h2><div class="gs-sub">Random Question Round</div></div>
   </div>
   <div class="gs-random-body">
-    <div class="gs-random-cred" id="gsrb-cred">+100 LC Credits</div>
+    <div class="gs-random-cred" id="gsrb-cred">+100 Points</div>
     <button class="gs-big-buzzer" id="gs-random-buzzer" onclick="gsPressRandomBuzzer()"
       style="background:linear-gradient(135deg,#f9a825,#e65100);border-color:#f9a825;color:#fff">
       🙋<span class="gbb-label">I KNOW!</span>
@@ -1706,7 +1702,7 @@ const GS = {
   phoneCdInterval:null, phoneCdSec:5,
   _pendingResume: false,
   // Random
-  randomCredits:100, randomBuzzOrder:[], randomWinner:null,
+  randomPoints:100, randomBuzzOrder:[], randomWinner:null,
   // Edit
   editQuizIdx:-1, questionCount:0,
 };
@@ -1985,7 +1981,7 @@ function gsAddQuestion() {
     <div id="gschoices-${n}">${['A','B','C','D'].map((l,ci)=>gsChoiceRowHTML(n,ci,l)).join('')}</div>
     <button class="gs-add-choice" onclick="gsAddChoiceRow(${n})">＋ Add Choice</button>
     <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-      <label style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;white-space:nowrap">LC CREDITS:</label>
+      <label style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;white-space:nowrap">POINTS:</label>
       <input type="number" id="gsq-pts-${n}" value="100" min="50" step="50" style="width:80px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:7px 9px;color:#fff;font-size:13px;outline:none">
     </div>`;
   document.getElementById('gs-questions-container').appendChild(div);
@@ -2127,7 +2123,7 @@ function gsRenderTables() {
     const c=gsTableColor(t);
     return `<div class="gp-chip idle" id="gpc-t${t}" style="background:${c.bg}22;border-color:${c.border}44;color:${c.label}">
       <div class="gcc-num">T${t}</div>
-      <div id="gpc-lc-${t}">${GS.tableScores[t]||0} LC</div></div>`;
+      <div id="gpc-lc-${t}">${GS.tableScores[t]||0} pts</div></div>`;
   }).join('');
 }
 function gsUpdateChip(t,state) {
@@ -2329,7 +2325,7 @@ function gsJudge(correct) {
     Object.keys(GS.tableScores).forEach(tt=>{if(tt!==t)gsUpdateChip(tt,'idle');});
     gsShowResult(true,t,pts);
     document.querySelectorAll('.gp-choice').forEach((el,i)=>{el.className='gp-choice '+(i===q.correctIdx?'correct':'');});
-    gsAwardTableCredits(t,pts,`Game Show — ${GS.activeQuiz.title} Q${GS.currentQIdx+1}`);
+    gsAwardTablePoints(t,pts,`Game Show — ${GS.activeQuiz.title} Q${GS.currentQIdx+1}`);
   } else {
     gsUpdateChip(t,'wrong');
     const remaining=Object.keys(GS.tableScores).filter(tt=>tt!==t&&!GS.buzzOrder.includes(tt));
@@ -2349,7 +2345,7 @@ function gsShowResult(correct,t,pts) {
   b.className='gp-result-banner show '+(correct?'correct-bg':'wrong-bg');
   document.getElementById('gp-rb-icon').textContent=correct?'✅':'❌';
   document.getElementById('gp-rb-title').textContent=correct?`${gsGetTableLabel(t)} — CORRECT!`:`${gsGetTableLabel(t)} — WRONG!`;
-  document.getElementById('gp-rb-sub').textContent=correct?`+${pts} LC Credits awarded! 🎉`:'Other tables can buzz in…';
+  document.getElementById('gp-rb-sub').textContent=correct?`+${pts} Points awarded! 🎉`:'Other tables can buzz in…';
   if(correct) gsFireworks();
 }
 function gsDismissResult() {
@@ -2380,7 +2376,7 @@ function gsEndGame() {
     const c=gsTableColor(t);
     return `<div class="gs-score-row" style="border-color:${i===0?'#FFD700':'rgba(255,255,255,0.07)'}">
       <div class="gs-rank">${medals[i]||'#'+(i+1)}</div>
-      <div class="gs-score-info"><div class="gs-si-name" style="color:${c.label}">${gsGetTableLabel(t)}</div><div class="gs-si-pts">${pts} LC Credits earned</div></div>
+      <div class="gs-score-info"><div class="gs-si-name" style="color:${c.label}">${gsGetTableLabel(t)}</div><div class="gs-si-pts">${pts} Points earned</div></div>
       <div class="gs-score-pts">${pts}</div>
     </div>`;
   }).join('');
@@ -2388,20 +2384,20 @@ function gsEndGame() {
 }
 function gsExitPresentation() { clearInterval(GS.cdInterval); GS.activeQuiz=null; GS.questionOpen=false; gsGo('s-gs-host-home'); }
 
-async function gsAwardTableCredits(tableNo,pts,reason) {
+async function gsAwardTablePoints(tableNo,pts,reason) {
   try {
     // ONE record per table — not per individual student
     await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({action:'addCredit',studentId:`TABLE-${tableNo}`,studentName:`${gsGetTableLabel(tableNo)}`,
         tableNo,weekNo:GS.activeQuiz?.week||1,reason,creditsAdded:pts,addedBy:GS.currentHost?.['Full Name']||'Game Show'})});
     gsToast(`✅ ${pts} LC awarded to ${gsGetTableLabel(tableNo)}`);
-  } catch(e) { gsToast('⚠️ Credits failed: '+e.message); }
+  } catch(e) { gsToast('⚠️ Points failed: '+e.message); }
 }
 
 // ── RANDOM ROUND ──
 function gsStartRandom() {
   const cred=parseInt(document.getElementById('gsrq-credits').value)||100;
-  GS.randomCredits=cred; GS.randomBuzzOrder=[]; GS.randomWinner=null;
+  GS.randomPoints=cred; GS.randomBuzzOrder=[]; GS.randomWinner=null;
   document.getElementById('gs-random-winner-actions').style.display='none';
   document.getElementById('gs-random-buzz-list').innerHTML='<div class="gs-empty" style="padding:14px 0"><div class="ge-icon">⏳</div><p>Waiting for tables to buzz in…</p></div>';
   gsBroadcast('RANDOM_START',{credits:cred});
@@ -2427,9 +2423,9 @@ function gsOnRandomBuzz(data) {
 async function gsAwardRandomTable() {
   if(!GS.randomWinner) return;
   const tableNo = GS.randomWinner;
-  const pts = GS.randomCredits;
+  const pts = GS.randomPoints;
   // Step 1: Award table as ONE record
-  await gsAwardTableCredits(tableNo, pts, `Random Q (Game Show) — ${gsGetTableLabel(tableNo)}`);
+  await gsAwardTablePoints(tableNo, pts, `Random Q (Game Show) — ${gsGetTableLabel(tableNo)}`);
   // Step 2: Show student picker so director can also credit the individual who answered
   const students = await gsGetTableStudents(tableNo);
   document.getElementById('gs-award-table-label').textContent = `${gsGetTableLabel(tableNo)} — who answered?`;
@@ -2450,7 +2446,7 @@ async function gsAwardRandomTable() {
 async function gsAwardIndividual(idx) {
   const s = GS._awardStudents ? GS._awardStudents[idx] : null;
   if (!s) { gsToast('❌ Student not found'); return; }
-  const pts = GS.randomCredits;
+  const pts = GS.randomPoints;
   const tableNo = GS.randomWinner;
   try {
     await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
@@ -2660,7 +2656,7 @@ function gsOnRandomStart(data) {
   const t=String(GS.currentBuzzer?.['Table Assigned']||'');
   const c=gsTableColor(t);
   document.getElementById('gsrb-table').textContent=gsGetTableLabel(t);
-  document.getElementById('gsrb-cred').textContent=`+${data.credits} LC Credits`;
+  document.getElementById('gsrb-cred').textContent=`+${data.credits} Points`;
   const btn=document.getElementById('gs-random-buzzer');
   if(btn){btn.style.opacity='1';btn.style.background=`linear-gradient(135deg,${c.bg},${c.bg}cc)`;btn.style.borderColor=c.border;btn.style.boxShadow=`0 0 35px ${c.bg}88`;}
   document.getElementById('gsrb-state').textContent='Ready to buzz!';

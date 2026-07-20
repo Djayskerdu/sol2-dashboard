@@ -1215,7 +1215,7 @@
   <div class="result-banner" id="result-banner">
     <div class="rb-icon" id="rb-icon">✅</div>
     <div class="rb-title" id="rb-title">Correct!</div>
-    <div class="rb-sub" id="rb-sub">+100 SOL2 Credits</div>
+    <div class="rb-sub" id="rb-sub">+100 Points</div>
     <div id="rb-countdown-wrap" style="display:none;margin-top:20px;text-align:center;">
       <div id="rb-countdown-msg" style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.6);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Next question incoming…</div>
       <div id="rb-countdown-num" style="font-size:60px;font-weight:900;color:#FFD700;line-height:1;text-shadow:0 0 40px #FFD70099;transition:transform 0.2s,opacity 0.2s;"></div>
@@ -1297,7 +1297,7 @@
   <div id="wro-winner-wrap">
     <div id="wro-trophy">🏆</div>
     <div id="wro-winner-name">Table —</div>
-    <div id="wro-winner-pts">— SOL2 Credits</div>
+    <div id="wro-winner-pts">— Points</div>
   </div>
   <div id="wro-continue-btn" style="display:flex;flex-direction:column;align-items:center;gap:10px;">
     <div id="wro-cd-msg" style="font-size:clamp(11px,2vw,14px);font-weight:700;color:rgba(255,255,255,0.55);letter-spacing:2px;text-transform:uppercase;opacity:0;transition:opacity 0.5s;">Showing Full Scoreboard in…</div>
@@ -1317,7 +1317,7 @@
   <div class="random-host-body">
     <div class="form-field" style="display:flex;gap:10px;align-items:flex-end">
       <div style="flex:1">
-        <label>SOL2 CREDITS TO AWARD</label>
+        <label>POINTS TO AWARD</label>
         <input type="number" id="rq-credits" value="100" min="50" step="50">
       </div>
       <button class="btn-primary btn-gold" style="width:auto;padding:11px 18px;margin-top:0;flex-shrink:0" onclick="startRandomRound()">GO 🚀</button>
@@ -1330,7 +1330,7 @@
       </div>
     </div>
     <div id="random-winner-actions" style="display:none">
-      <button class="btn-primary btn-green mt-16" onclick="awardTableCredits_Random()">✅ Award Table Credits</button>
+      <button class="btn-primary btn-green mt-16" onclick="awardTableCredits_Random()">✅ Award Table Points</button>
       <button class="btn-primary" style="background:rgba(255,255,255,0.1);margin-top:8px" onclick="clearRandomRound()">🔄 New Round</button>
     </div>
     <!-- Student picker — shown after table credits awarded -->
@@ -1460,7 +1460,7 @@
   <div class="random-buzz-body">
     <div id="random-q-display" style="display:none">
       <div class="random-q-text" id="random-q-text">—</div>
-      <div class="random-credits-badge" id="random-credits-badge">+100 SOL2 Credits</div>
+      <div class="random-credits-badge" id="random-credits-badge">+100 Points</div>
     </div>
     <div id="random-buzz-btn-wrap">
       <button class="big-buzzer-btn" id="random-buzzer-btn" onclick="pressRandomBuzzer()"
@@ -1923,7 +1923,7 @@ function addQuestion() {
     </div>
     <button class="add-choice-btn" onclick="addChoiceRow(${qIdx})">＋ Add Choice</button>
     <div class="points-row mt-8">
-      <label>SOL2 CREDITS FOR THIS QUESTION:</label>
+      <label>POINTS FOR THIS QUESTION:</label>
       <input type="number" id="q-pts-${qIdx}" value="100" min="50" step="50" style="width:80px">
     </div>
   `;
@@ -2262,7 +2262,7 @@ function playQuestionPreviewThenCountdown(overlay, qNum, qText, onDone) {
   msgEl.style.opacity = '0';
   cdEl.style.display = 'none';
 
-  // ── STEP 0: "FOR X LC CREDITS" reveal before question ──
+  // ── STEP 0: "FOR X POINTS" reveal before question ──
   const q = GS.activeQuiz?.questions[qNum - 1];
   const pts = q?.points || 100;
 
@@ -2271,7 +2271,7 @@ function playQuestionPreviewThenCountdown(overlay, qNum, qText, onDone) {
   qboxEl.style.opacity = '0';
   qboxEl.style.transform = 'translateY(20px)';
 
-  // Show "FOR ___ LC CREDITS" badge
+  // Show "FOR ___ POINTS" badge
   const creditsReveal = document.createElement('div');
   creditsReveal.id = 'credits-reveal-banner';
   creditsReveal.style.cssText = `
@@ -2284,7 +2284,7 @@ function playQuestionPreviewThenCountdown(overlay, qNum, qText, onDone) {
   creditsReveal.innerHTML = `
     <div style="font-size:clamp(11px,2vw,15px);font-weight:800;color:rgba(255,255,255,0.55);letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;">THIS QUESTION IS WORTH</div>
     <div style="font-size:clamp(48px,10vw,88px);font-weight:900;color:#FFD700;line-height:1;text-shadow:0 0 60px #FFD70099;letter-spacing:2px;">${pts} LC</div>
-    <div style="font-size:clamp(14px,2.5vw,22px);font-weight:800;color:rgba(255,255,255,0.7);letter-spacing:3px;text-transform:uppercase;margin-top:6px;">CREDITS</div>
+    <div style="font-size:clamp(14px,2.5vw,22px);font-weight:800;color:rgba(255,255,255,0.7);letter-spacing:3px;text-transform:uppercase;margin-top:6px;">POINTS</div>
     <div style="margin-top:18px;font-size:clamp(13px,2vw,18px);font-weight:800;color:rgba(255,215,0,0.7);letter-spacing:2px;text-transform:uppercase;">▶ QUESTION ${qNum}</div>
   `;
   overlay.style.position = 'fixed';
@@ -2570,7 +2570,7 @@ function showResultBanner(correct, tableNo, pts, autoNext) {
   banner.className = 'result-banner show ' + (correct ? 'correct-bg' : 'wrong-bg');
   document.getElementById('rb-icon').textContent = correct ? '✅' : '❌';
   document.getElementById('rb-title').textContent = correct ? `${getTableName(tableNo)} — CORRECT!` : `${getTableName(tableNo)} — WRONG!`;
-  document.getElementById('rb-sub').textContent = correct ? `+${pts} LC Credits awarded! 🎉` : 'Other tables can buzz in…';  // Auto-advance countdown after correct answer
+  document.getElementById('rb-sub').textContent = correct ? `+${pts} Points awarded! 🎉` : 'Other tables can buzz in…';  // Auto-advance countdown after correct answer
   if (correct && autoNext) {
     const wrap = document.getElementById('rb-countdown-wrap');
     const numEl = document.getElementById('rb-countdown-num');
@@ -2633,7 +2633,7 @@ function playNextQuestionCountdown(qNum, onDone) {
   const overlay = document.getElementById('pres-intro-overlay');
   _introReset();
   overlay.style.display = 'flex';
-  // Go straight to LC Credits reveal → question preview → choices
+  // Go straight to Points reveal → question preview → choices
   const q = GS.activeQuiz?.questions[qNum - 1];
   playQuestionPreviewThenCountdown(overlay, qNum, q?.text || '', onDone);
 }
@@ -3039,7 +3039,7 @@ function playWinnerReveal() {
     nameEl.textContent = getTableName(winnerTable);
     nameEl.style.color = color.label;
     nameEl.style.textShadow = `0 0 60px ${color.bg}cc`;
-    ptsEl.textContent = `${winnerPts} LC Credits`;
+    ptsEl.textContent = `${winnerPts} Points`;
 
     winWrap.classList.add('show');
     ptsEl.classList.add('show');
@@ -3265,7 +3265,7 @@ function showFinalScores() {
       <div class="lb-avatar">${avatar}</div>
       <div class="lb-info">
         <div class="lb-table-name" style="color:${color.label}">${getTableName(tableNo)}</div>
-        <div class="lb-pts-label">LC Credits Earned</div>
+        <div class="lb-pts-label">Points Earned</div>
       </div>
       <div class="lb-score">${pts}<span>LC</span></div>
       <div class="lb-bar-wrap">
@@ -3604,7 +3604,7 @@ function onAnswerResult(data) {
       GS._buzzerScore += (data.points || 0);
       document.getElementById('bg-score').textContent = GS._buzzerScore;
       document.getElementById('bc-score').textContent = GS._buzzerScore;
-      showToast(`✅ Correct! +${data.points} LC Credits`);
+      showToast(`✅ Correct! +${data.points} Points`);
     } else {
       showToast('❌ Wrong answer! Other tables can try.');
     }
@@ -3789,7 +3789,7 @@ function onRandomStart(data) {
   if (data.question) {
     document.getElementById('random-q-display').style.display = 'block';
     document.getElementById('random-q-text').textContent = data.question;
-    document.getElementById('random-credits-badge').textContent = `+${data.credits} LC Credits`;
+    document.getElementById('random-credits-badge').textContent = `+${data.credits} Points`;
   }
 
   const btn = document.getElementById('random-buzzer-btn');

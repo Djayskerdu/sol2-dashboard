@@ -962,9 +962,9 @@ function renderFCredits() {
   el.innerHTML = sorted.map((s, i) => `
     <div class="row">
       <div><strong>#${i + 1} ${s["Full Name"]}</strong><br><small>${getTableLabel(s["Table No"])}</small></div>
-      <div>${getStudentCredits(s["Student ID"])} LC</div>
+      <div>${getStudentCredits(s["Student ID"])} pts</div>
     </div>
-  `).join('') || '<p style="padding:16px;color:var(--gray)">No credits yet.</p>';
+  `).join('') || '<p style="padding:16px;color:var(--gray)">No points yet.</p>';
 }
 
 // ═══════════════════════════════════════════
@@ -1000,7 +1000,7 @@ async function doAddCredit() {
       addedBy: APP.currentFaculty?.["Full Name"] || "Faculty"
     });
 
-    showToast(`✅ ${amount} LC added to ${student["Full Name"]}`);
+    showToast(`✅ ${amount} pts added to ${student["Full Name"]}`);
     if (amountEl) amountEl.value = 5;
     await loadAllData();
   } catch (err) {
@@ -1096,7 +1096,7 @@ function renderATables() {
     return `
       <div class="card" style="padding:14px;cursor:pointer" onclick="showTableDetail('${t}')">
         <div style="font-family:var(--font-head);font-size:18px;font-weight:700">${getTableLabel(t)}</div>
-        <div style="font-size:12px;color:var(--gray);margin-top:4px">${totalLC} LC Credits</div>
+        <div style="font-size:12px;color:var(--gray);margin-top:4px">${totalLC} pts</div>
       </div>
     `;
   }).join('');
@@ -1135,14 +1135,14 @@ function showTableDetail(tableNo) {
 
   if (stats) stats.innerHTML = `
     <div class="stat-card"><div class="stat-val">${students.length}</div><div class="stat-label">Students</div></div>
-    <div class="stat-card"><div class="stat-val">${tableCredits}</div><div class="stat-label">Table LC Credits</div></div>
+    <div class="stat-card"><div class="stat-val">${tableCredits}</div><div class="stat-label">Table Points</div></div>
   `;
 
   const sorted = [...students].sort((a, b) => getStudentCredits(b["Student ID"]) - getStudentCredits(a["Student ID"]));
   if (list) list.innerHTML = sorted.map(s => `
     <div class="row">
       <div><strong>${s["Full Name"]}</strong></div>
-      <div>${getStudentCredits(s["Student ID"])} LC</div>
+      <div>${getStudentCredits(s["Student ID"])} pts</div>
     </div>
   `).join('') || '<p style="padding:16px;color:var(--gray)">No students in this table.</p>';
 }
@@ -1213,7 +1213,7 @@ function renderLeaderboard() {
   el.innerHTML = sorted.map((s, i) => `
     <div class="row">
       <div><strong>${medals[i] || `#${i + 1}`} ${s["Full Name"]}</strong><br><small>${getTableLabel(s["Table No"])}</small></div>
-      <div>${getStudentCredits(s["Student ID"])} LC</div>
+      <div>${getStudentCredits(s["Student ID"])} pts</div>
     </div>
   `).join('') || '<p style="padding:16px;color:var(--gray)">No students yet.</p>';
 }
@@ -1234,7 +1234,7 @@ function renderTableLeaderboard() {
   el.innerHTML = sorted.map((t, i) => `
     <div class="row">
       <div><strong>${medals[i] || `#${i + 1}`} ${getTableLabel(t)}</strong><br><small>${tableMap[t].count} students</small></div>
-      <div>${tableMap[t].total} LC</div>
+      <div>${tableMap[t].total} pts</div>
     </div>
   `).join('') || '<p style="padding:16px;color:var(--gray)">No data yet.</p>';
 }
@@ -1900,7 +1900,7 @@ function openTableAddCredit() {
   if (!modal) return;
   const tableNo    = document.getElementById('a-td-title')?.textContent?.replace('Table ','').trim();
   const modalTitle = document.getElementById('modal-table-credit-title');
-  if (modalTitle) modalTitle.textContent = `Add LC Credits — ${getTableLabel(tableNo)}`;
+  if (modalTitle) modalTitle.textContent = `Add Points — ${getTableLabel(tableNo)}`;
   modal.style.display = 'flex';
   document.querySelectorAll('#modal-table-credit .reason-btn').forEach((b, i) => {
     b.classList.toggle('selected', i === 0);
@@ -1947,7 +1947,7 @@ async function doTableAddCredit() {
 
     closeTableCreditModal();
     await loadAllData();
-    showToast(`✅ ${amount} LC added to ${getTableLabel(tableNo)}`);
+    showToast(`✅ ${amount} pts added to ${getTableLabel(tableNo)}`);
     showTableDetail(tableNo);
   } catch (err) {
     showToast('❌ ' + (err.message || 'Failed to save'));
@@ -2243,7 +2243,7 @@ function updateFacultyHome() {
   ['f-students-topbar','f-payment-topbar','f-credits-topbar'].forEach(id => {
     const el = document.getElementById(id);
     if (el && tableNo) {
-      const labels = { 'f-students-topbar': 'Attendance', 'f-payment-topbar': 'Payment', 'f-credits-topbar': 'LC Credits' };
+      const labels = { 'f-students-topbar': 'Attendance', 'f-payment-topbar': 'Payment', 'f-credits-topbar': 'Points' };
       el.textContent = `${getTableLabel(tableNo)} — ${labels[id]}`;
     }
   });

@@ -338,7 +338,7 @@ function addPayment(data) {
 }
 
 /************************************************
- * CREDITS
+ * POINTS
  ************************************************/
 
 function addCredit(data) {
@@ -355,7 +355,7 @@ function addCredit(data) {
   ]);
   return {
     success: true,
-    message: "Credit Added"
+    message: "Point Added"
   };
 }
 
