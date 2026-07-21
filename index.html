@@ -318,7 +318,7 @@
     </button>
     <button class="menu-item" onclick="go('s-f-devotional')">
       <div class="mi-icon" style="background:#e8f5ee"><svg viewBox="0 0 24 24" stroke="#46586e" fill="none"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Devotional &amp; Activities</div><div class="mi-sub">Daily check — 63 days total</div></div>
+      <div class="mi-text"><div class="mi-title">Devotional</div><div class="mi-sub">Daily check — 140 days · 20 weeks</div></div>
       <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
     <button class="menu-item" onclick="go('s-f-modcomp')">
@@ -567,7 +567,7 @@
     </button>
     <button class="menu-item" onclick="go('s-a-devotional')">
       <div class="mi-icon" style="background:#e8f5ee"><svg viewBox="0 0 24 24" stroke="#46586e" fill="none"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Devotional &amp; Activities Record</div><div class="mi-sub">View all tables daily completion</div></div>
+      <div class="mi-text"><div class="mi-title">Devotional Record</div><div class="mi-sub">View all tables daily completion</div></div>
       <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
     <button class="menu-item" onclick="go('s-a-modcomp')">
@@ -1114,11 +1114,11 @@
 <div class="screen" id="s-f-devotional">
   <div class="topbar" style="background:var(--navy)">
     <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Devotional &amp; Activities</span>
+    <span class="topbar-title">Devotional</span>
   </div>
   <div class="body">
     <div style="background:linear-gradient(135deg,#46586e,#8fa4b8);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
-      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">63-Day Program</div>
+      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">20-Week Program · 140 Days</div>
       <div style="font-size:15px;font-weight:700">Click a student to mark their daily devotionals</div>
     </div>
     <div class="card" style="padding:0 16px" id="f-devotional-list"></div>
@@ -1139,11 +1139,11 @@
   <div class="topbar" style="background:var(--navy)">
     <button class="topbar-back" onclick="go('s-f-devotional')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
     <span class="topbar-title" id="f-devot-detail-name">Devotional</span>
-    <span id="f-devot-counter" style="font-size:11px;color:rgba(255,255,255,0.8);white-space:nowrap">0/63</span>
+    <span id="f-devot-counter" style="font-size:11px;color:rgba(255,255,255,0.8);white-space:nowrap">0/140</span>
   </div>
   <div class="body">
     <div style="background:#e8f5ee;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#46586e;line-height:1.5">
-      ✅ Check each day the student completed their devotional/activity. Progress is saved on this device.
+      ✅ Check each day the student completed their devotional. Progress is saved on this device.
     </div>
     <div id="f-devot-checklist"></div>
   </div>
@@ -1161,11 +1161,11 @@
 <div class="screen" id="s-a-devotional">
   <div class="topbar" style="background:var(--green)">
     <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Devotional &amp; Activities Record</span>
+    <span class="topbar-title">Devotional Record</span>
   </div>
   <div class="body">
     <div style="background:linear-gradient(135deg,#46586e,#8fa4b8);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
-      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">63-Day Program</div>
+      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">20-Week Program · 140 Days</div>
       <div style="font-size:15px;font-weight:700">Select a table to view student devotional completion</div>
     </div>
     <div id="a-devot-tables"></div>
