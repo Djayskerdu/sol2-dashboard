@@ -320,17 +320,27 @@ async function generateCertificate(studentId) {
     const green   = PDFLib.rgb(0x0d/255, 0x47/255, 0x2b/255);
     const black   = PDFLib.rgb(0.1, 0.1, 0.1);
 
+    // Coordinates below were measured as pixel positions on the reference
+    // template image, which is 2000 x 1545 px (CERTIFICATE PLAIN TEMPLATE.png).
+    // Convert px -> pt using the actual page width/height (NOT a single
+    // shared ratio) since the reference image isn't square.
+    const REF_IMG_W = 2000;
+    const REF_IMG_H = 1545;
+    const scaleX = pageW / REF_IMG_W;
+    const scaleY = pageH / REF_IMG_H;
+    // px (x, yFromTop) -> pt {x, y} (y from bottom, as drawText expects)
+    const pxToPt = (px, py) => ({ x: px * scaleX, y: pageH - (py * scaleY) });
+
     // Name — centered on the underline beneath "presented to"
     const name = (student['Full Name'] || '').toUpperCase();
-    const nameLineCenterX = 204.3;   // px 667.5 / (2000/612)
-    const nameBaselineY   = pageH - 213.85; // px 700 from top, converted
+    const namePt = pxToPt(667.5, 700);
     const nameMaxWidth    = 280; // available width above the underline
     let nameSize = 30;
     while (nameSize > 12 && font.widthOfTextAtSize(name, nameSize) > nameMaxWidth) nameSize -= 1;
     const nameWidth = font.widthOfTextAtSize(name, nameSize);
     page.drawText(name, {
-      x: nameLineCenterX - nameWidth / 2,
-      y: nameBaselineY,
+      x: namePt.x - nameWidth / 2,
+      y: namePt.y,
       size: nameSize,
       font,
       color: green
@@ -339,15 +349,14 @@ async function generateCertificate(studentId) {
     // Equipping class name — centered under "for the successful completion of".
     // Pulled straight from SYSTEM_SETTINGS: Batch Name (e.g. "School of Leaders 2").
     const className = (APP.settings && APP.settings['Batch Name']) ? String(APP.settings['Batch Name']).toUpperCase() : '';
-    const classNameCenterX = 204.0;   // px 666.5 / (2000/612)
-    const classNameBaselineY = pageH - 288.25; // px 942 from top, converted
+    const classPt = pxToPt(666.5, 942);
     const classMaxWidth = 300; // available width on that line
     let classSize = 22;
     while (classSize > 10 && font.widthOfTextAtSize(className, classSize) > classMaxWidth) classSize -= 1;
     const classWidth = font.widthOfTextAtSize(className, classSize);
     page.drawText(className, {
-      x: classNameCenterX - classWidth / 2,
-      y: classNameBaselineY,
+      x: classPt.x - classWidth / 2,
+      y: classPt.y,
       size: classSize,
       font,
       color: green
@@ -355,13 +364,12 @@ async function generateCertificate(studentId) {
 
     // Date — centered above the "DATE" signature line
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const dateLineCenterX = 96.08;  // px 314 / (2000/612)
-    const dateBaselineY   = pageH - 416.1; // px 1362 from top, converted
+    const datePt = pxToPt(314, 1318);
     const fieldSize = 12.9;
     const dateWidth = font.widthOfTextAtSize(dateStr, fieldSize);
     page.drawText(dateStr, {
-      x: dateLineCenterX - dateWidth / 2,
-      y: dateBaselineY,
+      x: datePt.x - dateWidth / 2,
+      y: datePt.y,
       size: fieldSize,
       font,
       color: black
@@ -375,11 +383,11 @@ async function generateCertificate(studentId) {
       .map(f => f['Full Name'])
       .filter(Boolean);
     const directorStr = directorNames.join(' & ');
-    const directorLineCenterX = 258.26; // px 844 / (2000/612)
+    const directorPt = pxToPt(844, 1318);
     const directorWidth = font.widthOfTextAtSize(directorStr, fieldSize);
     page.drawText(directorStr, {
-      x: directorLineCenterX - directorWidth / 2,
-      y: dateBaselineY,
+      x: directorPt.x - directorWidth / 2,
+      y: directorPt.y,
       size: fieldSize,
       font,
       color: black
@@ -388,12 +396,11 @@ async function generateCertificate(studentId) {
     // Student ID — centered under the description paragraph, above the
     // DATE / DIRECTOR / LEAD PASTOR row. Taken straight from the STUDENTS sheet.
     const studentIdStr = String(student['Student ID'] || '');
-    const studentIdCenterX = 205.0; // px 670 / (2000/612)
-    const studentIdBaselineY = pageH - 394.7; // px 1290 from top, converted
+    const studentIdPt = pxToPt(670, 1270);
     const studentIdWidth = font.widthOfTextAtSize(studentIdStr, fieldSize);
     page.drawText(studentIdStr, {
-      x: studentIdCenterX - studentIdWidth / 2,
-      y: studentIdBaselineY,
+      x: studentIdPt.x - studentIdWidth / 2,
+      y: studentIdPt.y,
       size: fieldSize,
       font,
       color: green
