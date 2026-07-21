@@ -288,6 +288,7 @@ function isCertificateEligible(studentId) {
 // the DATE signature line), so they line up with the design exactly.
 // ═══════════════════════════════════════════
 const CERT_TEMPLATE_URL = encodeURI('CERTIFICATE PLAIN TEMPLATE.pdf');
+const ROBOTO_BOLD_URL   = encodeURI('fonts/Roboto-Bold.ttf');
 
 async function generateCertificate(studentId) {
   const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
@@ -300,16 +301,22 @@ async function generateCertificate(studentId) {
 
   try {
     if (typeof PDFLib === 'undefined') throw new Error('PDF library did not load. Check your connection and try again.');
+    if (typeof fontkit === 'undefined') throw new Error('Font library did not load. Check your connection and try again.');
 
     const bytes = await fetch(CERT_TEMPLATE_URL).then(r => {
       if (!r.ok) throw new Error('Could not load certificate template (' + r.status + ').');
       return r.arrayBuffer();
     });
+    const robotoBytes = await fetch(ROBOTO_BOLD_URL).then(r => {
+      if (!r.ok) throw new Error('Could not load Roboto font (' + r.status + ').');
+      return r.arrayBuffer();
+    });
 
     const pdfDoc  = await PDFLib.PDFDocument.load(bytes);
+    pdfDoc.registerFontkit(fontkit);
     const page    = pdfDoc.getPages()[0];
     const { width: pageW, height: pageH } = page.getSize();
-    const font    = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    const font    = await pdfDoc.embedFont(robotoBytes); // Roboto Bold
     const green   = PDFLib.rgb(0x0d/255, 0x47/255, 0x2b/255);
     const black   = PDFLib.rgb(0.1, 0.1, 0.1);
 
@@ -329,18 +336,67 @@ async function generateCertificate(studentId) {
       color: green
     });
 
+    // Equipping class name — centered under "for the successful completion of".
+    // Pulled straight from SYSTEM_SETTINGS: Batch Name (e.g. "School of Leaders 2").
+    const className = (APP.settings && APP.settings['Batch Name']) ? String(APP.settings['Batch Name']).toUpperCase() : '';
+    const classNameCenterX = 204.0;   // px 666.5 / (2000/612)
+    const classNameBaselineY = pageH - 288.25; // px 942 from top, converted
+    const classMaxWidth = 300; // available width on that line
+    let classSize = 22;
+    while (classSize > 10 && font.widthOfTextAtSize(className, classSize) > classMaxWidth) classSize -= 1;
+    const classWidth = font.widthOfTextAtSize(className, classSize);
+    page.drawText(className, {
+      x: classNameCenterX - classWidth / 2,
+      y: classNameBaselineY,
+      size: classSize,
+      font,
+      color: green
+    });
+
     // Date — centered above the "DATE" signature line
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const dateLineCenterX = 96.08;  // px 314 / (2000/612)
     const dateBaselineY   = pageH - 416.1; // px 1362 from top, converted
-    const dateSize = 13;
-    const dateWidth = font.widthOfTextAtSize(dateStr, dateSize);
+    const fieldSize = 12.9;
+    const dateWidth = font.widthOfTextAtSize(dateStr, fieldSize);
     page.drawText(dateStr, {
       x: dateLineCenterX - dateWidth / 2,
       y: dateBaselineY,
-      size: dateSize,
+      size: fieldSize,
       font,
       color: black
+    });
+
+    // Director — centered above the "DIRECTOR" signature line.
+    // Pulled from FACULTY_STAFF: everyone whose Role includes "Director"
+    // (matches the sheet exactly — currently Sarmatha Dizon & Aaron Quilos).
+    const directorNames = (APP.faculty || [])
+      .filter(f => String(f['Role'] || '').toLowerCase().includes('director'))
+      .map(f => f['Full Name'])
+      .filter(Boolean);
+    const directorStr = directorNames.join(' & ');
+    const directorLineCenterX = 258.26; // px 844 / (2000/612)
+    const directorWidth = font.widthOfTextAtSize(directorStr, fieldSize);
+    page.drawText(directorStr, {
+      x: directorLineCenterX - directorWidth / 2,
+      y: dateBaselineY,
+      size: fieldSize,
+      font,
+      color: black
+    });
+
+    // Student ID — centered under the description paragraph, above the
+    // DATE / DIRECTOR / LEAD PASTOR row. Taken straight from the STUDENTS sheet.
+    const studentIdStr = String(student['Student ID'] || '');
+    const studentIdCenterX = 205.0; // px 670 / (2000/612)
+    const studentIdBaselineY = pageH - 394.7; // px 1290 from top, converted
+    const studentIdWidth = font.widthOfTextAtSize(studentIdStr, fieldSize);
+    page.drawText(studentIdStr, {
+      x: studentIdCenterX - studentIdWidth / 2,
+      y: studentIdBaselineY,
+      size: fieldSize,
+      font,
+      color: green
     });
 
     const outBytes = await pdfDoc.save();
