@@ -333,7 +333,7 @@ async function generateCertificate(studentId) {
 
     // Name — centered on the underline beneath "presented to"
     const name = (student['Full Name'] || '').toUpperCase();
-    const namePt = pxToPt(667.5, 700);
+    const namePt = pxToPt(667.5, 660);
     const nameMaxWidth    = 280; // available width above the underline
     let nameSize = 30;
     while (nameSize > 12 && font.widthOfTextAtSize(name, nameSize) > nameMaxWidth) nameSize -= 1;
@@ -349,7 +349,7 @@ async function generateCertificate(studentId) {
     // Equipping class name — centered under "for the successful completion of".
     // Pulled straight from SYSTEM_SETTINGS: Batch Name (e.g. "School of Leaders 2").
     const className = (APP.settings && APP.settings['Batch Name']) ? String(APP.settings['Batch Name']).toUpperCase() : '';
-    const classPt = pxToPt(666.5, 942);
+    const classPt = pxToPt(666.5, 910);
     const classMaxWidth = 300; // available width on that line
     let classSize = 22;
     while (classSize > 10 && font.widthOfTextAtSize(className, classSize) > classMaxWidth) classSize -= 1;
@@ -362,9 +362,10 @@ async function generateCertificate(studentId) {
       color: green
     });
 
-    // Date — centered above the "DATE" signature line
-    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const datePt = pxToPt(314, 1318);
+    // Date — centered above the "DATE" signature line, baseline aligned
+    // with the "LEMUEL P. QUILOS" text on the right so the whole row sits even.
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
+    const datePt = pxToPt(314, 1354);
     const fieldSize = 12.9;
     const dateWidth = font.widthOfTextAtSize(dateStr, fieldSize);
     page.drawText(dateStr, {
@@ -382,8 +383,8 @@ async function generateCertificate(studentId) {
       .filter(f => String(f['Role'] || '').toLowerCase().includes('director'))
       .map(f => f['Full Name'])
       .filter(Boolean);
-    const directorStr = directorNames.join(' & ');
-    const directorPt = pxToPt(844, 1318);
+    const directorStr = directorNames.join(' & ').toUpperCase();
+    const directorPt = pxToPt(844, 1354);
     const directorWidth = font.widthOfTextAtSize(directorStr, fieldSize);
     page.drawText(directorStr, {
       x: directorPt.x - directorWidth / 2,
