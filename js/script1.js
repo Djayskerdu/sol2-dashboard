@@ -600,6 +600,10 @@ function go(id) {
   if (el) { el.classList.add('screen-animated'); el.classList.add('active'); }
   APP.currentScreen = id;
 
+  // Going back to the portal landing screen ends any Add Student session
+  // right away, even if the 5-minute window hasn't run out yet.
+  if (id === 's-portal') endAddStudentSession();
+
   const refreshBtn = document.getElementById('global-refresh-btn');
   if (refreshBtn) refreshBtn.classList.toggle('is-hidden', LOGIN_SCREEN_IDS.includes(id));
 
@@ -2317,10 +2321,39 @@ function onAddStudentTableChange() {
 }
 
 // ── Login gate ──────────────────────────────────────────────
-// Shown first when the ➕ button on the portal screen is tapped.
-// Only a Director/Consultant (admin) or Record account can pass
-// through to the actual Add Student form.
+// Shown first when the ➕ button is tapped. Only a Director/Consultant
+// (admin) or Record account can pass through to the actual Add Student
+// form. Once signed in, that access is remembered for a short session
+// (see ADD_STUDENT_SESSION_MINUTES below) so the person isn't asked to
+// log in again for every student they add — the session ends early,
+// though, the moment they navigate back to the portal/home screen.
+const ADD_STUDENT_SESSION_MINUTES = 5;
+let addStudentSessionPerson = null;
+let addStudentSessionTimer = null;
+
+function startAddStudentSession(person) {
+  addStudentSessionPerson = person;
+  if (addStudentSessionTimer) clearTimeout(addStudentSessionTimer);
+  addStudentSessionTimer = setTimeout(endAddStudentSession, ADD_STUDENT_SESSION_MINUTES * 60 * 1000);
+}
+
+function endAddStudentSession() {
+  addStudentSessionPerson = null;
+  if (addStudentSessionTimer) { clearTimeout(addStudentSessionTimer); addStudentSessionTimer = null; }
+}
+
+function hasActiveAddStudentSession() {
+  return !!addStudentSessionPerson;
+}
+
 function openAddStudentGate() {
+  // Already signed in within the last few minutes — skip straight to the
+  // form and refresh the session clock instead of asking to log in again.
+  if (hasActiveAddStudentSession()) {
+    startAddStudentSession(addStudentSessionPerson); // reset the 5-min clock
+    openAddStudentModal();
+    return;
+  }
   document.getElementById('asg-user').value = '';
   document.getElementById('asg-pass').value = '';
   hideLoginError('asg-err');
@@ -2356,6 +2389,7 @@ function doAddStudentGateLogin() {
       return;
     }
     if (btn) { btn.disabled = false; btn.textContent = 'Sign In & Continue'; }
+    startAddStudentSession(person);
     closeAddStudentGate();
     openAddStudentModal();
   }, 120);
