@@ -365,7 +365,7 @@ async function generateCertificate(studentId) {
     // Date — centered above the "DATE" signature line, baseline aligned
     // with the "LEMUEL P. QUILOS" text on the right so the whole row sits even.
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
-    const datePt = pxToPt(314, 1354);
+    const datePt = pxToPt(314, 1330);
     const fieldSize = 12.9;
     const dateWidth = font.widthOfTextAtSize(dateStr, fieldSize);
     page.drawText(dateStr, {
