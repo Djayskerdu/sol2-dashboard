@@ -87,6 +87,20 @@ input, select, button, textarea { font-family: var(--font); }
 /* CARDS */
 .card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
 
+/* VIEW TABLES — expandable table cards on the public View Tables screen */
+.vt-card { background: var(--card); border-radius: var(--radius); margin-bottom: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.vt-card-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; }
+.vt-card-title { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: var(--text1); }
+.vt-card-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.vt-card-chev { margin-left: auto; color: var(--text3); transition: transform 0.15s ease; flex-shrink: 0; }
+.vt-card.open .vt-card-chev { transform: rotate(90deg); }
+.vt-card-body { max-height: 0; overflow: hidden; transition: max-height 0.2s ease; border-top: 1px solid var(--border); }
+.vt-card.open .vt-card-body { max-height: 1000px; }
+.vt-card-fac { padding: 10px 16px; font-size: 12px; color: var(--text2); background: rgba(0,0,0,0.02); }
+.vt-card-fac strong { color: var(--text1); }
+.vt-name-row { padding: 10px 16px; font-size: 13px; color: var(--text1); border-top: 1px solid var(--border); }
+.vt-name-row:first-of-type { border-top: none; }
+
 /* ATTENDANCE SUMMARY BAR — Present / Late / Absent totals shown above each list */
 .att-summary-bar {
   display: grid;
@@ -230,6 +244,37 @@ input, select, button, textarea { font-family: var(--font); }
 #global-refresh-btn[disabled] { opacity: 0.6; cursor: default; }
 #global-refresh-btn.is-hidden { display: none; }
 @keyframes gr-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* PORTAL FLOATING BUTTONS — Add Student + View Tables, same treatment
+   as the refresh button, live on the portal screen since the refresh
+   button is hidden there. Sit side-by-side, top-right. */
+.portal-fab {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1500;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  transition: background 0.15s, transform 0.15s;
+}
+.portal-fab:hover { background: rgba(255,255,255,0.3); }
+.portal-fab:active { transform: scale(0.92); }
+
+#portal-add-student-btn { right: max(14px, env(safe-area-inset-right)); }
+#portal-view-table-btn { right: calc(max(14px, env(safe-area-inset-right)) + 48px); }
+
+@media (min-width: 768px) {
+  #portal-add-student-btn { top: 16px; right: 16px; }
+  #portal-view-table-btn { top: 16px; right: 64px; }
+}
 
 @media (min-width: 768px) {
   #global-refresh-btn { top: 16px; right: 16px; }

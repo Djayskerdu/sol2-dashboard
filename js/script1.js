@@ -365,7 +365,7 @@ async function generateCertificate(studentId) {
     // Date — centered above the "DATE" signature line, baseline aligned
     // with the "LEMUEL P. QUILOS" text on the right so the whole row sits even.
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
-    const datePt = pxToPt(314, 1335);
+    const datePt = pxToPt(314, 1354);
     const fieldSize = 12.9;
     const dateWidth = font.widthOfTextAtSize(dateStr, fieldSize);
     page.drawText(dateStr, {
@@ -384,7 +384,7 @@ async function generateCertificate(studentId) {
       .map(f => f['Full Name'])
       .filter(Boolean);
     const directorStr = directorNames.join(' & ').toUpperCase();
-    const directorPt = pxToPt(844, 1335);
+    const directorPt = pxToPt(844, 1354);
     const directorWidth = font.widthOfTextAtSize(directorStr, fieldSize);
     page.drawText(directorStr, {
       x: directorPt.x - directorWidth / 2,
@@ -397,7 +397,7 @@ async function generateCertificate(studentId) {
     // Student ID — centered under the description paragraph, above the
     // DATE / DIRECTOR / LEAD PASTOR row. Taken straight from the STUDENTS sheet.
     const studentIdStr = String(student['Student ID'] || '');
-    const studentIdPt = pxToPt(670, 1250);
+    const studentIdPt = pxToPt(670, 1270);
     const studentIdWidth = font.widthOfTextAtSize(studentIdStr, fieldSize);
     page.drawText(studentIdStr, {
       x: studentIdPt.x - studentIdWidth / 2,
@@ -614,12 +614,13 @@ function refreshCurrentScreen() {
   if (id === 's-r-attendance')  switchAttTab('students');
   if (id === 's-r-payment')     populatePayStudentSelect();
   if (id === 's-r-balances')    { renderBalances(); renderBalancesSummary(); }
+  if (id === 's-view-tables')   renderViewTables();
 }
 
 // ═══════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════
-const LOGIN_SCREEN_IDS = ['s-portal', 's-faculty-login', 's-admin-login', 's-record-login', 's-gs-host-login', 's-gs-buzzer-login'];
+const LOGIN_SCREEN_IDS = ['s-portal', 's-view-tables', 's-faculty-login', 's-admin-login', 's-record-login', 's-gs-host-login', 's-gs-buzzer-login'];
 
 function go(id) {
   const main = document.getElementById('desktop-main');
@@ -654,6 +655,7 @@ function go(id) {
   if (id === 's-r-payment')     populatePayStudentSelect();
   if (id === 's-r-balances')    { renderBalances(); renderBalancesSummary(); }
   if (id === 's-add-credit')   populateCreditStudentSelect();
+  if (id === 's-view-tables')  renderViewTables();
 }
 
 // Manually re-syncs all data from the sheet and re-renders whatever screen
@@ -1483,6 +1485,65 @@ function renderAStudentAtt() {
       <div>${a["Attendance Status"] || a["Status"] || "Present"}</div>
     </div>
   `).join('');
+}
+
+// ═══════════════════════════════════════════
+// PUBLIC — VIEW TABLES (no login required)
+// Reached from the "View Tables" button on the portal screen.
+// Shows every table with a member count; tap a table to expand
+// and see the member names + facilitator.
+// ═══════════════════════════════════════════
+function openViewTables() {
+  go('s-view-tables');
+}
+
+function renderViewTables() {
+  const list = document.getElementById('vt-list');
+  if (!list) return;
+
+  const tableMap = {};
+  APP.students
+    .filter(s => (s['Status'] || 'Active').toLowerCase() !== 'dropped')
+    .forEach(s => {
+      const t = String(s['Table No'] || '');
+      if (!t) return;
+      if (!tableMap[t]) tableMap[t] = [];
+      tableMap[t].push(s);
+    });
+
+  const tables = Object.keys(tableMap).sort((a, b) => Number(a) - Number(b));
+  if (!tables.length) {
+    list.innerHTML = '<p style="padding:16px;color:var(--text3)">No table data found.</p>';
+    return;
+  }
+
+  list.innerHTML = tables.map(t => {
+    const students = tableMap[t].sort((a, b) => String(a['Full Name']).localeCompare(String(b['Full Name'])));
+    const guide = APP.tableGuides.find(g => String(g['Table No']) === String(t));
+    const facilitator = (guide && guide['Facilitator Name']) ? guide['Facilitator Name'] : 'Not assigned';
+    const namesHtml = students.map(s => `<div class="vt-name-row">${s['Full Name']}</div>`).join('')
+      || '<div class="vt-name-row" style="color:var(--text3)">No members yet.</div>';
+    return `
+      <div class="vt-card" id="vt-card-${t}">
+        <div class="vt-card-head" onclick="toggleViewTable('${t}')">
+          <div>
+            <div class="vt-card-title">${getTableLabel(t)}</div>
+            <div class="vt-card-sub">${students.length} member${students.length === 1 ? '' : 's'}</div>
+          </div>
+          <svg class="vt-card-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="vt-card-body">
+          <div class="vt-card-fac">Facilitator: <strong>${facilitator}</strong></div>
+          ${namesHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleViewTable(tableNo) {
+  const card = document.getElementById(`vt-card-${tableNo}`);
+  if (card) card.classList.toggle('open');
 }
 
 // ═══════════════════════════════════════════
@@ -2374,6 +2435,155 @@ async function doTableAddCredit() {
   } finally {
     const btn = document.getElementById('modal-add-credit-btn');
     if (btn) { btn.disabled = false; btn.textContent = 'Add Credits to Table'; }
+  }
+}
+
+// ═══════════════════════════════════════════
+// ADD STUDENT (Director / Consultant / Record)
+// Reached via the ➕ button on the portal screen, which first shows a
+// login gate (see doAddStudentGateLogin below) — so this modal itself
+// is never reachable without signing in with an Admin or Record account.
+// Student ID, Status, and Registration Date are set automatically:
+// the ID is generated server-side (next number after the highest
+// existing "STUDENT-####"), Status is always "Active" for a new
+// enrollee, and Registration Date is today.
+// ═══════════════════════════════════════════
+function previewNextStudentId() {
+  let maxNum = 0;
+  APP.students.forEach(s => {
+    const m = String(s['Student ID'] || '').match(/(\d+)\s*$/);
+    if (m) { const n = parseInt(m[1], 10); if (n > maxNum) maxNum = n; }
+  });
+  return 'STUDENT-' + String(maxNum + 1).padStart(4, '0');
+}
+
+function populateAddStudentTableSelect() {
+  const sel = document.getElementById('as-tableno');
+  if (!sel) return;
+  const tables = [...APP.tableGuides]
+    .map(g => g['Table No'])
+    .filter(t => t !== '' && t !== null && t !== undefined)
+    .sort((a, b) => Number(a) - Number(b));
+  sel.innerHTML = '<option value="">Select…</option>' +
+    tables.map(t => `<option value="${t}">${getTableLabel(t)}</option>`).join('');
+}
+
+function onAddStudentTableChange() {
+  const tableNo = document.getElementById('as-tableno')?.value;
+  const facEl   = document.getElementById('as-facilitator');
+  if (!facEl) return;
+  const guide = APP.tableGuides.find(g => String(g['Table No']) === String(tableNo));
+  facEl.value = (guide && guide['Facilitator Name']) ? guide['Facilitator Name'] : '';
+}
+
+// ── Login gate ──────────────────────────────────────────────
+// Shown first when the ➕ button on the portal screen is tapped.
+// Only a Director/Consultant (admin) or Record account can pass
+// through to the actual Add Student form.
+function openAddStudentGate() {
+  document.getElementById('asg-user').value = '';
+  document.getElementById('asg-pass').value = '';
+  hideLoginError('asg-err');
+  const modal = document.getElementById('modal-add-student-gate');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddStudentGate() {
+  const modal = document.getElementById('modal-add-student-gate');
+  if (modal) modal.style.display = 'none';
+}
+
+function doAddStudentGateLogin() {
+  const username = document.getElementById('asg-user')?.value || '';
+  const password = document.getElementById('asg-pass')?.value || '';
+  const btn      = document.getElementById('asg-login-btn');
+  hideLoginError('asg-err');
+  if (!username || !password) { showLoginError('asg-err', 'Please enter your username and password.'); return; }
+  if (isDataEmpty()) { showLoginError('asg-err', 'Still connecting to server. Please wait a moment and try again.'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+  setTimeout(() => {
+    const person = findFacultyByCredentials(username, password);
+    if (!person) {
+      showLoginError('asg-err', 'Incorrect username or password.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In & Continue'; }
+      document.getElementById('asg-pass').value = '';
+      return;
+    }
+    const roleTypes = getRoleTypes(person["Role"]);
+    if (!roleTypes.includes('admin') && !roleTypes.includes('record')) {
+      showLoginError('asg-err', 'Your account does not have Director, Consultant, or Record access.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In & Continue'; }
+      return;
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In & Continue'; }
+    closeAddStudentGate();
+    openAddStudentModal();
+  }, 120);
+}
+
+function openAddStudentModal() {
+  document.getElementById('as-fullname').value        = '';
+  document.getElementById('as-age').value              = '';
+  document.getElementById('as-gender').value           = '';
+  document.getElementById('as-lgleader').value         = '';
+  document.getElementById('as-networkleader').value    = '';
+  document.getElementById('as-tableno').value          = '';
+  document.getElementById('as-facilitator').value      = '';
+  document.getElementById('as-contact').value          = '';
+  const errEl = document.getElementById('as-err');
+  if (errEl) errEl.style.display = 'none';
+
+  populateAddStudentTableSelect();
+  document.getElementById('as-preview-id').textContent = previewNextStudentId();
+  document.getElementById('as-preview-date').textContent =
+    new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const modal = document.getElementById('modal-add-student');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddStudentModal() {
+  const modal = document.getElementById('modal-add-student');
+  if (modal) modal.style.display = 'none';
+}
+
+async function doAddStudent() {
+  const fullName      = document.getElementById('as-fullname')?.value.trim()      || '';
+  const age           = document.getElementById('as-age')?.value                  || '';
+  const gender        = document.getElementById('as-gender')?.value               || '';
+  const lgLeader      = document.getElementById('as-lgleader')?.value.trim()      || '';
+  const networkLeader = document.getElementById('as-networkleader')?.value.trim() || '';
+  const tableNo       = document.getElementById('as-tableno')?.value              || '';
+  const contactNo     = document.getElementById('as-contact')?.value.trim()       || '';
+
+  const errEl = document.getElementById('as-err');
+  const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; } };
+  if (errEl) errEl.style.display = 'none';
+
+  if (!fullName) { showErr('⚠️ Full Name is required.'); return; }
+  if (!tableNo)  { showErr('⚠️ Please select a Table No.'); return; }
+
+  try {
+    const btn = document.getElementById('modal-add-student-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+    const res = await apiPost({
+      action: 'addStudent',
+      fullName, age, gender, lgLeader, networkLeader, tableNo, contactNo
+    });
+
+    if (!res || res.success === false) throw new Error((res && res.message) || 'Failed to add student');
+
+    closeAddStudentModal();
+    await loadAllData();
+    showToast(`✅ ${fullName} added` + (res.data && res.data['Student ID'] ? ` (${res.data['Student ID']})` : ''));
+    go(APP.currentScreen); // re-render whichever home screen this was opened from
+  } catch (err) {
+    showErr('❌ ' + (err.message || 'Failed to add student'));
+    console.error('doAddStudent error:', err);
+  } finally {
+    const btn = document.getElementById('modal-add-student-btn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Add Student'; }
   }
 }
 

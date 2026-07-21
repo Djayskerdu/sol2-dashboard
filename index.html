@@ -198,6 +198,8 @@
      PORTAL SELECT
 ══════════════════════════════════════════ -->
 <div class="screen active" id="s-portal">
+  <button id="portal-view-table-btn" class="portal-fab" title="View Tables" onclick="openViewTables()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg></button>
+  <button id="portal-add-student-btn" class="portal-fab" title="Add Student" onclick="openAddStudentGate()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   <div class="portal-hero">
     <div class="portal-logo">
       <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.14 8 11.35C16.5 22.14 20 17.25 20 12V6l-8-4z"/></svg>
@@ -229,6 +231,22 @@
   </div>
   <div style="padding:0 20px 20px;text-align:center">
     <div style="font-size:11px;color:var(--text3)"><span class="sync-dot" id="sync-dot-portal"></span><span id="sync-label-portal">Loading...</span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW TABLES — public, no login required.
+     Shows every table with a member count; tap a
+     table to expand and see the names + facilitator.
+══════════════════════════════════════════ -->
+<div class="screen" id="s-view-tables">
+  <div class="topbar" style="background:var(--navy)">
+    <button class="topbar-back" onclick="go('s-portal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="topbar-title">View Tables</span>
+    <button id="vt-add-student-btn" class="topbar-back" title="Add Student" onclick="openAddStudentGate()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+  </div>
+  <div class="body">
+    <div id="vt-list"></div>
   </div>
 </div>
 
@@ -745,6 +763,75 @@
     <div style="display:flex;gap:10px;margin-top:4px">
       <button onclick="closeTableCreditModal()" style="flex:1;padding:11px;border:1.5px solid #ddd;border-radius:10px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2)">Cancel</button>
       <button id="modal-add-credit-btn" onclick="doTableAddCredit()" style="flex:2;padding:11px;border:none;border-radius:10px;background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer">Add Points to Table</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ADD STUDENT — LOGIN GATE
+     Shown when the portal + button is tapped. Must sign in with a
+     Director/Consultant or Record account before the Add Student
+     form appears.
+══════════════════════════════════════════ -->
+<div id="modal-add-student-gate" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9100;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:380px;box-shadow:0 4px 30px rgba(0,0,0,0.25)">
+    <div style="display:flex;align-items:center;margin-bottom:4px">
+      <div style="font-size:15px;font-weight:700;color:var(--text1)">Sign In to Add a Student</div>
+      <button onclick="closeAddStudentGate()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);margin-left:auto">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Director, Consultant, or Record accounts only</div>
+    <div class="field"><label>Username</label><input type="text" id="asg-user" placeholder="Username" onkeydown="if(event.key==='Enter')doAddStudentGateLogin()"></div>
+    <div class="field"><label>Password</label><input type="password" id="asg-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAddStudentGateLogin()"></div>
+    <div id="asg-err" style="display:none;color:#c0392b;font-size:12px;margin-bottom:8px;text-align:center"></div>
+    <button class="btn-primary" id="asg-login-btn" style="background:var(--green)" onclick="doAddStudentGateLogin()">Sign In &amp; Continue</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ADD STUDENT (Director / Consultant / Record only —
+     gated behind login since this screen only exists inside
+     the admin and record portals)
+══════════════════════════════════════════ -->
+<div id="modal-add-student" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:flex-end;justify-content:center">
+  <div style="background:#fff;border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 -4px 30px rgba(0,0,0,0.2)">
+    <div style="display:flex;align-items:center;margin-bottom:4px">
+      <div style="font-size:15px;font-weight:700;color:var(--text1)">Add Student</div>
+      <button onclick="closeAddStudentModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);margin-left:auto">✕</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:14px;line-height:1.6">
+      Student ID <strong id="as-preview-id" style="color:var(--text2)">—</strong> · Status <strong style="color:var(--text2)">Active</strong> · Registered <strong id="as-preview-date" style="color:var(--text2)">—</strong>
+      <br>These are filled in automatically when you save.
+    </div>
+
+    <div class="field"><label>Full Name</label><input type="text" id="as-fullname" placeholder="Juan Dela Cruz"></div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1"><label>Age</label><input type="number" id="as-age" placeholder="18" min="1" max="120"></div>
+      <div class="field" style="flex:1">
+        <label>Gender</label>
+        <select id="as-gender">
+          <option value="">Select…</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>LG Leader</label><input type="text" id="as-lgleader" placeholder="LG Leader's name"></div>
+    <div class="field"><label>Network Leader</label><input type="text" id="as-networkleader" placeholder="Network Leader's name"></div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1">
+        <label>Table No</label>
+        <select id="as-tableno" onchange="onAddStudentTableChange()">
+          <option value="">Select…</option>
+        </select>
+      </div>
+      <div class="field" style="flex:1"><label>Facilitator</label><input type="text" id="as-facilitator" placeholder="Auto-filled" readonly style="background:#f3f4f6;color:var(--text3)"></div>
+    </div>
+    <div class="field"><label>Contact No</label><input type="text" id="as-contact" placeholder="09XXXXXXXXX"></div>
+    <div id="as-err" style="display:none;color:#c0392b;font-size:12px;margin-bottom:8px"></div>
+
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button onclick="closeAddStudentModal()" style="flex:1;padding:11px;border:1.5px solid #ddd;border-radius:10px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2)">Cancel</button>
+      <button id="modal-add-student-btn" onclick="doAddStudent()" style="flex:2;padding:11px;border:none;border-radius:10px;background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer">Add Student</button>
     </div>
   </div>
 </div>
@@ -3021,7 +3108,7 @@ window.addEventListener('load', () => {
 function updateSidebar() {
   if (typeof APP === 'undefined') return;
   var faculty = APP.currentFaculty;
-  var portalScreens = ['s-portal','s-faculty-login','s-admin-login','s-record-login'];
+  var portalScreens = ['s-portal','s-view-tables','s-faculty-login','s-admin-login','s-record-login'];
   var isPortalScreen = portalScreens.includes(APP.currentScreen);
   var appEl = document.getElementById('app');
   var sidebarEl = document.getElementById('desktop-sidebar');

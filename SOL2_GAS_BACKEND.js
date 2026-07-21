@@ -180,6 +180,11 @@ function doPost(e) {
       // NEW: Update student status (Active / Dropped)
       case "updateStudentStatus":
         return output(updateStudentStatus(data));
+
+      // NEW: Add a new student (Director / Consultant / Record only —
+      // front-end already gates this behind login before it's reachable)
+      case "addStudent":
+        return output(addStudent(data));
       // ── GAME SHOW STATE (cross-device sync) ──
       case "setGameState":
         PropertiesService.getScriptProperties().setProperty("GS_GAME_STATE", JSON.stringify(data.state));
@@ -716,6 +721,84 @@ function updateStudentStatus(data) {
   return {
     success: false,
     message: "Student not found: " + data.studentId
+  };
+}
+
+/************************************************
+ * ADD STUDENT
+ * Student ID is generated here (next number after the highest
+ * existing "STUDENT-####"), Facilitator is looked up from
+ * TABLE_GUIDES based on the Table No chosen, Status defaults to
+ * "Active", and Registration Date is set to right now.
+ ************************************************/
+
+function addStudent(data) {
+  const sheet   = getSheet("STUDENTS");
+  const values  = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const idCol   = headers.indexOf("Student ID");
+
+  if (idCol < 0) {
+    throw new Error("STUDENTS sheet missing 'Student ID' column.");
+  }
+  if (!data.fullName) {
+    return { success: false, message: "Full Name is required." };
+  }
+
+  // Next sequential Student ID, e.g. STUDENT-0001 -> STUDENT-0002
+  let maxNum = 0;
+  for (let i = 1; i < values.length; i++) {
+    const idStr = String(values[i][idCol] || "");
+    const m = idStr.match(/(\d+)\s*$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > maxNum) maxNum = n;
+    }
+  }
+  const nextNum = maxNum + 1;
+  const newId   = "STUDENT-" + ("0000" + nextNum).slice(-4);
+
+  // Look up the Facilitator assigned to the chosen table
+  let facilitatorName = "";
+  const tableGuides = getSheetData("TABLE_GUIDES").data;
+  const guide = tableGuides.find(function (g) {
+    return String(g["Table No"]) === String(data.tableNo);
+  });
+  if (guide) facilitatorName = guide["Facilitator Name"] || "";
+
+  const registrationDate = new Date();
+  const status = "Active";
+
+  sheet.appendRow([
+    newId,                       // Student ID (auto)
+    data.fullName || "",         // Full Name
+    data.age || "",              // Age
+    data.gender || "",           // Gender
+    data.lgLeader || "",         // LG Leader
+    data.networkLeader || "",    // Network Leader
+    data.tableNo || "",          // Table No
+    facilitatorName,             // Facilitator (auto, from Table Guide)
+    data.contactNo || "",        // Contact No
+    status,                      // Status (auto)
+    registrationDate             // Registration Date (auto)
+  ]);
+
+  return {
+    success: true,
+    message: data.fullName + " added as " + newId,
+    data: {
+      "Student ID": newId,
+      "Full Name": data.fullName || "",
+      "Age": data.age || "",
+      "Gender": data.gender || "",
+      "LG Leader": data.lgLeader || "",
+      "Network Leader": data.networkLeader || "",
+      "Table No": data.tableNo || "",
+      "Facilitator": facilitatorName,
+      "Contact No": data.contactNo || "",
+      "Status": status,
+      "Registration Date": registrationDate
+    }
   };
 }
 
