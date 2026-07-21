@@ -397,7 +397,7 @@ async function generateCertificate(studentId) {
     // Student ID — centered under the description paragraph, above the
     // DATE / DIRECTOR / LEAD PASTOR row. Taken straight from the STUDENTS sheet.
     const studentIdStr = String(student['Student ID'] || '');
-    const studentIdPt = pxToPt(670, 1290);
+    const studentIdPt = pxToPt(670, 1250);
     const studentIdWidth = font.widthOfTextAtSize(studentIdStr, fieldSize);
     page.drawText(studentIdStr, {
       x: studentIdPt.x - studentIdWidth / 2,
