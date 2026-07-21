@@ -26,6 +26,13 @@ const SPREADSHEET_ID = "1zfWtx5dFfyvWSeL1fC_EHLBoK9cejZXdlSdRGyk0-Pk"; // ← RE
  * Headers (Row 1):
  *   Activity ID | Student ID | Student Name | Table No | Day No | Completed | Date Marked | Marked By
  *
+ * Sheet: STUDENT_LESSON_COMPLETION   (Module/Lesson certificate tracker)
+ * Headers (Row 1):
+ *   Completion ID | Student ID | Student Name | Table No | Module No | Lesson No | Status | Date Marked | Marked By
+ *   Status = "Done" (✓ completed) | "Makeup" (✗ needs make-up class) | "" (not yet marked)
+ *   SOL2 has 2 Modules, 10 Lessons each (20 total). A student is Certificate-Eligible
+ *   only when all 20 rows for that student are "Done".
+ *
  * Sheet: TABLE_GUIDES
  * Headers (Row 1):
  *   Table No | Facilitator ID | Facilitator Name | Table Name | Total Students | Notes
@@ -86,6 +93,10 @@ function doGet(e) {
       // NEW: Makeup status records
       case "makeupStatus":
         return output(getSheetData("MAKEUP_STATUS"));
+
+      // NEW: Module/Lesson completion records (drives Certificate eligibility)
+      case "lessonCompletion":
+        return output(getSheetData("STUDENT_LESSON_COMPLETION"));
 
       // ── GAME SHOW STATE (cross-device sync) ──
       case "gameState":
@@ -157,6 +168,14 @@ function doPost(e) {
       // NEW: Update makeup status for an absence record
       case "updateMakeupStatus":
         return output(updateMakeupStatus(data));
+
+      // NEW: Set a single lesson's status ("Done" / "Makeup" / "") for a student
+      case "toggleLessonCompletion":
+        return output(toggleLessonCompletion(data));
+
+      // NEW: Bulk-save all 20 module/lesson statuses for a student (replaces existing rows)
+      case "saveStudentLessonCompletion":
+        return output(saveStudentLessonCompletion(data));
 
       // NEW: Update student status (Active / Dropped)
       case "updateStudentStatus":
@@ -493,6 +512,94 @@ function saveStudentDevotionals(data) {
     ]);
   }
   return { success: true, message: "Devotionals saved" };
+}
+
+/************************************************
+ * MODULE/LESSON COMPLETION — Toggle a single lesson
+ * data: { studentId, studentName, tableNo, moduleNo, lessonNo, status, markedBy }
+ * status: "Done" | "Makeup" | "" (clears the mark)
+ ************************************************/
+
+function toggleLessonCompletion(data) {
+  const sheet   = getSheet("STUDENT_LESSON_COMPLETION");
+  const values  = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const studentIdCol = headers.indexOf("Student ID");
+  const moduleCol    = headers.indexOf("Module No");
+  const lessonCol    = headers.indexOf("Lesson No");
+  const statusCol    = headers.indexOf("Status");
+  const dateCol      = headers.indexOf("Date Marked");
+  const markedByCol  = headers.indexOf("Marked By");
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][studentIdCol]) === String(data.studentId) &&
+        Number(values[i][moduleCol]) === Number(data.moduleNo) &&
+        Number(values[i][lessonCol]) === Number(data.lessonNo)) {
+      sheet.getRange(i + 1, statusCol + 1).setValue(data.status || "");
+      sheet.getRange(i + 1, dateCol + 1).setValue(new Date());
+      sheet.getRange(i + 1, markedByCol + 1).setValue(data.markedBy || "");
+      return { success: true, message: "Lesson status updated" };
+    }
+  }
+
+  sheet.appendRow([
+    Utilities.getUuid(),
+    data.studentId,
+    data.studentName,
+    data.tableNo,
+    data.moduleNo,
+    data.lessonNo,
+    data.status || "",
+    new Date(),
+    data.markedBy || ""
+  ]);
+  return { success: true, message: "Lesson status recorded" };
+}
+
+/************************************************
+ * MODULE/LESSON COMPLETION — Bulk save all 20 lessons for a student
+ * data: { studentId, studentName, tableNo, lessons: [{module, lesson, status}], markedBy }
+ * "lessons" only needs to include entries with a non-blank status; any
+ * module/lesson not included is saved as "" (not yet marked).
+ ************************************************/
+
+function saveStudentLessonCompletion(data) {
+  const sheet   = getSheet("STUDENT_LESSON_COMPLETION");
+  const values  = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const studentIdCol = headers.indexOf("Student ID");
+
+  // Delete all existing rows for this student (go bottom-up)
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][studentIdCol]) === String(data.studentId)) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+
+  // Build a lookup of provided statuses
+  const statusMap = {};
+  (data.lessons || []).forEach(function (l) {
+    statusMap[l.module + "-" + l.lesson] = l.status || "";
+  });
+
+  const TOTAL_MODULES = 2;
+  const LESSONS_PER_MODULE = 10;
+  for (let m = 1; m <= TOTAL_MODULES; m++) {
+    for (let l = 1; l <= LESSONS_PER_MODULE; l++) {
+      sheet.appendRow([
+        Utilities.getUuid(),
+        data.studentId,
+        data.studentName,
+        data.tableNo,
+        m,
+        l,
+        statusMap[m + "-" + l] || "",
+        new Date(),
+        data.markedBy || ""
+      ]);
+    }
+  }
+  return { success: true, message: "Module/Lesson completion saved" };
 }
 
 /************************************************

@@ -61,8 +61,18 @@ let APP = {
   totalFee: 500,
   devotionals: {},   // studentId -> Set of completed day numbers (1-63)
   activities: {},    // studentId -> Set of completed day numbers (1-63)
-  makeupStatus: {}   // attendanceId -> { status, notes }
+  makeupStatus: {},  // attendanceId -> { status, notes }
+  lessonCompletion: {}  // studentId -> { "moduleNo-lessonNo": "Done" | "Makeup" }
 };
+
+// ═══════════════════════════════════════════
+// MODULE / LESSON COMPLETION — constants
+// SOL2 = 2 Modules, 10 Lessons each (20 total). Used to determine
+// Certificate of Completion eligibility.
+// ═══════════════════════════════════════════
+const TOTAL_MODULES = 2;
+const LESSONS_PER_MODULE = 10;
+const TOTAL_LESSONS = TOTAL_MODULES * LESSONS_PER_MODULE;
 
 // ═══════════════════════════════════════════
 // TABLE NAME HELPERS
@@ -219,6 +229,156 @@ async function saveMakeupStatus(attendanceId, status, studentId, studentName, we
   } catch(e) { console.warn('Makeup status sync failed:', e); }
 }
 
+// ── Module / Lesson Completion (drives Certificate of Completion) ──────
+function lessonKey(moduleNo, lessonNo) { return moduleNo + '-' + lessonNo; }
+
+function loadLessonCompletionFromSheet(rows) {
+  APP.students.forEach(s => { APP.lessonCompletion[s['Student ID']] = {}; });
+  (rows || []).forEach(row => {
+    const sid = String(row['Student ID'] || '');
+    const mod = Number(row['Module No']);
+    const les = Number(row['Lesson No']);
+    const status = row['Status'] || '';
+    if (sid && mod && les) {
+      if (!APP.lessonCompletion[sid]) APP.lessonCompletion[sid] = {};
+      if (status === 'Done' || status === 'Makeup') APP.lessonCompletion[sid][lessonKey(mod, les)] = status;
+    }
+  });
+}
+
+function getLessonStatus(studentId, moduleNo, lessonNo) {
+  const rec = APP.lessonCompletion[studentId];
+  return (rec && rec[lessonKey(moduleNo, lessonNo)]) || '';
+}
+
+// Count of lessons marked "Done" within a single module (1 or 2)
+function getModuleDoneCount(studentId, moduleNo) {
+  const rec = APP.lessonCompletion[studentId] || {};
+  let count = 0;
+  for (let l = 1; l <= LESSONS_PER_MODULE; l++) if (rec[lessonKey(moduleNo, l)] === 'Done') count++;
+  return count;
+}
+
+// Count of lessons marked "Done" across both modules (out of TOTAL_LESSONS)
+function getTotalLessonsDoneCount(studentId) {
+  return getModuleDoneCount(studentId, 1) + getModuleDoneCount(studentId, 2);
+}
+
+// Count of lessons marked "Makeup" across both modules
+function getTotalLessonsMakeupCount(studentId) {
+  const rec = APP.lessonCompletion[studentId] || {};
+  let count = 0;
+  for (let m = 1; m <= TOTAL_MODULES; m++)
+    for (let l = 1; l <= LESSONS_PER_MODULE; l++)
+      if (rec[lessonKey(m, l)] === 'Makeup') count++;
+  return count;
+}
+
+// Certificate of Completion eligibility: every single lesson in both
+// modules must be marked "Done" — no make-up classes, no blanks.
+function isCertificateEligible(studentId) {
+  return getTotalLessonsDoneCount(studentId) === TOTAL_LESSONS;
+}
+
+// ═══════════════════════════════════════════
+// CERTIFICATE OF COMPLETION — PDF generation
+// Fills "CERTIFICATE PLAIN TEMPLATE.pdf" with the student's name and
+// today's date, then downloads it. Coordinates below were measured
+// against the template's own printed guide lines (name underline and
+// the DATE signature line), so they line up with the design exactly.
+// ═══════════════════════════════════════════
+const CERT_TEMPLATE_URL = encodeURI('CERTIFICATE PLAIN TEMPLATE.pdf');
+
+async function generateCertificate(studentId) {
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  if (!student) { alert('Student not found.'); return; }
+  if (!isCertificateEligible(studentId)) { alert('This student has not completed all 20 lessons yet.'); return; }
+
+  const btn = document.getElementById('modcomp-cert-btn');
+  const originalLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+  try {
+    if (typeof PDFLib === 'undefined') throw new Error('PDF library did not load. Check your connection and try again.');
+
+    const bytes = await fetch(CERT_TEMPLATE_URL).then(r => {
+      if (!r.ok) throw new Error('Could not load certificate template (' + r.status + ').');
+      return r.arrayBuffer();
+    });
+
+    const pdfDoc  = await PDFLib.PDFDocument.load(bytes);
+    const page    = pdfDoc.getPages()[0];
+    const { width: pageW, height: pageH } = page.getSize();
+    const font    = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    const green   = PDFLib.rgb(0x0d/255, 0x47/255, 0x2b/255);
+    const black   = PDFLib.rgb(0.1, 0.1, 0.1);
+
+    // Name — centered on the underline beneath "presented to"
+    const name = (student['Full Name'] || '').toUpperCase();
+    const nameLineCenterX = 204.3;   // px 667.5 / (2000/612)
+    const nameBaselineY   = pageH - 213.85; // px 700 from top, converted
+    const nameMaxWidth    = 280; // available width above the underline
+    let nameSize = 30;
+    while (nameSize > 12 && font.widthOfTextAtSize(name, nameSize) > nameMaxWidth) nameSize -= 1;
+    const nameWidth = font.widthOfTextAtSize(name, nameSize);
+    page.drawText(name, {
+      x: nameLineCenterX - nameWidth / 2,
+      y: nameBaselineY,
+      size: nameSize,
+      font,
+      color: green
+    });
+
+    // Date — centered above the "DATE" signature line
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const dateLineCenterX = 96.08;  // px 314 / (2000/612)
+    const dateBaselineY   = pageH - 416.1; // px 1362 from top, converted
+    const dateSize = 13;
+    const dateWidth = font.widthOfTextAtSize(dateStr, dateSize);
+    page.drawText(dateStr, {
+      x: dateLineCenterX - dateWidth / 2,
+      y: dateBaselineY,
+      size: dateSize,
+      font,
+      color: black
+    });
+
+    const outBytes = await pdfDoc.save();
+    const blob = new Blob([outBytes], { type: 'application/pdf' });
+    const url  = URL.createObjectURL(blob);
+
+    const link = document.getElementById('cert-download-link');
+    link.href = url;
+    link.download = `Certificate - ${student['Full Name'] || studentId}.pdf`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+  } catch (err) {
+    console.error('Certificate generation failed:', err);
+    alert('Could not generate the certificate: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+  }
+}
+
+async function saveLessonStatus(studentId, moduleNo, lessonNo, status) {
+  if (!APP.lessonCompletion[studentId]) APP.lessonCompletion[studentId] = {};
+  if (status) APP.lessonCompletion[studentId][lessonKey(moduleNo, lessonNo)] = status;
+  else delete APP.lessonCompletion[studentId][lessonKey(moduleNo, lessonNo)];
+
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  try {
+    await apiPost({
+      action: 'toggleLessonCompletion',
+      studentId,
+      studentName: student?.['Full Name'] || '',
+      tableNo: student?.['Table No'] || '',
+      moduleNo, lessonNo, status,
+      markedBy: APP.currentFaculty?.['Full Name'] || ''
+    });
+  } catch(e) { console.warn('Lesson completion sync failed:', e); }
+}
+
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
@@ -254,7 +414,8 @@ async function loadAllData() {
     apiGet('settings'),
     apiGet('devotionals'),
     apiGet('activities'),
-    apiGet('makeupStatus')
+    apiGet('makeupStatus'),
+    apiGet('lessonCompletion')
   ]);
 
   APP.students          = safeData(results[0]);
@@ -277,12 +438,14 @@ async function loadAllData() {
   const devotionalRows = safeData(results[10]);
   const activityRows   = safeData(results[11]);
   const makeupRows     = safeData(results[12]);
+  const lessonCompletionRows = safeData(results[13]);
 
   loadDevotionalsFromSheet(devotionalRows);
   loadActivitiesFromSheet(activityRows);
   loadDevotionalsLocal();   // fill blanks from localStorage (offline fallback)
   loadActivitiesLocal();
   loadMakeupStatusFromSheet(makeupRows);
+  loadLessonCompletionFromSheet(lessonCompletionRows);
 
   const failCount = results.slice(0, 10).filter(r => r.status === 'rejected').length;
 
@@ -372,6 +535,7 @@ function refreshCurrentScreen() {
   if (id === 's-f-payment')     renderFPayment();
   if (id === 's-f-credits')     renderFCredits();
   if (id === 's-f-devotional')  renderFDevotional();
+  if (id === 's-f-modcomp')     renderFModComp();
   if (id === 's-admin-home')    updateAdminHomeStats();
   if (id === 's-a-student-att') renderAStudentAtt();
   if (id === 's-a-faculty-att') renderAFacultyAtt();
@@ -380,6 +544,7 @@ function refreshCurrentScreen() {
   if (id === 's-a-tables')      renderATables();
   if (id === 's-a-leaderboard') switchLeaderboardTab('students');
   if (id === 's-a-devotional')  renderADevotionalTables();
+  if (id === 's-a-modcomp')     renderAModCompTables();
   if (id === 's-record-home')   renderRecordStats();
   if (id === 's-r-qr')          { switchQRTab('scan'); }
   if (id === 's-r-attendance')  switchAttTab('students');
@@ -409,6 +574,7 @@ function go(id) {
   if (id === 's-f-payment')     renderFPayment();
   if (id === 's-f-credits')     renderFCredits();
   if (id === 's-f-devotional')  renderFDevotional();
+  if (id === 's-f-modcomp')     renderFModComp();
   if (id === 's-admin-home')    updateAdminHomeStats();
   if (id === 's-a-student-att') renderAStudentAtt();
   if (id === 's-a-faculty-att') renderAFacultyAtt();
@@ -417,6 +583,7 @@ function go(id) {
   if (id === 's-a-tables')      renderATables();
   if (id === 's-a-leaderboard') switchLeaderboardTab('students');
   if (id === 's-a-devotional')  renderADevotionalTables();
+  if (id === 's-a-modcomp')     renderAModCompTables();
   if (id === 's-record-home')   renderRecordStats();
   if (id === 's-r-qr')          { switchQRTab('scan'); }
   if (id === 's-r-attendance')  switchAttTab('students');
@@ -892,6 +1059,194 @@ function renderADevotTableStudents(tableNo) {
             <div style="height:5px;background:#e0e0e0;border-radius:5px;overflow:hidden">
               <div style="height:100%;width:${activPct}%;background:#7c3aed;border-radius:5px"></div>
             </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('') || '<p style="padding:16px;color:var(--gray)">No students found.</p>';
+}
+
+// ═══════════════════════════════════════════
+// FACULTY — MODULE COMPLETION (Student List)
+// ═══════════════════════════════════════════
+let modCompCurrentStudent = null;
+let modCompActiveModule = 1; // 1 or 2
+
+function renderFModComp() {
+  const el = document.getElementById('f-modcomp-list');
+  if (!el) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const filtered = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  if (!filtered.length) {
+    el.innerHTML = '<p style="padding:16px;color:var(--gray)">No students found.</p>';
+    return;
+  }
+  el.innerHTML = filtered.map(s => {
+    const doneCount = getTotalLessonsDoneCount(s["Student ID"]);
+    const makeupCount = getTotalLessonsMakeupCount(s["Student ID"]);
+    const pct = Math.round((doneCount / TOTAL_LESSONS) * 100);
+    const eligible = isCertificateEligible(s["Student ID"]);
+    return `
+      <button class="row" style="align-items:center;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:12px 0;border-bottom:1px solid #f0f0f0" onclick="openModCompDetail('${s["Student ID"]}')">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">${s["Full Name"]} ${eligible ? '<span style="color:#1e7e34;font-size:11px;font-weight:700">🎓 Eligible</span>' : ''}</div>
+          <div style="margin-top:4px">
+            <div style="font-size:10px;color:#1e3a8a;font-weight:600;margin-bottom:2px">📘 Lessons Done ${doneCount}/${TOTAL_LESSONS}${makeupCount ? ` · ⚠️ ${makeupCount} make-up` : ''}</div>
+            <div style="height:5px;background:#e0e0e0;border-radius:5px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${eligible ? '#1e7e34' : pct >= 50 ? '#1e3a8a' : '#c9960c'};border-radius:5px;transition:width 0.3s"></div>
+            </div>
+          </div>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="width:16px;height:16px;margin-left:10px;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>`;
+  }).join('');
+}
+
+function openModCompDetail(studentId) {
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  if (!student) return;
+  modCompCurrentStudent = studentId;
+  modCompActiveModule = 1;
+  const el = document.getElementById('f-modcomp-detail-name');
+  if (el) el.textContent = student["Full Name"];
+  renderModCompChecklist(studentId);
+  go('s-f-modcomp-detail');
+}
+
+function switchModCompModule(moduleNo) {
+  modCompActiveModule = moduleNo;
+  renderModCompChecklist(modCompCurrentStudent);
+}
+
+function modCompHeaderHtml(studentId) {
+  const doneCount = getTotalLessonsDoneCount(studentId);
+  const makeupCount = getTotalLessonsMakeupCount(studentId);
+  const eligible = isCertificateEligible(studentId);
+  return `
+    <div style="background:${eligible ? 'linear-gradient(135deg,#1e7e34,#3fae5c)' : 'linear-gradient(135deg,#1e3a8a,#3b5fc9)'};border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
+      <div style="font-size:11px;opacity:0.85;margin-bottom:2px">2 Modules · 10 Lessons each · 20 total</div>
+      <div style="font-size:15px;font-weight:700">${eligible ? '🎓 Certificate Eligible — all lessons Done!' : `📘 ${doneCount}/${TOTAL_LESSONS} Lessons Done${makeupCount ? ` · ⚠️ ${makeupCount} Make-up` : ''}`}</div>
+      ${eligible ? `
+      <button id="modcomp-cert-btn" class="btn-primary" style="background:#fff;color:#1e7e34;margin-top:12px" onclick="generateCertificate('${studentId}')">
+        🎓 Generate Certificate
+      </button>` : ''}
+    </div>`;
+}
+
+// Renders the Module 1 / Module 2 tab switcher + the active module's 10-lesson checklist.
+// Each lesson has two buttons: ✓ Done and ✗ Make-up (tap again to un-mark).
+function renderModCompChecklist(studentId) {
+  const el = document.getElementById('f-modcomp-checklist');
+  if (!el) return;
+
+  const counter = document.getElementById('f-modcomp-counter');
+  if (counter) counter.textContent = `${getTotalLessonsDoneCount(studentId)}/${TOTAL_LESSONS} done`;
+
+  let tabsHtml = '';
+  for (let m = 1; m <= TOTAL_MODULES; m++) {
+    const isActive = modCompActiveModule === m;
+    const modDone = getModuleDoneCount(studentId, m);
+    tabsHtml += `
+      <button onclick="switchModCompModule(${m})"
+        style="flex:1;padding:10px 0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid ${isActive ? '#1e3a8a' : '#e8e8e8'};background:${isActive ? '#1e3a8a' : '#fff'};color:${isActive ? '#fff' : '#1e3a8a'};transition:all 0.2s">
+        Module ${m}<br><span style="font-size:11px;opacity:0.85">${modDone}/${LESSONS_PER_MODULE} done</span>
+      </button>`;
+  }
+
+  let lessonsHtml = '';
+  for (let l = 1; l <= LESSONS_PER_MODULE; l++) {
+    const status = getLessonStatus(studentId, modCompActiveModule, l);
+    const isDone = status === 'Done';
+    const isMakeup = status === 'Makeup';
+    lessonsHtml += `
+      <div data-lesson="${l}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:${isDone ? '#e8f5ee' : isMakeup ? '#fdecea' : '#fafafa'};margin-bottom:6px;border:1.5px solid ${isDone ? '#1e7e34' : isMakeup ? '#e53935' : '#e8e8e8'};transition:all 0.2s">
+        <div style="flex:1">
+          <span style="font-weight:600;font-size:13px">Lesson ${l}</span>
+        </div>
+        <button onclick="setLessonMark('${studentId}', ${modCompActiveModule}, ${l}, 'Done')"
+          title="Mark Done" style="width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:800;border:1.5px solid ${isDone ? '#1e7e34' : '#dcdcdc'};background:${isDone ? '#1e7e34' : '#fff'};color:${isDone ? '#fff' : '#1e7e34'}">✓</button>
+        <button onclick="setLessonMark('${studentId}', ${modCompActiveModule}, ${l}, 'Makeup')"
+          title="Mark Make-up Class" style="width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:800;border:1.5px solid ${isMakeup ? '#e53935' : '#dcdcdc'};background:${isMakeup ? '#e53935' : '#fff'};color:${isMakeup ? '#fff' : '#e53935'}">✗</button>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    ${modCompHeaderHtml(studentId)}
+    <div style="display:flex;gap:8px;margin-bottom:14px">${tabsHtml}</div>
+    <div id="modcomp-lesson-list">${lessonsHtml}</div>`;
+}
+
+// Tapping the same status again clears the mark (toggle off); tapping the
+// other status switches straight over.
+function setLessonMark(studentId, moduleNo, lessonNo, status) {
+  const current = getLessonStatus(studentId, moduleNo, lessonNo);
+  const next = current === status ? '' : status;
+  saveLessonStatus(studentId, moduleNo, lessonNo, next);
+  renderModCompChecklist(studentId);
+  renderFModComp();
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — MODULE COMPLETION RECORDS VIEW
+// ═══════════════════════════════════════════
+function renderAModCompTables() {
+  const el = document.getElementById('a-modcomp-tables');
+  if (!el) return;
+  const tableNos = [...new Set(APP.students.map(s => String(s["Table No"])))].filter(Boolean).sort();
+  el.innerHTML = tableNos.map(tno => {
+    const students = APP.students.filter(s => String(s["Table No"]) === tno && (s["Status"]||"Active").toLowerCase() !== "dropped");
+    const totalS = students.length;
+    const eligibleCount = students.filter(s => isCertificateEligible(s["Student ID"])).length;
+    const totalDone = students.reduce((sum, s) => sum + getTotalLessonsDoneCount(s["Student ID"]), 0);
+    const maxPossible = totalS * TOTAL_LESSONS;
+    const pct = maxPossible > 0 ? Math.round((totalDone / maxPossible) * 100) : 0;
+    return `
+      <button class="menu-item" onclick="openAModCompTable('${tno}')" style="margin-bottom:8px">
+        <div class="mi-icon" style="background:#e8f0fb"><svg viewBox="0 0 24 24" stroke="#1e3a8a" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+        <div class="mi-text">
+          <div class="mi-title">${getTableLabel(tno)} — ${totalS} students</div>
+          <div class="mi-sub">📘 ${pct}% lessons done · 🎓 ${eligibleCount}/${totalS} certificate-eligible</div>
+        </div>
+        <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>`;
+  }).join('') || '<p style="padding:16px;color:var(--gray)">No tables found.</p>';
+}
+
+function openAModCompTable(tableNo) {
+  const el = document.getElementById('a-modcomp-table-title');
+  if (el) el.textContent = `${getTableLabel(tableNo)} — Module Completion`;
+  renderAModCompTableStudents(tableNo);
+  go('s-a-modcomp-table');
+}
+
+function renderAModCompTableStudents(tableNo) {
+  const el = document.getElementById('a-modcomp-table-list');
+  if (!el) return;
+  const students = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"]||"Active").toLowerCase() !== "dropped"
+  ).sort((a, b) => getTotalLessonsDoneCount(b["Student ID"]) - getTotalLessonsDoneCount(a["Student ID"]));
+
+  el.innerHTML = students.map((s, i) => {
+    const doneCount = getTotalLessonsDoneCount(s["Student ID"]);
+    const makeupCount = getTotalLessonsMakeupCount(s["Student ID"]);
+    const pct = Math.round((doneCount / TOTAL_LESSONS) * 100);
+    const eligible = isCertificateEligible(s["Student ID"]);
+    const mod1 = getModuleDoneCount(s["Student ID"], 1);
+    const mod2 = getModuleDoneCount(s["Student ID"], 2);
+    return `
+      <div class="row" style="align-items:flex-start;padding:12px 0;flex-direction:column">
+        <div style="display:flex;align-items:center;width:100%;margin-bottom:8px">
+          <div style="width:26px;height:26px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#666;flex-shrink:0;margin-right:10px">#${i+1}</div>
+          <div style="font-weight:600;font-size:14px;flex:1">${s["Full Name"]}</div>
+          ${eligible ? '<span style="background:#e8f5ee;color:#1e7e34;font-size:10px;font-weight:700;border-radius:8px;padding:3px 8px">🎓 Eligible</span>' : ''}
+        </div>
+        <div style="width:100%;padding-left:36px">
+          <div style="font-size:10px;color:#1e3a8a;font-weight:600;margin-bottom:3px">📘 Module 1: ${mod1}/${LESSONS_PER_MODULE} · Module 2: ${mod2}/${LESSONS_PER_MODULE} — ${doneCount}/${TOTAL_LESSONS} (${pct}%)${makeupCount ? ` · ⚠️ ${makeupCount} make-up` : ''}</div>
+          <div style="height:5px;background:#e0e0e0;border-radius:5px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${eligible ? '#1e7e34' : '#1e3a8a'};border-radius:5px"></div>
           </div>
         </div>
       </div>`;
