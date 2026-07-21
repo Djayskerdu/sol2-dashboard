@@ -245,9 +245,10 @@ input, select, button, textarea { font-family: var(--font); }
 #global-refresh-btn.is-hidden { display: none; }
 @keyframes gr-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-/* PORTAL FLOATING BUTTONS — Add Student + View Tables, same treatment
-   as the refresh button, live on the portal screen since the refresh
-   button is hidden there. Sit side-by-side, top-right. */
+/* PORTAL FLOATING BUTTON — View Tables, same treatment as the refresh
+   button, lives on the portal screen since the refresh button is hidden
+   there. Add Student now lives inside the View Tables screen instead of
+   sitting redundantly next to this one. */
 .portal-fab {
   position: fixed;
   top: max(14px, env(safe-area-inset-top));
@@ -268,12 +269,10 @@ input, select, button, textarea { font-family: var(--font); }
 .portal-fab:hover { background: rgba(255,255,255,0.3); }
 .portal-fab:active { transform: scale(0.92); }
 
-#portal-add-student-btn { right: max(14px, env(safe-area-inset-right)); }
-#portal-view-table-btn { right: calc(max(14px, env(safe-area-inset-right)) + 48px); }
+#portal-view-table-btn { right: max(14px, env(safe-area-inset-right)); }
 
 @media (min-width: 768px) {
-  #portal-add-student-btn { top: 16px; right: 16px; }
-  #portal-view-table-btn { top: 16px; right: 64px; }
+  #portal-view-table-btn { top: 16px; right: 16px; }
 }
 
 @media (min-width: 768px) {
