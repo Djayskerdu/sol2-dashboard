@@ -365,7 +365,7 @@ async function generateCertificate(studentId) {
     // Date — centered above the "DATE" signature line, baseline aligned
     // with the "LEMUEL P. QUILOS" text on the right so the whole row sits even.
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
-    const datePt = pxToPt(314, 1330);
+    const datePt = pxToPt(314, 1335);
     const fieldSize = 12.9;
     const dateWidth = font.widthOfTextAtSize(dateStr, fieldSize);
     page.drawText(dateStr, {
@@ -384,7 +384,7 @@ async function generateCertificate(studentId) {
       .map(f => f['Full Name'])
       .filter(Boolean);
     const directorStr = directorNames.join(' & ').toUpperCase();
-    const directorPt = pxToPt(844, 1354);
+    const directorPt = pxToPt(844, 1335);
     const directorWidth = font.widthOfTextAtSize(directorStr, fieldSize);
     page.drawText(directorStr, {
       x: directorPt.x - directorWidth / 2,
