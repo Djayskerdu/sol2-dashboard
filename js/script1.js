@@ -350,26 +350,8 @@ async function generateCertificate(studentId) {
       color: black
     });
 
-    // Director — centered above the "DIRECTOR" signature line.
-    // Pulled from FACULTY_STAFF: everyone whose Role includes "Director"
-    // (matches the sheet exactly — currently Sarmatha Dizon & Aaron Quilos).
-    const directorNames = (APP.faculty || [])
-      .filter(f => String(f['Role'] || '').toLowerCase().includes('director'))
-      .map(f => f['Full Name'])
-      .filter(Boolean);
-    const directorStr = directorNames.join(' & ').toUpperCase();
-    const directorPt = pxToPt(844, 1334);
-    const directorWidth = font.widthOfTextAtSize(directorStr, fieldSize);
-    page.drawText(directorStr, {
-      x: directorPt.x - directorWidth / 2,
-      y: directorPt.y,
-      size: fieldSize,
-      font,
-      color: black
-    });
-
     // Student ID — centered under the description paragraph, above the
-    // DATE / DIRECTOR / LEAD PASTOR row. Taken straight from the STUDENTS sheet.
+    // DATE / LEAD PASTOR row. Taken straight from the STUDENTS sheet.
     const studentIdStr = String(student['Student ID'] || '');
     const studentIdPt = pxToPt(670, 1270);
     const studentIdWidth = font.widthOfTextAtSize(studentIdStr, fieldSize);
@@ -393,6 +375,117 @@ async function generateCertificate(studentId) {
 
   } catch (err) {
     console.error('Certificate generation failed:', err);
+    alert('Could not generate the certificate: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+  }
+}
+
+// ═══════════════════════════════════════════
+// CERTIFICATE OF APPRECIATION (DEVOTIONAL) — PDF generation
+// Same idea as the Module Completion certificate above, but earned by
+// checking off all 140 devotional days instead of all 20 lessons, and
+// filled onto "CERTIFICATE OF DEVOTIONAL PLAIN TEMPLATE.pdf". That
+// template shares the exact same layout grid as the completion one
+// (name / student ID / date all sit at identical coordinates), so the
+// same pxToPt math is reused as-is.
+// ═══════════════════════════════════════════
+const DEVOTIONAL_CERT_TEMPLATE_URL = encodeURI('CERTIFICATE OF DEVOTIONAL PLAIN TEMPLATE.pdf');
+
+// Devotional certificate eligibility: every one of the 140 devotional
+// days must be checked off — no gaps.
+function isDevotionalCertificateEligible(studentId) {
+  return getDevotionalCount(studentId) === TOTAL_DEVOTIONAL_DAYS;
+}
+
+async function generateDevotionalCertificate(studentId) {
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  if (!student) { alert('Student not found.'); return; }
+  if (!isDevotionalCertificateEligible(studentId)) { alert('This student has not completed all 140 devotional days yet.'); return; }
+
+  const btn = document.getElementById('devot-cert-btn');
+  const originalLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+  try {
+    if (typeof PDFLib === 'undefined') throw new Error('PDF library did not load. Check your connection and try again.');
+    if (typeof fontkit === 'undefined') throw new Error('Font library did not load. Check your connection and try again.');
+
+    const bytes = await fetch(DEVOTIONAL_CERT_TEMPLATE_URL).then(r => {
+      if (!r.ok) throw new Error('Could not load certificate template (' + r.status + ').');
+      return r.arrayBuffer();
+    });
+    const robotoBytes = await fetch(ROBOTO_BOLD_URL).then(r => {
+      if (!r.ok) throw new Error('Could not load Roboto font (' + r.status + ').');
+      return r.arrayBuffer();
+    });
+
+    const pdfDoc  = await PDFLib.PDFDocument.load(bytes);
+    pdfDoc.registerFontkit(fontkit);
+    const page    = pdfDoc.getPages()[0];
+    const { width: pageW, height: pageH } = page.getSize();
+    const font    = await pdfDoc.embedFont(robotoBytes); // Roboto Bold
+    const green   = PDFLib.rgb(0x0d/255, 0x47/255, 0x2b/255);
+    const black   = PDFLib.rgb(0.1, 0.1, 0.1);
+
+    const REF_IMG_W = 2000;
+    const REF_IMG_H = 1545;
+    const scaleX = pageW / REF_IMG_W;
+    const scaleY = pageH / REF_IMG_H;
+    const pxToPt = (px, py) => ({ x: px * scaleX, y: pageH - (py * scaleY) });
+
+    // Name — centered on the underline beneath "presented to".
+    const name = (student['Full Name'] || '').toUpperCase();
+    const namePt = pxToPt(667.5, 660);
+    const nameMaxWidth = 280;
+    let nameSize = 30;
+    while (nameSize > 12 && font.widthOfTextAtSize(name, nameSize) > nameMaxWidth) nameSize -= 1;
+    const nameWidth = font.widthOfTextAtSize(name, nameSize);
+    page.drawText(name, {
+      x: namePt.x - nameWidth / 2,
+      y: namePt.y,
+      size: nameSize,
+      font,
+      color: green
+    });
+
+    // Date — centered above the "DATE" signature line.
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
+    const datePt = pxToPt(314, 1334);
+    const fieldSize = 12.7;
+    const dateWidth = font.widthOfTextAtSize(dateStr, fieldSize);
+    page.drawText(dateStr, {
+      x: datePt.x - dateWidth / 2,
+      y: datePt.y,
+      size: fieldSize,
+      font,
+      color: black
+    });
+
+    // Student ID — centered under the description paragraph.
+    const studentIdStr = String(student['Student ID'] || '');
+    const studentIdPt = pxToPt(670, 1270);
+    const studentIdWidth = font.widthOfTextAtSize(studentIdStr, fieldSize);
+    page.drawText(studentIdStr, {
+      x: studentIdPt.x - studentIdWidth / 2,
+      y: studentIdPt.y,
+      size: fieldSize,
+      font,
+      color: green
+    });
+
+    const outBytes = await pdfDoc.save();
+    const blob = new Blob([outBytes], { type: 'application/pdf' });
+    const url  = URL.createObjectURL(blob);
+
+    const link = document.getElementById('cert-download-link');
+    link.href = url;
+    link.download = `Certificate of Appreciation - ${student['Full Name'] || studentId}.pdf`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+  } catch (err) {
+    console.error('Devotional certificate generation failed:', err);
     alert('Could not generate the certificate: ' + err.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
@@ -841,10 +934,11 @@ function renderFDevotional() {
   el.innerHTML = filtered.map(s => {
     const devotDone = getDevotionalCount(s["Student ID"]);
     const devotPct  = Math.round((devotDone / TOTAL_DEVOTIONAL_DAYS) * 100);
+    const eligible  = isDevotionalCertificateEligible(s["Student ID"]);
     return `
       <button class="row" style="align-items:center;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:12px 0;border-bottom:1px solid #f0f0f0" onclick="openDevotActDetail('${s["Student ID"]}')">
         <div style="flex:1">
-          <div style="font-weight:600;font-size:14px">${s["Full Name"]}</div>
+          <div style="font-weight:600;font-size:14px">${s["Full Name"]} ${eligible ? '<span style="color:#1e7e34;font-size:11px;font-weight:700">🎓 Eligible</span>' : ''}</div>
           <div style="margin-top:4px">
             <div style="font-size:10px;color:#46586e;font-weight:600;margin-bottom:2px">📖 Devotionals ${devotDone}/${TOTAL_DEVOTIONAL_DAYS}</div>
             <div style="height:4px;background:#e0e0e0;border-radius:4px;overflow:hidden">
@@ -867,6 +961,23 @@ function openDevotActDetail(studentId) {
   go('s-f-devot-detail');
 }
 
+// Banner shown above the devotional checklist: progress summary, and once
+// all 140 days are checked, a button to generate the Certificate of
+// Appreciation. Mirrors modCompHeaderHtml's eligible-state pattern.
+function devotHeaderHtml(studentId) {
+  const devotDone = getDevotionalCount(studentId);
+  const eligible = isDevotionalCertificateEligible(studentId);
+  return `
+    <div style="background:${eligible ? 'linear-gradient(135deg,#1e7e34,#3fae5c)' : 'linear-gradient(135deg,#46586e,#8fa4b8)'};border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
+      <div style="font-size:11px;opacity:0.85;margin-bottom:2px">20-Week Program · 140 Days</div>
+      <div style="font-size:15px;font-weight:700">${eligible ? '🎓 Certificate Eligible — all devotionals Done!' : `📖 ${devotDone}/${TOTAL_DEVOTIONAL_DAYS} Devotionals Done`}</div>
+      ${eligible ? `
+      <button id="devot-cert-btn" class="btn-primary" style="background:#fff;color:#1e7e34;margin-top:12px" onclick="generateDevotionalCertificate('${studentId}')">
+        🎓 Generate Certificate
+      </button>` : ''}
+    </div>`;
+}
+
 // Render the devotional checklist, grouped by Module -> Week -> 7-day row
 function renderDevotChecklist(studentId) {
   const el = document.getElementById('f-devot-checklist');
@@ -876,7 +987,7 @@ function renderDevotChecklist(studentId) {
   const counter = document.getElementById('f-devot-counter');
   if (counter) counter.textContent = `${devotDone.size}/${TOTAL_DEVOTIONAL_DAYS}`;
 
-  let html = '';
+  let html = devotHeaderHtml(studentId);
   let lastModule = 0;
   for (let week = 1; week <= TOTAL_DEVOTIONAL_WEEKS; week++) {
     const module = Math.ceil(week / DEVOTIONAL_WEEKS_PER_MODULE);
