@@ -61,8 +61,18 @@ let APP = {
   totalFee: 500,
   devotionals: {},   // studentId -> Set of completed day numbers (1-140)
   makeupStatus: {},  // attendanceId -> { status, notes }
-  lessonCompletion: {}  // studentId -> { "moduleNo-lessonNo": "Done" | "Makeup" }
+  lessonCompletion: {},  // studentId -> { "moduleNo-lessonNo": "Done" | "Makeup" }
+  lessonPoints: {}   // studentId -> { "moduleNo-lessonNo": { attendance, participation, homework, memoryVerse } }
 };
+
+// Point-box categories shown per lesson in the Points grid. Each box's
+// value is set by the facilitator when they check it (no fixed amount).
+const POINT_CATEGORIES = [
+  { key: 'attendance',    label: 'Attendance',    icon: '📋' },
+  { key: 'participation', label: 'Participation', icon: '🙋' },
+  { key: 'homework',      label: 'Homework',      icon: '📝' },
+  { key: 'memoryVerse',   label: 'Memory Verse',  icon: '✝️' }
+];
 
 // ═══════════════════════════════════════════
 // MODULE / LESSON COMPLETION — constants
@@ -252,6 +262,52 @@ function getTotalLessonsMakeupCount(studentId) {
 // modules must be marked "Done" — no make-up classes, no blanks.
 function isCertificateEligible(studentId) {
   return getTotalLessonsDoneCount(studentId) === TOTAL_LESSONS;
+}
+
+// ── Lesson Points grid (per-lesson Attendance/Participation/Homework/Memory
+// Verse checkboxes — replaces the old manual "Add Points" form) ──────────
+function loadLessonPointsFromSheet(rows) {
+  APP.students.forEach(s => { APP.lessonPoints[s['Student ID']] = {}; });
+  (rows || []).forEach(row => {
+    const sid = String(row['Student ID'] || '');
+    const mod = Number(row['Module No']);
+    const les = Number(row['Lesson No']);
+    if (sid && mod && les) {
+      if (!APP.lessonPoints[sid]) APP.lessonPoints[sid] = {};
+      APP.lessonPoints[sid][lessonKey(mod, les)] = {
+        attendance:    Number(row['Attendance Points'] || 0),
+        participation: Number(row['Participation Points'] || 0),
+        homework:      Number(row['Homework Points'] || 0),
+        memoryVerse:   Number(row['Memory Verse Points'] || 0)
+      };
+    }
+  });
+}
+
+// Current point value of a single box (0 = unchecked)
+function getLessonPointBox(studentId, moduleNo, lessonNo, categoryKey) {
+  const rec = APP.lessonPoints[studentId];
+  const cell = rec && rec[lessonKey(moduleNo, lessonNo)];
+  return cell ? Number(cell[categoryKey] || 0) : 0;
+}
+
+// Sum of all 4 boxes for one lesson row
+function getLessonPointsRowTotal(studentId, moduleNo, lessonNo) {
+  const rec = APP.lessonPoints[studentId];
+  const cell = rec && rec[lessonKey(moduleNo, lessonNo)];
+  if (!cell) return 0;
+  return POINT_CATEGORIES.reduce((sum, c) => sum + Number(cell[c.key] || 0), 0);
+}
+
+// Sum of every box across all 20 lessons for a student — this is the
+// student's total from the points grid (added to any legacy manual credits).
+function getStudentLessonPointsTotal(studentId) {
+  const rec = APP.lessonPoints[studentId] || {};
+  let total = 0;
+  Object.keys(rec).forEach(k => {
+    POINT_CATEGORIES.forEach(c => { total += Number(rec[k][c.key] || 0); });
+  });
+  return total;
 }
 
 // ═══════════════════════════════════════════
@@ -545,7 +601,8 @@ async function loadAllData() {
     apiGet('settings'),
     apiGet('devotionals'),
     apiGet('makeupStatus'),
-    apiGet('lessonCompletion')
+    apiGet('lessonCompletion'),
+    apiGet('lessonPoints')
   ]);
 
   APP.students          = safeData(results[0]);
@@ -568,11 +625,13 @@ async function loadAllData() {
   const devotionalRows = safeData(results[10]);
   const makeupRows     = safeData(results[11]);
   const lessonCompletionRows = safeData(results[12]);
+  const lessonPointsRows     = safeData(results[13]);
 
   loadDevotionalsFromSheet(devotionalRows);
   loadDevotionalsLocal();   // fill blanks from localStorage (offline fallback)
   loadMakeupStatusFromSheet(makeupRows);
   loadLessonCompletionFromSheet(lessonCompletionRows);
+  loadLessonPointsFromSheet(lessonPointsRows);
 
   const failCount = results.slice(0, 10).filter(r => r.status === 'rejected').length;
 
@@ -663,6 +722,8 @@ function refreshCurrentScreen() {
   if (id === 's-f-credits')     renderFCredits();
   if (id === 's-f-devotional')  renderFDevotional();
   if (id === 's-f-modcomp')     renderFModComp();
+  if (id === 's-add-credit')    renderFPointsGrid();
+  if (id === 's-f-points-grid-detail' && pointsGridCurrentStudent) renderPointsGridChecklist(pointsGridCurrentStudent);
   if (id === 's-admin-home')    updateAdminHomeStats();
   if (id === 's-a-student-att') renderAStudentAtt();
   if (id === 's-a-faculty-att') renderAFacultyAtt();
@@ -707,6 +768,8 @@ function go(id) {
   if (id === 's-f-credits')     renderFCredits();
   if (id === 's-f-devotional')  renderFDevotional();
   if (id === 's-f-modcomp')     renderFModComp();
+  if (id === 's-add-credit')    renderFPointsGrid();
+  if (id === 's-f-points-grid-detail' && pointsGridCurrentStudent) renderPointsGridChecklist(pointsGridCurrentStudent);
   if (id === 's-admin-home')    updateAdminHomeStats();
   if (id === 's-a-student-att') renderAStudentAtt();
   if (id === 's-a-faculty-att') renderAFacultyAtt();
@@ -1210,6 +1273,154 @@ function setLessonMark(studentId, moduleNo, lessonNo, status) {
 }
 
 // ═══════════════════════════════════════════
+// FACULTY — POINTS GRID (replaces the old manual "Add Points" form)
+// Per Module → Lesson, four boxes: Attendance / Participation / Homework /
+// Memory Verse. Tapping an unchecked box asks the facilitator how many
+// points to give; tapping a checked box removes those points immediately.
+// ═══════════════════════════════════════════
+let pointsGridCurrentStudent = null;
+let pointsGridActiveModule = 1;
+
+function renderFPointsGrid() {
+  const el = document.getElementById('f-points-grid-list');
+  if (!el) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const filtered = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  if (!filtered.length) {
+    el.innerHTML = '<p style="padding:16px;color:var(--gray)">No students found.</p>';
+    return;
+  }
+  const sorted = [...filtered].sort(
+    (a, b) => getStudentCredits(b["Student ID"]) - getStudentCredits(a["Student ID"])
+  );
+  el.innerHTML = sorted.map((s, i) => `
+    <button class="row" style="align-items:center;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:12px 0;border-bottom:1px solid #f0f0f0" onclick="openPointsGridDetail('${s["Student ID"]}')">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">#${i + 1} ${s["Full Name"]}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${getTableLabel(s["Table No"])}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap;margin-right:6px">${getStudentCredits(s["Student ID"])} pts</div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="width:16px;height:16px;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`).join('');
+}
+
+function openPointsGridDetail(studentId) {
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  if (!student) return;
+  pointsGridCurrentStudent = studentId;
+  pointsGridActiveModule = 1;
+  const el = document.getElementById('f-points-grid-detail-name');
+  if (el) el.textContent = student["Full Name"];
+  renderPointsGridChecklist(studentId);
+  go('s-f-points-grid-detail');
+}
+
+function switchPointsGridModule(moduleNo) {
+  pointsGridActiveModule = moduleNo;
+  renderPointsGridChecklist(pointsGridCurrentStudent);
+}
+
+function renderPointsGridChecklist(studentId) {
+  const el = document.getElementById('f-points-grid-checklist');
+  if (!el) return;
+
+  const counter = document.getElementById('f-points-grid-counter');
+  if (counter) counter.textContent = `${getStudentCredits(studentId)} pts total`;
+
+  let tabsHtml = '';
+  for (let m = 1; m <= TOTAL_MODULES; m++) {
+    const isActive = pointsGridActiveModule === m;
+    tabsHtml += `
+      <button onclick="switchPointsGridModule(${m})"
+        style="flex:1;padding:10px 0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid ${isActive ? '#1e3a8a' : '#e8e8e8'};background:${isActive ? '#1e3a8a' : '#fff'};color:${isActive ? '#fff' : '#1e3a8a'};transition:all 0.2s">
+        Module ${m}
+      </button>`;
+  }
+
+  let lessonsHtml = '';
+  for (let l = 1; l <= LESSONS_PER_MODULE; l++) {
+    const rowTotal = getLessonPointsRowTotal(studentId, pointsGridActiveModule, l);
+    let boxesHtml = '';
+    POINT_CATEGORIES.forEach(cat => {
+      const val = getLessonPointBox(studentId, pointsGridActiveModule, l, cat.key);
+      const checked = val > 0;
+      boxesHtml += `
+        <button onclick="handlePointsBoxTap('${studentId}', ${pointsGridActiveModule}, ${l}, '${cat.key}', '${cat.label}')"
+          title="${cat.label}"
+          style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:8px;cursor:pointer;border:1.5px solid ${checked ? '#1e7e34' : '#dcdcdc'};background:${checked ? '#e8f5ee' : '#fff'};color:${checked ? '#1e7e34' : '#666'}">
+          <span style="font-size:15px">${checked ? '✅' : cat.icon}</span>
+          <span style="font-size:9px;font-weight:700;line-height:1.2;text-align:center">${cat.label}</span>
+          ${checked ? `<span style="font-size:10px;font-weight:800">${val}pt</span>` : ''}
+        </button>`;
+    });
+    lessonsHtml += `
+      <div style="padding:10px 12px;border-radius:10px;background:${rowTotal ? '#fafdff' : '#fafafa'};margin-bottom:8px;border:1.5px solid ${rowTotal ? '#c9d9f5' : '#e8e8e8'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-weight:600;font-size:13px">Lesson ${l}</span>
+          ${rowTotal ? `<span style="font-size:11px;font-weight:700;color:var(--navy)">${rowTotal} pts</span>` : ''}
+        </div>
+        <div style="display:flex;gap:6px">${boxesHtml}</div>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:14px">${tabsHtml}</div>
+    <div id="points-grid-lesson-list">${lessonsHtml}</div>`;
+}
+
+// Tapping a box: unchecked -> ask how many points to award; checked ->
+// confirm removal (this pulls those points straight back out of the total).
+function handlePointsBoxTap(studentId, moduleNo, lessonNo, categoryKey, categoryLabel) {
+  const current = getLessonPointBox(studentId, moduleNo, lessonNo, categoryKey);
+  if (current > 0) {
+    if (!confirm(`Remove the ${current} pts already given for ${categoryLabel} (Lesson ${lessonNo})?`)) return;
+    savePointsBox(studentId, moduleNo, lessonNo, categoryKey, 0);
+    return;
+  }
+  const input = prompt(`Points to award for ${categoryLabel} — Lesson ${lessonNo}:`, '5');
+  if (input === null) return;
+  const points = Number(input);
+  if (!Number.isFinite(points) || points <= 0) {
+    showToast('⚠️ Enter a valid positive number');
+    return;
+  }
+  savePointsBox(studentId, moduleNo, lessonNo, categoryKey, points);
+}
+
+async function savePointsBox(studentId, moduleNo, lessonNo, categoryKey, points) {
+  if (!APP.lessonPoints[studentId]) APP.lessonPoints[studentId] = {};
+  const key = lessonKey(moduleNo, lessonNo);
+  if (!APP.lessonPoints[studentId][key]) {
+    APP.lessonPoints[studentId][key] = { attendance: 0, participation: 0, homework: 0, memoryVerse: 0 };
+  }
+  APP.lessonPoints[studentId][key][categoryKey] = points;
+
+  // Optimistic UI update, then sync in the background.
+  renderPointsGridChecklist(studentId);
+  renderFPointsGrid();
+
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  try {
+    await apiPost({
+      action: 'toggleLessonPointBox',
+      studentId,
+      studentName: student?.["Full Name"] || '',
+      tableNo: student?.["Table No"] || '',
+      moduleNo, lessonNo,
+      category: categoryKey,
+      points,
+      markedBy: APP.currentFaculty?.["Full Name"] || ''
+    });
+  } catch (e) {
+    console.warn('Lesson points sync failed:', e);
+    showToast('⚠️ Saved locally — will retry sync');
+  }
+}
+
+// ═══════════════════════════════════════════
 // ADMIN — MODULE COMPLETION RECORDS VIEW
 // ═══════════════════════════════════════════
 function renderAModCompTables() {
@@ -1276,9 +1487,10 @@ function renderAModCompTableStudents(tableNo) {
 
 // ═══════════════════════════════════════════
 function getStudentCredits(studentId) {
-  return APP.credits
+  const manualLegacy = APP.credits
     .filter(c => String(c["Student ID"]) === String(studentId))
     .reduce((sum, c) => sum + Number(c["Credits Added"] || 0), 0);
+  return manualLegacy + getStudentLessonPointsTotal(studentId);
 }
 
 // ═══════════════════════════════════════════
@@ -1341,51 +1553,6 @@ function renderFCredits() {
       <div>${getStudentCredits(s["Student ID"])} pts</div>
     </div>
   `).join('') || '<p style="padding:16px;color:var(--gray)">No points yet.</p>';
-}
-
-// ═══════════════════════════════════════════
-// ADD CREDIT (Faculty)
-// ═══════════════════════════════════════════
-async function doAddCredit() {
-  const sel = document.getElementById('credit-student-sel');
-  const studentId = sel ? sel.value : null;
-  const amountEl = document.getElementById('credit-amount');
-  const amount = parseInt(amountEl ? amountEl.value : 0);
-
-  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
-  if (!student) { showToast('⚠️ Please select a student'); return; }
-  if (!amount || amount < 1) { showToast('⚠️ Enter a valid credit amount'); return; }
-
-  const rawReason = APP.selectedReason || 'Attendance';
-  const reason = rawReason === '__other__'
-    ? (document.getElementById('credit-other-text')?.value?.trim() || 'Other')
-    : rawReason;
-
-  try {
-    const btn = document.querySelector('#s-add-credit .btn-primary');
-    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-
-    await apiPost({
-      action: "addCredit",
-      studentId: student["Student ID"],
-      studentName: student["Full Name"],
-      tableNo: student["Table No"],
-      weekNo: APP.currentWeek,
-      reason,
-      creditsAdded: amount,
-      addedBy: APP.currentFaculty?.["Full Name"] || "Faculty"
-    });
-
-    showToast(`✅ ${amount} pts added to ${student["Full Name"]}`);
-    if (amountEl) amountEl.value = 5;
-    await loadAllData();
-  } catch (err) {
-    showToast('❌ ' + (err.message || 'Failed to save'));
-    console.error('doAddCredit error:', err);
-  } finally {
-    const btn = document.querySelector('#s-add-credit .btn-primary');
-    if (btn) { btn.disabled = false; btn.textContent = 'Add Credits'; }
-  }
 }
 
 // Builds the Present / Late / Absent summary bar shown at the top of an

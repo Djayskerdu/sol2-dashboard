@@ -439,34 +439,43 @@
   </div>
 </div>
 
-<!-- ADD CREDIT SCREEN -->
+<!-- POINTS GRID — STUDENT LIST (replaces old manual Add Points form) -->
 <div class="screen" id="s-add-credit">
   <div class="topbar" style="background:var(--navy)">
     <button class="topbar-back" onclick="go('s-f-credits')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
     <span class="topbar-title">Add Points</span>
   </div>
   <div class="body">
-    <div class="card">
-      <div class="field"><label>Select Student</label><select id="credit-student-sel" class="fi"></select></div>
-      <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px">Reason for Credit</div>
-<div class="reason-grid">
-  <button class="reason-btn selected" onclick="selectReason(this,'Attendance')">📋 Attendance</button>
-  <button class="reason-btn" onclick="selectReason(this,'Participation')">🙋 Participation</button>
-  <button class="reason-btn" onclick="selectReason(this,'Homework')">📝 Homework</button>
-  <button class="reason-btn" onclick="selectReason(this,'Memory Verse')">✝️ Memory Verse</button>
-  <button class="reason-btn" onclick="selectReason(this,'__other__')" style="grid-column:1/-1">✏️ Other (optional — type below)</button>
-</div>
-      <div id="credit-other-wrap" style="display:none;margin-bottom:12px">
-        <input type="text" id="credit-other-text" placeholder="Describe reason..." style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font)">
-      </div>
-      <div class="field"><label>Points to Add</label><input type="number" id="credit-amount" value="5" min="1" max="50"></div>
-      <button class="btn-primary" style="background:var(--navy)" onclick="doAddCredit()">Add Points</button>
+    <div style="background:linear-gradient(135deg,#1e3a8a,#3b5fc9);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
+      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">2 Modules · 10 Lessons each</div>
+      <div style="font-size:15px;font-weight:700">Tap a student, then check off boxes per lesson</div>
     </div>
+    <div class="card" style="padding:0 16px" id="f-points-grid-list"></div>
   </div>
   <div class="bnav" style="--active-color:var(--navy)">
     <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
     <button class="ni" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
     <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Points</button>
+    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
+  </div>
+</div>
+
+<!-- POINTS GRID — STUDENT DETAIL (Module/Lesson checkbox grid) -->
+<div class="screen" id="s-f-points-grid-detail">
+  <div class="topbar" style="background:var(--navy)">
+    <button class="topbar-back" onclick="go('s-add-credit')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="topbar-title" id="f-points-grid-detail-name">Add Points</span>
+    <span id="f-points-grid-counter" style="font-size:11px;color:rgba(255,255,255,0.8);white-space:nowrap">0 pts total</span>
+  </div>
+  <div class="body">
+    <div style="background:#e8f0fb;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#1e3a8a;line-height:1.5">
+      ✅ Tap a box to award points for that lesson (you'll be asked how many). Tap a checked box again to remove those points.
+    </div>
+    <div id="f-points-grid-checklist"></div>
+  </div>
+  <div class="bnav" style="--active-color:var(--navy)">
+    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
+    <button class="ni active" onclick="go('s-add-credit')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Back</button>
     <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
   </div>
 </div>
