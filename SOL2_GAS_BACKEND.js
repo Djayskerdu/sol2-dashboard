@@ -40,6 +40,12 @@ const SPREADSHEET_ID = "1zfWtx5dFfyvWSeL1fC_EHLBoK9cejZXdlSdRGyk0-Pk"; // ← RE
  *   The dashboard will display "Name | Table X" everywhere a table is shown.
  * Headers (Row 1):
  *   Makeup ID | Attendance ID | Student ID | Student Name | Week No | Table No | Status | Updated By | Updated At | Notes
+ *
+ * Sheet: STUDENT_QUEST_PROGRESS   (Team Games — SOL2 Level Challenge)
+ * Headers (Row 1):
+ *   Quest ID | Student ID | Student Name | Table No | Level No | Quest No | Completed | Date Marked | Marked By
+ *   10 levels, 3 quests each. A row exists once a table guide has checked (or
+ *   unchecked) a given student's quest at least once; Completed = "Yes"/"No".
  ************************************************/
 
 /************************************************
@@ -97,6 +103,10 @@ function doGet(e) {
       // NEW: Module/Lesson completion records (drives Certificate eligibility)
       case "lessonCompletion":
         return output(getSheetData("STUDENT_LESSON_COMPLETION"));
+
+      // NEW: Team Games — SOL2 Level Challenge quest progress
+      case "questProgress":
+        return output(getSheetData("STUDENT_QUEST_PROGRESS"));
 
       // ── GAME SHOW STATE (cross-device sync) ──
       case "gameState":
@@ -156,6 +166,10 @@ function doPost(e) {
       // NEW: Toggle a single activity day for a student
       case "toggleActivity":
         return output(toggleActivity(data));
+
+      // NEW: Team Games — toggle a single Level Challenge quest for a student
+      case "toggleQuest":
+        return output(toggleQuest(data));
 
       // NEW: Bulk-save all devotional days for a student (replaces existing rows)
       case "saveStudentDevotionals":
@@ -442,6 +456,49 @@ function toggleDevotional(data) {
     data.markedBy || ""
   ]);
   return { success: true, message: "Devotional recorded" };
+}
+
+/************************************************
+ * TEAM GAMES — SOL2 Level Challenge
+ * Toggle a single quest for a student
+ * data: { studentId, studentName, tableNo, levelNo, questNo, completed, markedBy }
+ ************************************************/
+
+function toggleQuest(data) {
+  const sheet  = getSheet("STUDENT_QUEST_PROGRESS");
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const studentIdCol = headers.indexOf("Student ID");
+  const levelNoCol   = headers.indexOf("Level No");
+  const questNoCol   = headers.indexOf("Quest No");
+  const completedCol = headers.indexOf("Completed");
+  const dateCol      = headers.indexOf("Date Marked");
+
+  // Check if row already exists for this student + level + quest
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][studentIdCol]) === String(data.studentId) &&
+        Number(values[i][levelNoCol]) === Number(data.levelNo) &&
+        Number(values[i][questNoCol]) === Number(data.questNo)) {
+      // Update existing row
+      sheet.getRange(i + 1, completedCol + 1).setValue(data.completed ? "Yes" : "No");
+      sheet.getRange(i + 1, dateCol + 1).setValue(new Date());
+      return { success: true, message: "Quest updated" };
+    }
+  }
+
+  // Insert new row
+  sheet.appendRow([
+    Utilities.getUuid(),
+    data.studentId,
+    data.studentName,
+    data.tableNo,
+    data.levelNo,
+    data.questNo,
+    data.completed ? "Yes" : "No",
+    new Date(),
+    data.markedBy || ""
+  ]);
+  return { success: true, message: "Quest recorded" };
 }
 
 /************************************************

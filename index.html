@@ -326,6 +326,12 @@
       <div class="mi-text"><div class="mi-title">Module Completion</div><div class="mi-sub">2 Modules × 10 Lessons — certificate tracker</div></div>
       <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
+    <div class="slabel">Team Games</div>
+    <button class="menu-item" onclick="go('s-games-hub')">
+      <div class="mi-icon" style="background:#fde8ea"><svg viewBox="0 0 24 24" stroke="#d0304a" fill="none" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="6"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15" cy="10.5" r="1"/><circle cx="17.5" cy="13" r="1"/></svg></div>
+      <div class="mi-text"><div class="mi-title">Games Hub</div><div class="mi-sub">Table phone — students take turns playing</div></div>
+      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
   </div>
   <div class="bnav" style="--active-color:var(--navy)">
     <button class="ni active" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
@@ -1297,6 +1303,84 @@
     <button class="ni active" onclick="go('s-a-modcomp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>Back</button>
     <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
     <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     TEAM GAMES — GAMES HUB
+══════════════════════════════════════════ -->
+<div class="screen" id="s-games-hub">
+  <div class="topbar" style="background:var(--navy)">
+    <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="topbar-title">GAMES HUB</span>
+  </div>
+  <div class="body">
+    <div class="slabel" style="margin-top:0">For your table</div>
+    <div class="game-card" style="background:linear-gradient(135deg,#c9862f,#e0a83a)" onclick="go('s-lc-switch')">
+      <span class="gc-tag">Play</span>
+      <span class="gc-emoji">🗺️</span>
+      <div class="gc-title">SOL2 Level Challenge</div>
+      <div class="gc-sub">10 levels of real-life quests. Finish all 3 quests in a level to unlock the next.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LEVEL CHALLENGE — WHO'S PLAYING
+══════════════════════════════════════════ -->
+<div class="screen" id="s-lc-switch">
+  <div class="topbar" style="background:var(--navy)">
+    <button class="topbar-back" onclick="go('s-games-hub')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="topbar-title">WHO'S PLAYING?</span>
+  </div>
+  <div class="body">
+    <div class="switch-hint">One phone, one table. Tap a student's name to pull up their quest progress — each student's checklist is tracked separately, so passing the phone around doesn't mix anyone up.</div>
+    <div class="slabel" style="margin-top:0" id="lc-roster-label">My table roster</div>
+    <div class="roster-grid" id="lc-roster-grid"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LEVEL CHALLENGE — MAP
+══════════════════════════════════════════ -->
+<div class="screen" id="s-lc-map">
+  <div class="map-topbar">
+    <button class="topbar-back" onclick="go('s-lc-switch')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="topbar-title">LEVEL CHALLENGE</span>
+  </div>
+  <div class="current-student-bar">
+    <div class="csb-av" id="lc-csb-av">–</div>
+    <div class="csb-name" id="lc-csb-name">–</div>
+    <button class="csb-switch" onclick="go('s-lc-switch')">Switch student</button>
+  </div>
+  <div class="map-scroll" id="lc-map-scroll"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LEVEL CHALLENGE — QUESTS
+══════════════════════════════════════════ -->
+<div class="screen" id="s-lc-quests">
+  <div class="quest-topbar">
+    <button class="topbar-back" onclick="go('s-lc-map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="topbar-title" id="lc-quest-topbar-title">Level 1</span>
+  </div>
+  <div class="quest-sub" id="lc-quest-sub-label">3 of 3 quests needed to unlock Level 2</div>
+  <div class="quest-progress-track"><div class="quest-progress-fill" id="lc-quest-progress-fill" style="width:0%"></div></div>
+  <div class="quest-body">
+    <div class="tg-note">👩‍🏫 <b>Table guide:</b> check a quest off only after your student has actually done it. Unchecking is fine if it was tapped by mistake.</div>
+    <div id="lc-quest-list"></div>
+  </div>
+  <div class="overlay" id="lc-game-overlay">
+    <div class="overlay-card">
+      <div class="overlay-emoji" id="lc-overlay-emoji">⭐</div>
+      <div class="overlay-title" id="lc-overlay-title">Level Complete!</div>
+      <div class="overlay-sub" id="lc-overlay-sub">Level 1 done. Level 2 is now unlocked.</div>
+      <div class="overlay-btns">
+        <button class="ob-ghost" onclick="closeLCOverlayToMap()">Back to Map</button>
+        <button class="ob-primary" id="lc-overlay-next-btn" onclick="goToNextLCLevelFromOverlay()">Next Level →</button>
+      </div>
+    </div>
   </div>
 </div>
 

@@ -26,7 +26,11 @@ royal blue / silver-slate palette for School of Leaders 2.
 ## Setup steps
 1. **Database**: Upload `SOL2_DATABASE.xlsx` to Google Drive → "Open with Google Sheets"
    (or File → Import into an existing Google Sheet). Fill in STUDENTS, FACULTY_STAFF, and
-   TABLE_GUIDES with your program's real data.
+   TABLE_GUIDES with your program's real data. Also add a **STUDENT_QUEST_PROGRESS** sheet
+   (headers: `Quest ID | Student ID | Student Name | Table No | Level No | Quest No |
+   Completed | Date Marked | Marked By`) — this powers the new Team Games → SOL2 Level
+   Challenge feature. Until that sheet exists, quest progress still works but only saves
+   to each device's local storage instead of syncing across phones.
 2. **Backend**: Open the Google Sheet → Extensions → Apps Script. Paste in
    `SOL2_GAS_BACKEND.js`. Replace the `SPREADSHEET_ID` placeholder near the top with your
    sheet's ID (from its URL). Deploy → Manage deployments → New deployment → Web app,
@@ -40,5 +44,9 @@ royal blue / silver-slate palette for School of Leaders 2.
 ## Notes
 - Roles, tables, credits, payments, devotionals, leaderboard, make-up tracking, and the
   Gameshow trivia feature all work exactly as before — only labels and colors changed.
+- **Team Games → SOL2 Level Challenge** (new): from Faculty/Table Guide home, table guides
+  pick which student is currently holding the phone, then check off that student's real-life
+  quests (10 levels × 3 quests) to unlock the next level. To edit the quest wording, edit the
+  `QUESTS` object near the top of `js/script1.js` (search for "LEVEL CHALLENGE").
 - If you'd like different terminology for "LG Leader" / "Network Leader" / "Table" to match
   SOL2's own structure, those are plain text labels and easy to find-and-replace further.

@@ -62,7 +62,8 @@ let APP = {
   devotionals: {},   // studentId -> Set of completed day numbers (1-140)
   makeupStatus: {},  // attendanceId -> { status, notes }
   lessonCompletion: {},  // studentId -> { "moduleNo-lessonNo": "Done" | "Makeup" }
-  lessonPoints: {}   // studentId -> { "moduleNo-lessonNo": { attendance, participation, homework, memoryVerse } }
+  lessonPoints: {},  // studentId -> { "moduleNo-lessonNo": { attendance, participation, homework, memoryVerse } }
+  questProgress: {}  // studentId -> { "levelNo-questNo": true }  (Level Challenge game)
 };
 
 // Point-box categories shown per lesson in the Points grid. Each box's
@@ -195,6 +196,347 @@ async function saveDevotional(studentId, day, checked) {
 
 function getDevotionalCount(studentId) {
   return APP.devotionals[studentId] ? APP.devotionals[studentId].size : 0;
+}
+
+// ═══════════════════════════════════════════
+// TEAM GAMES — LEVEL CHALLENGE
+// 10 levels of real-life quests, 3 quests per level. A table guide
+// checks a quest off after a student actually completes it; finishing
+// all 3 quests in a level unlocks the next one. Level 10 is the grand
+// finale — the "prize" is handed out in person at the closing program,
+// there is no in-app reward.
+// ═══════════════════════════════════════════
+const QUEST_KEY_PREFIX = 'lc_quest_';
+const TOTAL_LEVELS = 10;
+const LEVEL_NAMES = {
+  1: 'Getting Started',
+  2: 'Daily Growth',
+  3: 'Building Community',
+  4: 'Serving Others',
+  5: 'Sharing Faith',
+  6: 'Growing Deeper',
+  7: 'Discipleship',
+  8: 'Leadership',
+  9: 'Kingdom Impact',
+  10: 'Mission Complete',
+};
+const QUESTS = {
+  1: [
+    { icon:'🎯', title:'Attend a LifeGroup' },
+    { icon:'🤝', title:'Introduce yourself to a new member' },
+    { icon:'📖', title:'Memorize one Bible verse' },
+  ],
+  2: [
+    { icon:'📖', title:'Read the Bible for 5 consecutive days' },
+    { icon:'🙏', title:'Pray for 10 minutes each day for 3 days' },
+    { icon:'💬', title:'Share one takeaway from your Bible reading' },
+  ],
+  3: [
+    { icon:'🎯', title:'Attend another LifeGroup' },
+    { icon:'📖', title:'Encourage someone with a Bible verse' },
+    { icon:'🤝', title:'Invite one friend to a LifeGroup' },
+  ],
+  4: [
+    { icon:'🙌', title:'Volunteer during a church activity' },
+    { icon:'🙏', title:'Pray with someone' },
+    { icon:'❤️', title:'Perform one act of kindness without expecting anything in return' },
+  ],
+  5: [
+    { icon:'💬', title:'Share your personal testimony' },
+    { icon:'✝️', title:'Share the Gospel with one person' },
+    { icon:'🎉', title:'Invite someone to church or a church event' },
+  ],
+  6: [
+    { icon:'📖', title:'Complete a Bible study lesson' },
+    { icon:'🙏', title:'Fast for one meal while praying' },
+    { icon:'📖', title:'Memorize three Bible verses' },
+  ],
+  7: [
+    { icon:'🤝', title:'Follow up with a first-time guest' },
+    { icon:'🙏', title:'Pray for three friends by name' },
+    { icon:'🎯', title:'Encourage someone to join a LifeGroup' },
+  ],
+  8: [
+    { icon:'🗣️', title:'Help facilitate a LifeGroup activity' },
+    { icon:'🌱', title:'Mentor or encourage a newer believer' },
+    { icon:'🙏', title:'Lead the opening prayer in a gathering' },
+  ],
+  9: [
+    { icon:'✝️', title:"Share God's Word with two people" },
+    { icon:'🎉', title:'Bring one new guest to church' },
+    { icon:'🌍', title:'Participate in an outreach or mission activity' },
+  ],
+  10: [
+    { icon:'🎯', title:'Attend a LifeGroup' },
+    { icon:'✝️', title:'Share the Gospel with three people' },
+    { icon:'❤️', title:'Lead one person to Christ (or begin a discipleship journey with them)' },
+  ],
+};
+function questsForLevel(lvl) { return QUESTS[lvl] || QUESTS[TOTAL_LEVELS]; }
+function questKey(levelNo, questNo) { return levelNo + '-' + questNo; }
+
+// ── Quest progress (synced to Google Sheets, same pattern as devotionals) ──
+function loadQuestProgressFromSheet(sheetRows) {
+  APP.students.forEach(s => { APP.questProgress[s['Student ID']] = {}; });
+  (sheetRows || []).forEach(row => {
+    const sid = String(row['Student ID'] || '');
+    const lvl = Number(row['Level No']);
+    const q   = Number(row['Quest No']);
+    if (sid && lvl && q && (row['Completed'] === 'Yes' || row['Completed'] === true)) {
+      if (!APP.questProgress[sid]) APP.questProgress[sid] = {};
+      APP.questProgress[sid][questKey(lvl, q)] = true;
+    }
+  });
+}
+
+// Fallback: load from localStorage (legacy / offline) for students with no sheet data yet
+function loadQuestProgressLocal() {
+  APP.students.forEach(s => {
+    const sid = s['Student ID'];
+    if (APP.questProgress[sid] && Object.keys(APP.questProgress[sid]).length > 0) return;
+    const key = QUEST_KEY_PREFIX + sid;
+    try {
+      const saved = localStorage.getItem(key);
+      APP.questProgress[sid] = saved ? JSON.parse(saved) : {};
+    } catch(e) { APP.questProgress[sid] = {}; }
+  });
+}
+
+async function saveQuestToggle(studentId, levelNo, questNo, checked) {
+  if (!APP.questProgress[studentId]) APP.questProgress[studentId] = {};
+  if (checked) APP.questProgress[studentId][questKey(levelNo, questNo)] = true;
+  else delete APP.questProgress[studentId][questKey(levelNo, questNo)];
+  // local backup
+  try { localStorage.setItem(QUEST_KEY_PREFIX + studentId, JSON.stringify(APP.questProgress[studentId])); } catch(e) {}
+  // sync to sheet
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  try {
+    await apiPost({ action: 'toggleQuest', studentId, studentName: student?.['Full Name'] || '', tableNo: student?.['Table No'] || '', levelNo, questNo, completed: checked, markedBy: APP.currentFaculty?.['Full Name'] || '' });
+  } catch(e) { console.warn('Quest sync failed:', e); }
+}
+
+// Is every quest in this level checked off for this student?
+function isLevelDoneFor(studentId, levelNo) {
+  const state = APP.questProgress[studentId] || {};
+  const quests = questsForLevel(levelNo);
+  for (let i = 0; i < quests.length; i++) {
+    if (!state[questKey(levelNo, i + 1)]) return false;
+  }
+  return true;
+}
+
+// Highest fully-completed level for a student (0 = none yet)
+function getHighestLevel(studentId) {
+  let highest = 0;
+  for (let lvl = 1; lvl <= TOTAL_LEVELS; lvl++) {
+    if (isLevelDoneFor(studentId, lvl)) highest = lvl;
+    else break;
+  }
+  return highest;
+}
+
+function lcInitials(name) {
+  return (name || '?').split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+}
+
+let currentLCStudent = null;
+let currentLCLevel = 1;
+
+function renderLCRoster() {
+  const grid = document.getElementById('lc-roster-grid');
+  const label = document.getElementById('lc-roster-label');
+  if (!grid) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const roster = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  if (label) label.textContent = getTableLabel(tableNo) + ' roster';
+  if (!roster.length) {
+    grid.innerHTML = '<p style="padding:16px;color:var(--text3);grid-column:1/-1">No students found for your table.</p>';
+    return;
+  }
+  grid.innerHTML = roster.map(s => {
+    const sid = s['Student ID'];
+    const done = getHighestLevel(sid);
+    const active = currentLCStudent && String(currentLCStudent['Student ID']) === String(sid);
+    return `
+      <div class="roster-card${active ? ' active-student' : ''}" onclick="selectLCStudent('${sid}')">
+        <div class="roster-av">${lcInitials(s['Full Name'])}</div>
+        <div class="roster-name">${s['Full Name']}</div>
+        <div class="roster-progress">${done}/${TOTAL_LEVELS} levels</div>
+      </div>`;
+  }).join('');
+}
+
+function selectLCStudent(studentId) {
+  const s = APP.students.find(st => String(st['Student ID']) === String(studentId));
+  if (!s) return;
+  currentLCStudent = s;
+  document.getElementById('lc-csb-av').textContent = lcInitials(s['Full Name']);
+  document.getElementById('lc-csb-name').textContent = s['Full Name'];
+  renderLCMap();
+  go('s-lc-map');
+}
+
+const LC_NODE_X = [160,235,160,85,160,235,160,85,160,160];
+const LC_NODE_Y = [940,845,750,655,560,465,370,275,180,85];
+
+function renderLCMap() {
+  const wrap = document.getElementById('lc-map-scroll');
+  if (!wrap || !currentLCStudent) return;
+  const highest = getHighestLevel(currentLCStudent['Student ID']);
+  const vbH = LC_NODE_Y[0] + 60;
+  let svg = `<svg class="map-svg" viewBox="0 0 320 ${vbH}" xmlns="http://www.w3.org/2000/svg">`;
+
+  let pathD = `M ${LC_NODE_X[0]} ${LC_NODE_Y[0]}`;
+  for (let i = 1; i < TOTAL_LEVELS; i++) pathD += ` L ${LC_NODE_X[i]} ${LC_NODE_Y[i]}`;
+  svg += `<path d="${pathD}" class="path-line"/>`;
+
+  for (let i = 0; i < TOTAL_LEVELS; i++) {
+    const lvl = i + 1;
+    const completed = lvl <= highest;
+    const unlocked = lvl <= highest + 1;
+    const isFinale = lvl === TOTAL_LEVELS;
+    let cls = 'lvl-node ' + (isFinale ? 'finale-node ' : '') + (completed ? 'completed' : (unlocked ? 'current' : 'locked'));
+    const r = isFinale ? 34 : 30;
+    svg += `<g class="${cls}" data-level="${lvl}" onclick="tapLCLevelNode(${lvl})">`;
+    svg += `<circle class="base" cx="${LC_NODE_X[i]}" cy="${LC_NODE_Y[i]}" r="${r}"/>`;
+    if (!unlocked) {
+      svg += `<text x="${LC_NODE_X[i]}" y="${LC_NODE_Y[i]+1}" font-size="20" text-anchor="middle" dominant-baseline="central">🔒</text>`;
+    } else if (isFinale) {
+      svg += `<text x="${LC_NODE_X[i]}" y="${LC_NODE_Y[i]+1}" font-size="26" text-anchor="middle" dominant-baseline="central">🏆</text>`;
+    } else if (completed) {
+      svg += `<text x="${LC_NODE_X[i]}" y="${LC_NODE_Y[i]+1}" font-size="24" text-anchor="middle" dominant-baseline="central">✓</text>`;
+    } else {
+      svg += `<text class="lvl-num" x="${LC_NODE_X[i]}" y="${LC_NODE_Y[i]+1}">${lvl}</text>`;
+    }
+    svg += `</g>`;
+  }
+  svg += `</svg>`;
+
+  const banner = `<div style="padding:14px 18px 4px">
+    <div style="background:#fff;border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);font-size:12px;color:var(--text2);line-height:1.5">
+      🏆 <b>Level 10</b> is the grand finale — there's no in-app prize, the real surprise is handed out at the SOL2 closing program once every level's quests are done.
+    </div>
+  </div>`;
+
+  wrap.innerHTML = banner + svg;
+}
+
+function tapLCLevelNode(lvl) {
+  if (!currentLCStudent) return;
+  const highest = getHighestLevel(currentLCStudent['Student ID']);
+  if (lvl > highest + 1) {
+    toastLCLocked();
+    return;
+  }
+  openLCQuests(lvl);
+  go('s-lc-quests');
+}
+
+function toastLCLocked() {
+  const bar = document.querySelector('#s-lc-map .current-student-bar');
+  if (!bar) return;
+  bar.classList.add('lc-shake');
+  setTimeout(() => bar.classList.remove('lc-shake'), 300);
+}
+
+function openLCQuests(lvl) {
+  currentLCLevel = lvl;
+  document.getElementById('lc-game-overlay').classList.remove('show');
+  document.getElementById('lc-quest-topbar-title').textContent = 'Level ' + lvl + ' — ' + LEVEL_NAMES[lvl];
+  document.getElementById('lc-quest-sub-label').textContent =
+    lvl === TOTAL_LEVELS
+      ? 'Finish all 3 to complete the SOL2 Level Challenge'
+      : `Finish all 3 quests to unlock Level ${lvl + 1}`;
+  renderLCQuestList();
+}
+
+function renderLCQuestList() {
+  if (!currentLCStudent) return;
+  const sid = currentLCStudent['Student ID'];
+  const state = APP.questProgress[sid] || {};
+  const quests = questsForLevel(currentLCLevel);
+  const list = document.getElementById('lc-quest-list');
+  list.innerHTML = quests.map((q, idx) => {
+    const done = !!state[questKey(currentLCLevel, idx + 1)];
+    return `
+      <div class="quest-card${done ? ' qc-done' : ''}">
+        <div class="quest-icon">${q.icon}</div>
+        <div class="quest-text">
+          <div class="quest-title">${q.title}</div>
+          <div class="quest-hint">Quest ${idx + 1} of ${quests.length}</div>
+        </div>
+        <div class="quest-check${done ? ' checked' : ''}" onclick="toggleLCQuest(${idx})">${done ? '✓' : ''}</div>
+      </div>`;
+  }).join('');
+  updateLCQuestProgress();
+}
+
+async function toggleLCQuest(idx) {
+  if (!currentLCStudent) return;
+  const sid = currentLCStudent['Student ID'];
+  const wasDone = !!(APP.questProgress[sid] || {})[questKey(currentLCLevel, idx + 1)];
+  await saveQuestToggle(sid, currentLCLevel, idx + 1, !wasDone);
+  renderLCQuestList();
+  if (isLevelDoneFor(sid, currentLCLevel)) {
+    setTimeout(finishLCLevel, 350);
+  }
+}
+
+function updateLCQuestProgress() {
+  if (!currentLCStudent) return;
+  const sid = currentLCStudent['Student ID'];
+  const state = APP.questProgress[sid] || {};
+  const quests = questsForLevel(currentLCLevel);
+  const doneCount = quests.filter((q, idx) => state[questKey(currentLCLevel, idx + 1)]).length;
+  document.getElementById('lc-quest-progress-fill').style.width = (doneCount / quests.length * 100) + '%';
+}
+
+function finishLCLevel() {
+  const isFinale = currentLCLevel === TOTAL_LEVELS;
+  const overlay = document.getElementById('lc-game-overlay');
+  const nextBtn = document.getElementById('lc-overlay-next-btn');
+  if (isFinale) {
+    document.getElementById('lc-overlay-emoji').textContent = '🏆';
+    document.getElementById('lc-overlay-title').textContent = 'All 10 Levels Complete!';
+    document.getElementById('lc-overlay-sub').textContent =
+      currentLCStudent['Full Name'] + ' finished every quest in the SOL2 Level Challenge. No points here — tell your table guide, the real surprise is waiting at the closing program!';
+    nextBtn.style.display = 'none';
+  } else {
+    document.getElementById('lc-overlay-emoji').textContent = '⭐';
+    document.getElementById('lc-overlay-title').textContent = 'Level ' + currentLCLevel + ' Complete!';
+    document.getElementById('lc-overlay-sub').textContent = 'All quests done. Level ' + (currentLCLevel + 1) + ' is now unlocked.';
+    nextBtn.style.display = 'block';
+    nextBtn.textContent = 'Next Level →';
+  }
+  overlay.classList.add('show');
+  launchLCConfetti(overlay);
+}
+
+function closeLCOverlayToMap() {
+  renderLCMap();
+  go('s-lc-map');
+}
+
+function goToNextLCLevelFromOverlay() {
+  openLCQuests(Math.min(currentLCLevel + 1, TOTAL_LEVELS));
+}
+
+function launchLCConfetti(container) {
+  const colors = ['#e0a83a', '#ffffff', '#7c9cf0', '#e0442f'];
+  for (let i = 0; i < 26; i++) {
+    const c = document.createElement('div');
+    c.className = 'lc-confetti';
+    c.style.left = (Math.random() * 100) + '%';
+    c.style.width = (5 + Math.random() * 4) + 'px';
+    c.style.height = (8 + Math.random() * 6) + 'px';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDelay = (Math.random() * 0.4) + 's';
+    container.appendChild(c);
+    setTimeout(() => c.remove(), 2200);
+  }
 }
 
 // ── Makeup Status ────────────────────────────────────────────
@@ -602,7 +944,8 @@ async function loadAllData() {
     apiGet('devotionals'),
     apiGet('makeupStatus'),
     apiGet('lessonCompletion'),
-    apiGet('lessonPoints')
+    apiGet('lessonPoints'),
+    apiGet('questProgress')
   ]);
 
   APP.students          = safeData(results[0]);
@@ -626,12 +969,15 @@ async function loadAllData() {
   const makeupRows     = safeData(results[11]);
   const lessonCompletionRows = safeData(results[12]);
   const lessonPointsRows     = safeData(results[13]);
+  const questProgressRows    = safeData(results[14]);
 
   loadDevotionalsFromSheet(devotionalRows);
   loadDevotionalsLocal();   // fill blanks from localStorage (offline fallback)
   loadMakeupStatusFromSheet(makeupRows);
   loadLessonCompletionFromSheet(lessonCompletionRows);
   loadLessonPointsFromSheet(lessonPointsRows);
+  loadQuestProgressFromSheet(questProgressRows);
+  loadQuestProgressLocal();  // fill blanks from localStorage (offline fallback)
 
   const failCount = results.slice(0, 10).filter(r => r.status === 'rejected').length;
 
@@ -739,6 +1085,8 @@ function refreshCurrentScreen() {
   if (id === 's-r-payment')     populatePayStudentSelect();
   if (id === 's-r-balances')    { renderBalances(); renderBalancesSummary(); }
   if (id === 's-view-tables')   renderViewTables();
+  if (id === 's-lc-switch')     renderLCRoster();
+  if (id === 's-lc-map')        renderLCMap();
 }
 
 // ═══════════════════════════════════════════
@@ -786,6 +1134,8 @@ function go(id) {
   if (id === 's-r-balances')    { renderBalances(); renderBalancesSummary(); }
   if (id === 's-add-credit')   populateCreditStudentSelect();
   if (id === 's-view-tables')  renderViewTables();
+  if (id === 's-lc-switch')    renderLCRoster();
+  if (id === 's-lc-map')       renderLCMap();
 }
 
 // Manually re-syncs all data from the sheet and re-renders whatever screen
