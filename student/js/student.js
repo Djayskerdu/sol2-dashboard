@@ -660,8 +660,16 @@ async function submitTestimony(idx) {
     }, pct => {
       const fill = document.getElementById(`qv-prog-${idx}`);
       const label = document.getElementById(`qv-prog-label-${idx}`);
-      if (fill) fill.style.width = pct + '%';
-      if (label) label.textContent = `Uploading… ${pct}%`;
+      if (pct === null) {
+        // Indeterminate — we no longer track real upload progress (see
+        // uploadTestimonyXHR for why), so show a full, pulsing bar instead
+        // of a stuck 0%.
+        if (fill) { fill.style.width = '100%'; fill.classList.add('qv-progress-indeterminate'); }
+        if (label) label.textContent = 'Uploading… this may take a minute';
+      } else {
+        if (fill) fill.style.width = pct + '%';
+        if (label) label.textContent = `Uploading… ${pct}%`;
+      }
     });
 
     if (!APP.questProgress[sid]) APP.questProgress[sid] = {};
@@ -691,13 +699,19 @@ function fileToBase64(file) {
 
 function uploadTestimonyXHR(payload, onProgress) {
   return new Promise((resolve, reject) => {
+    // NOTE: We intentionally do NOT attach an xhr.upload.onprogress listener.
+    // Doing so — even just registering the listener — forces the browser to
+    // treat this as a non-"simple" cross-origin request, which triggers a
+    // CORS preflight (OPTIONS). Apps Script web apps don't implement
+    // doOptions(), so any preflight gets a 405 and the whole upload fails
+    // with a generic "Network error", even though the Content-Type below
+    // is already safe. See: developer.mozilla.org/docs/Web/API/XMLHttpRequest/upload
+    // Losing the live % bar is the trade-off for uploads actually working.
+    if (onProgress) onProgress(null); // signal "indeterminate" to the caller
     const xhr = new XMLHttpRequest();
     xhr.open('POST', GAS_URL, true);
     xhr.setRequestHeader('Content-Type', 'text/plain'); // avoids CORS preflight GAS rejects (same fix as apiPost)
     xhr.timeout = 5 * 60 * 1000; // large uploads on slow connections need room
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
     xhr.onload = () => {
       try {
         const res = JSON.parse(xhr.responseText);
