@@ -699,14 +699,14 @@ async function submitTestimony(idx) {
   const statusEl = document.getElementById(`qv-status-${idx}`);
   if (statusEl) {
     statusEl.innerHTML = `
-      <div class="qv-progress-track"><div class="qv-progress-fill" id="qv-prog-${idx}"></div></div>
-      <div class="qv-note" id="qv-prog-label-${idx}">Uploading… 0%</div>`;
+      <div class="qv-progress-track"><div class="qv-progress-fill qv-progress-indeterminate"></div></div>
+      <div class="qv-note">Uploading… this may take a moment.</div>`;
   }
 
   try {
     const base64 = await fileToBase64(file);
     const quest = questsForLevel(currentLevel)[idx];
-    const result = await uploadTestimonyXHR({
+    const result = await uploadTestimonyFetch({
       studentId: sid,
       studentName: s['Full Name'] || '',
       tableNo: s['Table No'] || '',
@@ -718,11 +718,6 @@ async function submitTestimony(idx) {
       mimeType: file.type || 'video/mp4',
       base64Data: base64,
       markedBy: s['Full Name'] || ''
-    }, pct => {
-      const fill = document.getElementById(`qv-prog-${idx}`);
-      const label = document.getElementById(`qv-prog-label-${idx}`);
-      if (fill) fill.style.width = pct + '%';
-      if (label) label.textContent = `Uploading… ${pct}%`;
     });
 
     if (!APP.questProgress[sid]) APP.questProgress[sid] = {};
@@ -751,27 +746,20 @@ function fileToBase64(file) {
   });
 }
 
-function uploadTestimonyXHR(payload, onProgress) {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', GAS_URL, true);
-    xhr.timeout = 5 * 60 * 1000; // large uploads on slow connections need room
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      try {
-        const res = JSON.parse(xhr.responseText);
-        if (res && res.success) resolve(res);
-        else reject(new Error((res && res.message) || 'Upload failed'));
-      } catch (e) {
-        reject(new Error('Unexpected response from server'));
-      }
-    };
-    xhr.onerror = () => reject(new Error('Network error'));
-    xhr.ontimeout = () => reject(new Error('Upload timed out'));
-    xhr.send(JSON.stringify(Object.assign({ action: 'uploadTestimonyVideo' }, payload)));
-  });
+function uploadTestimonyFetch(payload) {
+  return fetchWithTimeout(GAS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" }, // same as apiPost — avoids the CORS preflight GAS rejects
+    body: JSON.stringify(Object.assign({ action: 'uploadTestimonyVideo' }, payload))
+  }, 5 * 60 * 1000) // large uploads on slow connections need room
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then(result => {
+      if (result && result.success) return result;
+      throw new Error((result && result.message) || 'Upload failed');
+    });
 }
 
 function finishLevel() {
