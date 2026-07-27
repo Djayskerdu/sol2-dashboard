@@ -68,7 +68,7 @@ const LEVEL_NAMES = {
 };
 const QUESTS = {
   1: [
-    { icon:'🎥', type:'upload', title:'Create or upload a video testimony (at least 2 minutes long) sharing how God has worked in your life.' },
+    { icon:'🎥', type:'upload', title:'Create or upload a video testimony (up to 2 minutes long) sharing how God has worked in your life.' },
     { icon:'▶️', type:'watch',  title:'Watch the assigned video to prepare for the upcoming lessons in Module 1 (Lessons 1 and 2).' }
   ],
   2: [ { icon:'📖', title:'Read the Bible for 5 consecutive days' }, { icon:'🙏', title:'Pray for 10 minutes each day for 3 days' }, { icon:'💬', title:'Share one takeaway from your Bible reading' } ],
@@ -456,7 +456,7 @@ function renderUploadQuestCard(q, idx, done, totalInLevel) {
   const bodyContent = (done && submittedUrl)
     ? `<a class="qv-watch-link" href="${submittedUrl}" target="_blank" rel="noopener">🎬 View your submitted video</a>
        <label class="qv-replace-link" for="${inputId}">Replace video</label>`
-    : `<label class="qv-upload-zone" for="${inputId}">📤 Tap to choose your testimony video<br><span>MP4/MOV, up to ${Math.round(MAX_UPLOAD_BYTES/1024/1024)}MB, at least 2 minutes</span></label>`;
+    : `<label class="qv-upload-zone" for="${inputId}">📤 Tap to choose your testimony video<br><span>MP4/MOV, up to ${Math.round(MAX_UPLOAD_BYTES/1024/1024)}MB, max 2 minutes</span></label>`;
   return `
     <div class="quest-card qc-video${done ? ' qc-done' : ''}">
       <div class="qv-header">
@@ -533,10 +533,11 @@ function showSentToast() {
 // LEVEL CHALLENGE — VIDEO TESTIMONY UPLOAD
 // ═══════════════════════════════════════════
 // Raw file cap. Base64 adds ~33% on top of this when sent to Apps Script,
-// which caps incoming web-app requests around ~50MB — keeping the raw file
-// under 30MB leaves comfortable headroom.
-const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
-const MIN_TESTIMONY_SECONDS = 120;
+// which caps incoming web-app requests around ~50MB. Videos are capped at
+// 2 minutes max, which keeps files naturally small — 15MB leaves comfortable
+// headroom while still avoiding large-payload upload failures.
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const MAX_TESTIMONY_SECONDS = 120;
 
 let pendingVideoFiles = {}; // idx -> File, chosen but not yet submitted
 
@@ -560,17 +561,23 @@ function handleVideoChosen(idx, file) {
     <video class="qv-preview" src="${objUrl}" controls playsinline></video>
     <div class="qv-file-name">${escapeHtml(file.name)} · ${(file.size/1024/1024).toFixed(1)}MB</div>
     <div id="qv-dur-${idx}"></div>
-    <button class="qv-complete-btn" onclick="submitTestimony(${idx})">Submit Testimony</button>`;
+    <div id="qv-submit-wrap-${idx}"><button class="qv-complete-btn" onclick="submitTestimony(${idx})">Submit Testimony</button></div>`;
 
-  // Best-effort duration check — some mobile browsers/formats won't report
-  // this reliably, so it's a heads-up, not a hard block.
+  // Hard duration check — video must be 2 minutes or under. Some mobile
+  // browsers/formats won't report duration reliably, so we only block when
+  // we can actually confirm it's too long; otherwise we let it through.
   const probe = document.createElement('video');
   probe.preload = 'metadata';
   probe.onloadedmetadata = () => {
     const durEl = document.getElementById(`qv-dur-${idx}`);
-    if (durEl && isFinite(probe.duration) && probe.duration > 0 && probe.duration < MIN_TESTIMONY_SECONDS) {
-      durEl.className = 'qv-error';
-      durEl.textContent = `Heads up — this clip is about ${Math.round(probe.duration)}s, and the task asks for at least 2 minutes. You can still submit, but consider re-recording a longer one.`;
+    const submitWrap = document.getElementById(`qv-submit-wrap-${idx}`);
+    if (isFinite(probe.duration) && probe.duration > 0 && probe.duration > MAX_TESTIMONY_SECONDS) {
+      if (durEl) {
+        durEl.className = 'qv-error';
+        durEl.textContent = `This clip is about ${Math.round(probe.duration)}s — the task asks for a maximum of 2 minutes. Please trim it or record a shorter one, then choose it again.`;
+      }
+      if (submitWrap) submitWrap.innerHTML = '';
+      delete pendingVideoFiles[idx];
     }
     URL.revokeObjectURL(probe.src);
   };
@@ -623,7 +630,8 @@ async function submitTestimony(idx) {
     if (isLevelDoneFor(sid, currentLevel)) setTimeout(finishLevel, 350);
   } catch (e) {
     console.warn('Testimony upload failed:', e);
-    if (statusEl) statusEl.innerHTML = `<div class="qv-error">Upload failed — check your connection and try again. If your video is large, try trimming it shorter first.</div>
+    const detail = (e && e.message) ? e.message : 'Unknown error';
+    if (statusEl) statusEl.innerHTML = `<div class="qv-error">Upload failed: ${escapeHtml(detail)}<br>Check your connection and try again. If your video is large, try trimming it shorter first.</div>
       <button class="qv-complete-btn" onclick="submitTestimony(${idx})">Try Again</button>`;
   }
 }
