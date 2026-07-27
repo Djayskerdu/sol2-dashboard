@@ -389,6 +389,107 @@ function openQuests(lvl) {
   renderQuestList();
 }
 
+// ── WATCH-QUEST ANTI-SKIP GUARD ──
+// Loads the real YouTube IFrame Player API (instead of a plain <iframe>) so
+// we can track playback, snap back any attempt to scrub ahead of what's
+// actually been watched, and keep the "Mark as Watched" button locked until
+// the video has actually played through to the end.
+let _ytApiPromise = null;
+let ytPlayers = {};         // idx -> YT.Player instance
+let watchGuardState = {};   // idx -> { maxWatched, unlocked, interval }
+
+function loadYouTubeIframeAPI() {
+  if (_ytApiPromise) return _ytApiPromise;
+  _ytApiPromise = new Promise((resolve) => {
+    if (window.YT && window.YT.Player) { resolve(window.YT); return; }
+    const prevReady = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof prevReady === 'function') prevReady();
+      resolve(window.YT);
+    };
+    if (!document.getElementById('yt-iframe-api-script')) {
+      const tag = document.createElement('script');
+      tag.id = 'yt-iframe-api-script';
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+  });
+  return _ytApiPromise;
+}
+
+function extractYouTubeId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
+  return m ? m[1] : null;
+}
+
+function isWatchUnlocked(idx) {
+  return !!(watchGuardState[idx] && watchGuardState[idx].unlocked);
+}
+
+function initWatchGuards() {
+  const guards = document.querySelectorAll('.qv-video-frame[data-yt-id]');
+  if (!guards.length) return;
+  loadYouTubeIframeAPI().then((YT) => {
+    guards.forEach((div) => {
+      const idx = Number(div.dataset.idx);
+      const videoId = div.dataset.ytId;
+      if (!watchGuardState[idx]) watchGuardState[idx] = { maxWatched: 0, unlocked: false, interval: null };
+      ytPlayers[idx] = new YT.Player(div, {
+        videoId: videoId,
+        playerVars: { rel: 0, modestbranding: 1, disablekb: 1, playsinline: 1 },
+        events: {
+          onStateChange: (e) => onWatchGuardStateChange(idx, e, YT)
+        }
+      });
+    });
+  });
+}
+
+function onWatchGuardStateChange(idx, e, YT) {
+  const state = watchGuardState[idx];
+  if (!state) return;
+  if (e.data === YT.PlayerState.PLAYING) {
+    if (state.interval) clearInterval(state.interval);
+    state.interval = setInterval(() => pollWatchGuard(idx), 500);
+  } else if (state.interval) {
+    clearInterval(state.interval);
+    state.interval = null;
+  }
+}
+
+function pollWatchGuard(idx) {
+  const player = ytPlayers[idx];
+  const state = watchGuardState[idx];
+  if (!player || !state || typeof player.getCurrentTime !== 'function') return;
+
+  let current, duration;
+  try {
+    current = player.getCurrentTime();
+    duration = player.getDuration();
+  } catch (e) { return; }
+  if (!isFinite(current) || !isFinite(duration) || duration <= 0) return;
+
+  const tolerance = 2; // small leeway for normal playback drift
+  if (current > state.maxWatched + tolerance) {
+    player.seekTo(state.maxWatched, true); // snap back — no skipping ahead
+  } else {
+    state.maxWatched = Math.max(state.maxWatched, current);
+  }
+
+  if (!state.unlocked && state.maxWatched >= duration - 2) {
+    state.unlocked = true;
+    const btn = document.getElementById(`qv-complete-btn-${idx}`);
+    const note = document.getElementById(`qv-watch-note-${idx}`);
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('qv-btn-disabled');
+      btn.textContent = 'Mark as Watched — Complete';
+    }
+    if (note) note.textContent = '✅ Video watched — you can mark this complete now.';
+  }
+}
+
 function renderQuestList() {
   const s = APP.currentStudent;
   if (!s) return;
@@ -411,6 +512,7 @@ function renderQuestList() {
       </div>`;
   }).join('');
   updateQuestProgressBar();
+  initWatchGuards();
 }
 
 // Converts a YouTube link into an embeddable URL. Returns null for anything
@@ -424,15 +526,18 @@ function embedVideoUrl(url) {
 
 function renderWatchQuestCard(q, idx, done, totalInLevel) {
   const vid = APP.questVideos[questKey(currentLevel, idx + 1)] || {};
-  const embed = embedVideoUrl(vid.url);
+  const ytId = extractYouTubeId(vid.url);
   let player;
   if (!vid.url) {
     player = `<div class="qv-watch-link qv-disabled">📹 Video not uploaded yet — check back soon</div>`;
-  } else if (embed) {
-    player = `<div class="qv-video-frame"><iframe src="${embed}" allowfullscreen allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" loading="lazy"></iframe></div>`;
+  } else if (ytId) {
+    player = `<div class="qv-video-frame" id="yt-guard-${idx}" data-yt-id="${ytId}" data-idx="${idx}"></div>
+      <div class="qv-note" id="qv-watch-note-${idx}">▶️ Watch the full video to unlock the complete button — skipping ahead will jump you back.</div>`;
   } else {
     player = `<a class="qv-watch-link" href="${vid.url}" target="_blank" rel="noopener">▶️ Watch Video${vid.title ? ' — ' + escapeHtml(vid.title) : ''}</a>`;
   }
+  const unlocked = done || !ytId || isWatchUnlocked(idx);
+  const btnLocked = !!ytId && !done && !unlocked;
   return `
     <div class="quest-card qc-video${done ? ' qc-done' : ''}">
       <div class="qv-header">
@@ -443,8 +548,9 @@ function renderWatchQuestCard(q, idx, done, totalInLevel) {
         </div>
       </div>
       ${player}
-      <button class="qv-complete-btn${done ? ' qv-done' : ''}" onclick="toggleQuestSelf(${idx})">
-        ${done ? '✓ Marked as watched — tap to undo' : 'Mark as Watched — Complete'}
+      <button class="qv-complete-btn${done ? ' qv-done' : ''}${btnLocked ? ' qv-btn-disabled' : ''}"
+        id="qv-complete-btn-${idx}" ${btnLocked ? 'disabled' : ''} onclick="toggleQuestSelf(${idx})">
+        ${done ? '✓ Marked as watched — tap to undo' : (btnLocked ? '🔒 Watch the full video to unlock' : 'Mark as Watched — Complete')}
       </button>
     </div>`;
 }
