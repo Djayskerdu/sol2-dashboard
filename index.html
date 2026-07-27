@@ -279,6 +279,10 @@
   <div class="topbar" style="background:var(--navy)">
     <svg style="width:20px;height:32.5px;stroke:#fff;stroke-width:1;fill:none;flex-shrink:0" viewBox="0 0 20 20"></svg>
     <span class="topbar-title">TABLE GUIDE</span>
+    <span class="topbar-icon" style="position:relative" onclick="go('s-f-notifications')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;display:block"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="f-home-notif-badge" class="notif-badge" style="display:none;position:absolute;top:-6px;right:-8px">0</span>
+    </span>
   </div>
   <div class="body">
     <div class="card-hero" style="background:linear-gradient(135deg,var(--navy),var(--navy-light))">
@@ -326,10 +330,10 @@
       <div class="mi-text"><div class="mi-title">Module Completion</div><div class="mi-sub">2 Modules × 10 Lessons — certificate tracker</div></div>
       <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
-    <div class="slabel">Team Games</div>
-    <button class="menu-item" onclick="go('s-games-hub')">
-      <div class="mi-icon" style="background:#fde8ea"><svg viewBox="0 0 24 24" stroke="#d0304a" fill="none" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="6"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15" cy="10.5" r="1"/><circle cx="17.5" cy="13" r="1"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Games Hub</div><div class="mi-sub">Table phone — students take turns playing</div></div>
+    <div class="slabel">Updates</div>
+    <button class="menu-item" onclick="go('s-f-notifications')">
+      <div class="mi-icon" style="background:#fde8ea"><svg viewBox="0 0 24 24" stroke="#d0304a" fill="none" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      <div class="mi-text"><div class="mi-title">Notifications<span id="f-notif-badge" class="notif-badge" style="display:none">0</span></div><div class="mi-sub">Level Challenge quests your students complete</div></div>
       <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
   </div>
@@ -1308,79 +1312,17 @@
 
 
 <!-- ══════════════════════════════════════════
-     TEAM GAMES — GAMES HUB
+     NOTIFICATIONS — student Level Challenge completions
 ══════════════════════════════════════════ -->
-<div class="screen" id="s-games-hub">
+<div class="screen" id="s-f-notifications">
   <div class="topbar" style="background:var(--navy)">
     <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">GAMES HUB</span>
+    <span class="topbar-title">NOTIFICATIONS</span>
+    <span class="topbar-icon" onclick="markAllNotifsReadForFaculty()" title="Mark all read">✓ All</span>
   </div>
   <div class="body">
-    <div class="slabel" style="margin-top:0">For your table</div>
-    <div class="game-card" style="background:linear-gradient(135deg,#c9862f,#e0a83a)" onclick="go('s-lc-switch')">
-      <span class="gc-tag">Play</span>
-      <span class="gc-emoji">🗺️</span>
-      <div class="gc-title">SOL2 Level Challenge</div>
-      <div class="gc-sub">10 levels of real-life quests. Finish all 3 quests in a level to unlock the next.</div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     LEVEL CHALLENGE — WHO'S PLAYING
-══════════════════════════════════════════ -->
-<div class="screen" id="s-lc-switch">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-games-hub')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">WHO'S PLAYING?</span>
-  </div>
-  <div class="body">
-    <div class="switch-hint">One phone, one table. Tap a student's name to pull up their quest progress — each student's checklist is tracked separately, so passing the phone around doesn't mix anyone up.</div>
-    <div class="slabel" style="margin-top:0" id="lc-roster-label">My table roster</div>
-    <div class="roster-grid" id="lc-roster-grid"></div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     LEVEL CHALLENGE — MAP
-══════════════════════════════════════════ -->
-<div class="screen" id="s-lc-map">
-  <div class="map-topbar">
-    <button class="topbar-back" onclick="go('s-lc-switch')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">LEVEL CHALLENGE</span>
-  </div>
-  <div class="current-student-bar">
-    <div class="csb-av" id="lc-csb-av">–</div>
-    <div class="csb-name" id="lc-csb-name">–</div>
-    <button class="csb-switch" onclick="go('s-lc-switch')">Switch student</button>
-  </div>
-  <div class="map-scroll" id="lc-map-scroll"></div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     LEVEL CHALLENGE — QUESTS
-══════════════════════════════════════════ -->
-<div class="screen" id="s-lc-quests">
-  <div class="quest-topbar">
-    <button class="topbar-back" onclick="go('s-lc-map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="lc-quest-topbar-title">Level 1</span>
-  </div>
-  <div class="quest-sub" id="lc-quest-sub-label">3 of 3 quests needed to unlock Level 2</div>
-  <div class="quest-progress-track"><div class="quest-progress-fill" id="lc-quest-progress-fill" style="width:0%"></div></div>
-  <div class="quest-body">
-    <div class="tg-note">👩‍🏫 <b>Table guide:</b> check a quest off only after your student has actually done it. Unchecking is fine if it was tapped by mistake.</div>
-    <div id="lc-quest-list"></div>
-  </div>
-  <div class="overlay" id="lc-game-overlay">
-    <div class="overlay-card">
-      <div class="overlay-emoji" id="lc-overlay-emoji">⭐</div>
-      <div class="overlay-title" id="lc-overlay-title">Level Complete!</div>
-      <div class="overlay-sub" id="lc-overlay-sub">Level 1 done. Level 2 is now unlocked.</div>
-      <div class="overlay-btns">
-        <button class="ob-ghost" onclick="closeLCOverlayToMap()">Back to Map</button>
-        <button class="ob-primary" id="lc-overlay-next-btn" onclick="goToNextLCLevelFromOverlay()">Next Level →</button>
-      </div>
-    </div>
+    <div class="switch-hint">Quests your students mark complete themselves (in the Student app) show up here.</div>
+    <div id="f-notif-list"></div>
   </div>
 </div>
 

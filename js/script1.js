@@ -63,7 +63,8 @@ let APP = {
   makeupStatus: {},  // attendanceId -> { status, notes }
   lessonCompletion: {},  // studentId -> { "moduleNo-lessonNo": "Done" | "Makeup" }
   lessonPoints: {},  // studentId -> { "moduleNo-lessonNo": { attendance, participation, homework, memoryVerse } }
-  questProgress: {}  // studentId -> { "levelNo-questNo": true }  (Level Challenge game)
+  questProgress: {},  // studentId -> { "levelNo-questNo": true }  (Level Challenge game)
+  notifications: []   // rows from the NOTIFICATIONS sheet (student quest completions)
 };
 
 // Point-box categories shown per lesson in the Points grid. Each box's
@@ -335,208 +336,88 @@ function getHighestLevel(studentId) {
   return highest;
 }
 
-function lcInitials(name) {
-  return (name || '?').split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+// NOTE: the interactive "who's playing / map / quest checklist" UI that used
+// to live here (table guides checking quests off for students) has moved to
+// the separate Student app — students self-report their own quests there.
+// This file keeps only the shared data helpers above (QUESTS, LEVEL_NAMES,
+// questsForLevel, isLevelDoneFor, getHighestLevel, saveQuestToggle) plus the
+// NOTIFICATIONS feature below, which is how Faculty/Table Guides now see
+// completions.
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS — Faculty/Table Guide bell
+// A row appears here whenever a student marks a Level Challenge quest
+// complete in the Student app. Filtered to the signed-in faculty's own
+// table (Table Guides) or shown in full (Admin/Director/Record roles).
+// ═══════════════════════════════════════════
+function facultyNotifRows() {
+  const role = APP.currentFaculty ? getRoleTypes(APP.currentFaculty["Role"]) : [];
+  const isTableGuideOnly = role.includes('faculty') && !role.includes('admin');
+  const tableNo = APP.currentFaculty?.["Table Assigned"];
+  let rows = APP.notifications || [];
+  if (isTableGuideOnly && tableNo) {
+    rows = rows.filter(n => String(n["Table No"]) === String(tableNo));
+  }
+  return rows.slice().sort((a, b) => new Date(b["Created At"]) - new Date(a["Created At"]));
 }
 
-let currentLCStudent = null;
-let currentLCLevel = 1;
+function unreadFacultyNotifCount() {
+  return facultyNotifRows().filter(n => n["Read"] !== "Yes" && n["Read"] !== true).length;
+}
 
-function renderLCRoster() {
-  const grid = document.getElementById('lc-roster-grid');
-  const label = document.getElementById('lc-roster-label');
-  if (!grid) return;
-  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
-  const roster = APP.students.filter(s =>
-    String(s["Table No"]) === String(tableNo) &&
-    (s["Status"] || "Active").toLowerCase() !== "dropped"
-  );
-  if (label) label.textContent = getTableLabel(tableNo) + ' roster';
-  if (!roster.length) {
-    grid.innerHTML = '<p style="padding:16px;color:var(--text3);grid-column:1/-1">No students found for your table.</p>';
+function updateFacultyNotifBadges() {
+  const count = unreadFacultyNotifCount();
+  [document.getElementById('f-notif-badge'), document.getElementById('f-home-notif-badge')].forEach(el => {
+    if (!el) return;
+    el.style.display = count > 0 ? '' : 'none';
+    el.textContent = count > 9 ? '9+' : String(count);
+  });
+}
+
+function renderFacultyNotifications() {
+  const list = document.getElementById('f-notif-list');
+  if (!list) return;
+  const rows = facultyNotifRows();
+  if (!rows.length) {
+    list.innerHTML = '<div class="notif-empty">No notifications yet. When a student completes a Level Challenge quest in their app, it will show up here.</div>';
+    updateFacultyNotifBadges();
     return;
   }
-  grid.innerHTML = roster.map(s => {
-    const sid = s['Student ID'];
-    const done = getHighestLevel(sid);
-    const active = currentLCStudent && String(currentLCStudent['Student ID']) === String(sid);
+  list.innerHTML = rows.map(n => {
+    const isRead = n["Read"] === "Yes" || n["Read"] === true;
+    const when = n["Created At"] ? new Date(n["Created At"]).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
     return `
-      <div class="roster-card${active ? ' active-student' : ''}" onclick="selectLCStudent('${sid}')">
-        <div class="roster-av">${lcInitials(s['Full Name'])}</div>
-        <div class="roster-name">${s['Full Name']}</div>
-        <div class="roster-progress">${done}/${TOTAL_LEVELS} levels</div>
-      </div>`;
-  }).join('');
-}
-
-function selectLCStudent(studentId) {
-  const s = APP.students.find(st => String(st['Student ID']) === String(studentId));
-  if (!s) return;
-  currentLCStudent = s;
-  document.getElementById('lc-csb-av').textContent = lcInitials(s['Full Name']);
-  document.getElementById('lc-csb-name').textContent = s['Full Name'];
-  renderLCMap();
-  go('s-lc-map');
-}
-
-const LC_NODE_X = [160,235,160,85,160,235,160,85,160,160];
-const LC_NODE_Y = [940,845,750,655,560,465,370,275,180,85];
-
-function renderLCMap() {
-  const wrap = document.getElementById('lc-map-scroll');
-  if (!wrap || !currentLCStudent) return;
-  const highest = getHighestLevel(currentLCStudent['Student ID']);
-  const vbH = LC_NODE_Y[0] + 60;
-  let svg = `<svg class="map-svg" viewBox="0 0 320 ${vbH}" xmlns="http://www.w3.org/2000/svg">`;
-
-  let pathD = `M ${LC_NODE_X[0]} ${LC_NODE_Y[0]}`;
-  for (let i = 1; i < TOTAL_LEVELS; i++) pathD += ` L ${LC_NODE_X[i]} ${LC_NODE_Y[i]}`;
-  svg += `<path d="${pathD}" class="path-line"/>`;
-
-  for (let i = 0; i < TOTAL_LEVELS; i++) {
-    const lvl = i + 1;
-    const completed = lvl <= highest;
-    const unlocked = lvl <= highest + 1;
-    const isFinale = lvl === TOTAL_LEVELS;
-    let cls = 'lvl-node ' + (isFinale ? 'finale-node ' : '') + (completed ? 'completed' : (unlocked ? 'current' : 'locked'));
-    const r = isFinale ? 34 : 30;
-    svg += `<g class="${cls}" data-level="${lvl}" onclick="tapLCLevelNode(${lvl})">`;
-    svg += `<circle class="base" cx="${LC_NODE_X[i]}" cy="${LC_NODE_Y[i]}" r="${r}"/>`;
-    if (!unlocked) {
-      svg += `<text x="${LC_NODE_X[i]}" y="${LC_NODE_Y[i]+1}" font-size="20" text-anchor="middle" dominant-baseline="central">🔒</text>`;
-    } else if (isFinale) {
-      svg += `<text x="${LC_NODE_X[i]}" y="${LC_NODE_Y[i]+1}" font-size="26" text-anchor="middle" dominant-baseline="central">🏆</text>`;
-    } else if (completed) {
-      svg += `<text x="${LC_NODE_X[i]}" y="${LC_NODE_Y[i]+1}" font-size="24" text-anchor="middle" dominant-baseline="central">✓</text>`;
-    } else {
-      svg += `<text class="lvl-num" x="${LC_NODE_X[i]}" y="${LC_NODE_Y[i]+1}">${lvl}</text>`;
-    }
-    svg += `</g>`;
-  }
-  svg += `</svg>`;
-
-  const banner = `<div style="padding:14px 18px 4px">
-    <div style="background:#fff;border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);font-size:12px;color:var(--text2);line-height:1.5">
-      🏆 <b>Level 10</b> is the grand finale — there's no in-app prize, the real surprise is handed out at the SOL2 closing program once every level's quests are done.
-    </div>
-  </div>`;
-
-  wrap.innerHTML = banner + svg;
-}
-
-function tapLCLevelNode(lvl) {
-  if (!currentLCStudent) return;
-  const highest = getHighestLevel(currentLCStudent['Student ID']);
-  if (lvl > highest + 1) {
-    toastLCLocked();
-    return;
-  }
-  openLCQuests(lvl);
-  go('s-lc-quests');
-}
-
-function toastLCLocked() {
-  const bar = document.querySelector('#s-lc-map .current-student-bar');
-  if (!bar) return;
-  bar.classList.add('lc-shake');
-  setTimeout(() => bar.classList.remove('lc-shake'), 300);
-}
-
-function openLCQuests(lvl) {
-  currentLCLevel = lvl;
-  document.getElementById('lc-game-overlay').classList.remove('show');
-  document.getElementById('lc-quest-topbar-title').textContent = 'Level ' + lvl + ' — ' + LEVEL_NAMES[lvl];
-  document.getElementById('lc-quest-sub-label').textContent =
-    lvl === TOTAL_LEVELS
-      ? 'Finish all 3 to complete the SOL2 Level Challenge'
-      : `Finish all 3 quests to unlock Level ${lvl + 1}`;
-  renderLCQuestList();
-}
-
-function renderLCQuestList() {
-  if (!currentLCStudent) return;
-  const sid = currentLCStudent['Student ID'];
-  const state = APP.questProgress[sid] || {};
-  const quests = questsForLevel(currentLCLevel);
-  const list = document.getElementById('lc-quest-list');
-  list.innerHTML = quests.map((q, idx) => {
-    const done = !!state[questKey(currentLCLevel, idx + 1)];
-    return `
-      <div class="quest-card${done ? ' qc-done' : ''}">
-        <div class="quest-icon">${q.icon}</div>
-        <div class="quest-text">
-          <div class="quest-title">${q.title}</div>
-          <div class="quest-hint">Quest ${idx + 1} of ${quests.length}</div>
+      <div class="notif-item ${isRead ? 'read' : 'unread'}" onclick="markFacultyNotifRead('${n["Notification ID"]}')">
+        <div class="notif-dot"></div>
+        <div class="notif-body">
+          <div class="notif-msg">${n["Message"] || ''}</div>
+          <div class="notif-time">${when}${isRead ? ' · read' : ''}</div>
         </div>
-        <div class="quest-check${done ? ' checked' : ''}" onclick="toggleLCQuest(${idx})">${done ? '✓' : ''}</div>
       </div>`;
   }).join('');
-  updateLCQuestProgress();
+  updateFacultyNotifBadges();
 }
 
-async function toggleLCQuest(idx) {
-  if (!currentLCStudent) return;
-  const sid = currentLCStudent['Student ID'];
-  const wasDone = !!(APP.questProgress[sid] || {})[questKey(currentLCLevel, idx + 1)];
-  await saveQuestToggle(sid, currentLCLevel, idx + 1, !wasDone);
-  renderLCQuestList();
-  if (isLevelDoneFor(sid, currentLCLevel)) {
-    setTimeout(finishLCLevel, 350);
-  }
+async function markFacultyNotifRead(notificationId) {
+  const n = (APP.notifications || []).find(x => String(x["Notification ID"]) === String(notificationId));
+  if (n) n["Read"] = "Yes"; // optimistic update
+  renderFacultyNotifications();
+  try {
+    await apiPost({ action: 'markNotificationRead', notificationId, readBy: APP.currentFaculty?.['Full Name'] || '' });
+  } catch (e) { console.warn('markNotificationRead failed:', e); }
 }
 
-function updateLCQuestProgress() {
-  if (!currentLCStudent) return;
-  const sid = currentLCStudent['Student ID'];
-  const state = APP.questProgress[sid] || {};
-  const quests = questsForLevel(currentLCLevel);
-  const doneCount = quests.filter((q, idx) => state[questKey(currentLCLevel, idx + 1)]).length;
-  document.getElementById('lc-quest-progress-fill').style.width = (doneCount / quests.length * 100) + '%';
-}
-
-function finishLCLevel() {
-  const isFinale = currentLCLevel === TOTAL_LEVELS;
-  const overlay = document.getElementById('lc-game-overlay');
-  const nextBtn = document.getElementById('lc-overlay-next-btn');
-  if (isFinale) {
-    document.getElementById('lc-overlay-emoji').textContent = '🏆';
-    document.getElementById('lc-overlay-title').textContent = 'All 10 Levels Complete!';
-    document.getElementById('lc-overlay-sub').textContent =
-      currentLCStudent['Full Name'] + ' finished every quest in the SOL2 Level Challenge. No points here — tell your table guide, the real surprise is waiting at the closing program!';
-    nextBtn.style.display = 'none';
-  } else {
-    document.getElementById('lc-overlay-emoji').textContent = '⭐';
-    document.getElementById('lc-overlay-title').textContent = 'Level ' + currentLCLevel + ' Complete!';
-    document.getElementById('lc-overlay-sub').textContent = 'All quests done. Level ' + (currentLCLevel + 1) + ' is now unlocked.';
-    nextBtn.style.display = 'block';
-    nextBtn.textContent = 'Next Level →';
-  }
-  overlay.classList.add('show');
-  launchLCConfetti(overlay);
-}
-
-function closeLCOverlayToMap() {
-  renderLCMap();
-  go('s-lc-map');
-}
-
-function goToNextLCLevelFromOverlay() {
-  openLCQuests(Math.min(currentLCLevel + 1, TOTAL_LEVELS));
-}
-
-function launchLCConfetti(container) {
-  const colors = ['#e0a83a', '#ffffff', '#7c9cf0', '#e0442f'];
-  for (let i = 0; i < 26; i++) {
-    const c = document.createElement('div');
-    c.className = 'lc-confetti';
-    c.style.left = (Math.random() * 100) + '%';
-    c.style.width = (5 + Math.random() * 4) + 'px';
-    c.style.height = (8 + Math.random() * 6) + 'px';
-    c.style.background = colors[i % colors.length];
-    c.style.animationDelay = (Math.random() * 0.4) + 's';
-    container.appendChild(c);
-    setTimeout(() => c.remove(), 2200);
-  }
+async function markAllNotifsReadForFaculty() {
+  const role = APP.currentFaculty ? getRoleTypes(APP.currentFaculty["Role"]) : [];
+  const isTableGuideOnly = role.includes('faculty') && !role.includes('admin');
+  const tableNo = isTableGuideOnly ? (APP.currentFaculty?.["Table Assigned"] || "") : "";
+  (APP.notifications || []).forEach(n => {
+    if (!tableNo || String(n["Table No"]) === String(tableNo)) n["Read"] = "Yes";
+  });
+  renderFacultyNotifications();
+  try {
+    await apiPost({ action: 'markAllNotificationsRead', tableNo, readBy: APP.currentFaculty?.['Full Name'] || '' });
+  } catch (e) { console.warn('markAllNotificationsRead failed:', e); }
 }
 
 // ── Makeup Status ────────────────────────────────────────────
@@ -915,7 +796,20 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAllData();
   initClock();
   updateSyncStatus(false);
+  setInterval(pollNotifications, 45000); // light-weight refresh, doesn't touch the rest of the data
 });
+
+// Re-fetches just the NOTIFICATIONS sheet so the Faculty bell badge/list stay
+// current without re-pulling every other sheet.
+async function pollNotifications() {
+  if (!APP.currentFaculty) return; // no one logged in yet
+  try {
+    const res = await apiGet('notifications');
+    APP.notifications = res?.data || [];
+    updateFacultyNotifBadges();
+    if (APP.currentScreen === 's-f-notifications') renderFacultyNotifications();
+  } catch (e) { /* silent — will retry on next tick */ }
+}
 
 // ═══════════════════════════════════════════
 // LOAD ALL DATA
@@ -945,7 +839,8 @@ async function loadAllData() {
     apiGet('makeupStatus'),
     apiGet('lessonCompletion'),
     apiGet('lessonPoints'),
-    apiGet('questProgress')
+    apiGet('questProgress'),
+    apiGet('notifications')
   ]);
 
   APP.students          = safeData(results[0]);
@@ -970,6 +865,7 @@ async function loadAllData() {
   const lessonCompletionRows = safeData(results[12]);
   const lessonPointsRows     = safeData(results[13]);
   const questProgressRows    = safeData(results[14]);
+  APP.notifications          = safeData(results[15]);
 
   loadDevotionalsFromSheet(devotionalRows);
   loadDevotionalsLocal();   // fill blanks from localStorage (offline fallback)
@@ -986,6 +882,7 @@ async function loadAllData() {
   populateWeekDropdowns();
   updateAdminHomeStats();
   updateFacultyHome();
+  updateFacultyNotifBadges();
   renderRecordStats();
   renderBalancesSummary();
   refreshCurrentScreen();
@@ -1085,8 +982,7 @@ function refreshCurrentScreen() {
   if (id === 's-r-payment')     populatePayStudentSelect();
   if (id === 's-r-balances')    { renderBalances(); renderBalancesSummary(); }
   if (id === 's-view-tables')   renderViewTables();
-  if (id === 's-lc-switch')     renderLCRoster();
-  if (id === 's-lc-map')        renderLCMap();
+  if (id === 's-f-notifications') renderFacultyNotifications();
 }
 
 // ═══════════════════════════════════════════
@@ -1134,8 +1030,7 @@ function go(id) {
   if (id === 's-r-balances')    { renderBalances(); renderBalancesSummary(); }
   if (id === 's-add-credit')   populateCreditStudentSelect();
   if (id === 's-view-tables')  renderViewTables();
-  if (id === 's-lc-switch')    renderLCRoster();
-  if (id === 's-lc-map')       renderLCMap();
+  if (id === 's-f-notifications') renderFacultyNotifications();
 }
 
 // Manually re-syncs all data from the sheet and re-renders whatever screen
@@ -3363,6 +3258,7 @@ function updateAdminHomeStats() {
 // FACULTY HOME
 // ═══════════════════════════════════════════
 function updateFacultyHome() {
+  updateFacultyNotifBadges();
   const nameEl = document.getElementById('f-home-name');
   const roleEl = document.getElementById('f-home-role');
   const f = APP.currentFaculty || APP.faculty[0];

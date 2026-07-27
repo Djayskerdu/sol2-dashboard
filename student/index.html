@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>SOL2 Student</title>
+<meta name="description" content="SOL2 Student app — weekly Level Challenge quests">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e3a8a">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  /* Student-app-only additions (kept small, base styles.css does the heavy lifting) */
+  .stu-hero { border-radius: var(--radius); padding: 20px; margin-bottom: 14px; background: linear-gradient(135deg,var(--navy),var(--navy-light)); color:#fff; }
+  .stu-hero .greet { font-size:11px; color:rgba(255,255,255,.65); font-weight:500; }
+  .stu-hero .name { font-family:var(--font-head); font-size:20px; font-weight:700; margin-top:2px; }
+  .stu-hero .meta { font-size:12px; color:rgba(255,255,255,.6); margin-top:4px; }
+  .stu-progress-card { background:var(--card); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); margin-bottom:14px; cursor:pointer; }
+  .stu-progress-card:active { transform:scale(0.98); }
+  .stu-progress-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .stu-progress-title { font-family:var(--font-head); font-weight:700; font-size:15px; color:var(--text); }
+  .stu-progress-badge { font-size:12px; font-weight:700; color:var(--navy); background:#eaf0ff; padding:3px 9px; border-radius:999px; }
+  .stu-track { height:8px; border-radius:6px; background:var(--bg); overflow:hidden; }
+  .stu-track-fill { height:100%; background:linear-gradient(90deg,var(--navy),var(--gold)); border-radius:6px; transition:width .3s; }
+  .stu-progress-sub { font-size:12px; color:var(--text2); margin-top:8px; }
+  .stu-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .stu-info-box { background:var(--card); border-radius:var(--radius-sm); padding:12px; box-shadow:var(--shadow); text-align:center; }
+  .stu-info-box .v { font-family:var(--font-head); font-size:16px; font-weight:800; color:var(--navy); }
+  .stu-info-box .l { font-size:10.5px; color:var(--text3); margin-top:2px; text-transform:uppercase; letter-spacing:.4px; }
+  .stu-sent-toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#1a1a2e; color:#fff; padding:10px 18px; border-radius:999px; font-size:12.5px; font-weight:600; box-shadow:var(--shadow-lg); z-index:999; opacity:0; pointer-events:none; transition:opacity .25s; }
+  .stu-sent-toast.show { opacity:1; }
+  .stu-logout-link { text-align:center; margin-top:6px; }
+  .stu-logout-link a { font-size:12.5px; color:var(--text3); text-decoration:underline; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════════════════════════════════════
+       LOGIN
+  ══════════════════════════════════════════ -->
+  <div class="screen active" id="s-login">
+    <div class="login-wrap">
+      <div class="login-box">
+        <div class="login-head">
+          <div class="login-avatar" style="background:var(--navy)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          </div>
+          <div class="login-title">SOL2 Student Login</div>
+          <div class="login-sub">Enter your Student ID and PIN</div>
+        </div>
+        <div class="field"><label>Student ID</label><input type="text" id="stu-login-id" placeholder="e.g. SOL2-014" style="--accent:var(--navy)" onkeydown="if(event.key==='Enter')document.getElementById('stu-login-pin').focus()"></div>
+        <div class="field"><label>PIN</label><input type="password" inputmode="numeric" id="stu-login-pin" placeholder="••••" style="--accent:var(--navy)" onkeydown="if(event.key==='Enter')doStudentLogin()"></div>
+        <div id="stu-login-err" style="display:none;color:#c0392b;font-size:12px;margin-bottom:8px;text-align:center"></div>
+        <button class="btn-primary" style="background:var(--navy)" onclick="doStudentLogin()">Sign In</button>
+        <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:14px">Don't know your PIN? Ask your Table Guide.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       HOME
+  ══════════════════════════════════════════ -->
+  <div class="screen" id="s-home">
+    <div class="topbar" style="background:var(--navy)">
+      <svg style="width:20px;height:20px;stroke:#fff;stroke-width:2;fill:none;flex-shrink:0" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      <span class="topbar-title">SOL2 STUDENT</span>
+    </div>
+    <div class="body">
+      <div class="stu-hero">
+        <div class="greet">Welcome back,</div>
+        <div class="name" id="stu-home-name">—</div>
+        <div class="meta" id="stu-home-table">—</div>
+      </div>
+
+      <div class="stu-info-grid">
+        <div class="stu-info-box"><div class="v" id="stu-info-level">0/10</div><div class="l">Levels Done</div></div>
+        <div class="stu-info-box"><div class="v" id="stu-info-quests">0/30</div><div class="l">Quests Done</div></div>
+      </div>
+
+      <div class="stu-progress-card" onclick="go('s-map')">
+        <div class="stu-progress-top">
+          <div class="stu-progress-title">🗺️ SOL2 Level Challenge</div>
+          <div class="stu-progress-badge" id="stu-progress-badge">Level 1</div>
+        </div>
+        <div class="stu-track"><div class="stu-track-fill" id="stu-progress-fill" style="width:0%"></div></div>
+        <div class="stu-progress-sub">Tap to check off this week's real-life quests. Your Table Guide gets notified the moment you complete one.</div>
+      </div>
+
+      <div class="stu-logout-link"><a onclick="studentLogout()">Log out</a></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       LEVEL CHALLENGE — MAP
+  ══════════════════════════════════════════ -->
+  <div class="screen" id="s-map">
+    <div class="map-topbar">
+      <button class="topbar-back" onclick="go('s-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="topbar-title">LEVEL CHALLENGE</span>
+    </div>
+    <div class="map-scroll" id="stu-map-scroll"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       LEVEL CHALLENGE — QUESTS
+  ══════════════════════════════════════════ -->
+  <div class="screen" id="s-quests">
+    <div class="quest-topbar">
+      <button class="topbar-back" onclick="go('s-map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="topbar-title" id="stu-quest-topbar-title">Level 1</span>
+    </div>
+    <div class="quest-sub" id="stu-quest-sub-label">3 of 3 quests needed to unlock Level 2</div>
+    <div class="quest-progress-track"><div class="quest-progress-fill" id="stu-quest-progress-fill" style="width:0%"></div></div>
+    <div class="quest-body">
+      <div class="tg-note">✅ Check a quest off only after you've actually done it — your Table Guide will see it right away.</div>
+      <div id="stu-quest-list"></div>
+    </div>
+    <div class="overlay" id="stu-game-overlay">
+      <div class="overlay-card">
+        <div class="overlay-emoji" id="stu-overlay-emoji">⭐</div>
+        <div class="overlay-title" id="stu-overlay-title">Level Complete!</div>
+        <div class="overlay-sub" id="stu-overlay-sub">Level 1 done. Level 2 is now unlocked.</div>
+        <div class="overlay-btns">
+          <button class="ob-ghost" onclick="closeOverlayToMap()">Back to Map</button>
+          <button class="ob-primary" id="stu-overlay-next-btn" onclick="goToNextLevelFromOverlay()">Next Level →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stu-sent-toast" id="stu-sent-toast">✅ Your Table Guide was notified!</div>
+
+</div>
+<script src="js/student.js"></script>
+</body>
+</html>

@@ -9,11 +9,17 @@
  *  4. Add two new sheets: STUDENT_DEVOTIONALS and STUDENT_ACTIVITIES
  *     (see headers below)
  *  5. Add a MAKEUP_STATUS column to STUDENT_ATTENDANCE (see note)
- *  6. Deploy → Manage deployments → New deployment
+ *  6. For video quests (e.g. Level 1's testimony/watch quests): create a
+ *     Google Drive folder for testimony videos, copy its ID from the URL
+ *     (drive.google.com/drive/folders/ >>>COPY_THIS_PART<<<), and paste it
+ *     into VIDEO_FOLDER_ID below. Also add the QUEST_VIDEOS and
+ *     STUDENT_VIDEO_SUBMISSIONS sheets (see headers below).
+ *  7. Deploy → Manage deployments → New deployment
  *     Execute as: Me | Who has access: Anyone
  ************************************************/
 
 const SPREADSHEET_ID = "1zfWtx5dFfyvWSeL1fC_EHLBoK9cejZXdlSdRGyk0-Pk"; // ← REPLACE THIS
+const VIDEO_FOLDER_ID = "PASTE_YOUR_DRIVE_FOLDER_ID_HERE"; // ← Drive folder for uploaded testimony videos
 
 /************************************************
  * NEW SHEETS REQUIRED IN YOUR GOOGLE SPREADSHEET:
@@ -44,8 +50,38 @@ const SPREADSHEET_ID = "1zfWtx5dFfyvWSeL1fC_EHLBoK9cejZXdlSdRGyk0-Pk"; // ← RE
  * Sheet: STUDENT_QUEST_PROGRESS   (Team Games — SOL2 Level Challenge)
  * Headers (Row 1):
  *   Quest ID | Student ID | Student Name | Table No | Level No | Quest No | Completed | Date Marked | Marked By
- *   10 levels, 3 quests each. A row exists once a table guide has checked (or
- *   unchecked) a given student's quest at least once; Completed = "Yes"/"No".
+ *   10 levels, 3 quests each. A row exists once a student has checked (or
+ *   unchecked) their own quest at least once; Completed = "Yes"/"No".
+ *   NOTE: this is now self-reported by students in the separate STUDENT app —
+ *   Faculty/Table Guides no longer check these off themselves.
+ *
+ * Sheet: STUDENTS — add one new column:
+ *   PIN
+ *   A 4-6 digit PIN each student uses (with their Student ID) to log into the
+ *   Student app. Set an initial PIN for each student (e.g. their birth month+day).
+ *
+ * Sheet: NOTIFICATIONS   (new — powers the Faculty app's notification bell)
+ * Headers (Row 1):
+ *   Notification ID | Table No | Student ID | Student Name | Level No | Quest No |
+ *   Message | Created At | Read | Read By | Read At
+ *   A row is added automatically whenever a student marks a quest complete in
+ *   the Student app. Read = "Yes"/"No".
+ *
+ * Sheet: QUEST_VIDEOS   (Director/Consultant-managed — "watch this video" quests)
+ * Headers (Row 1):
+ *   Level No | Quest No | Video Title | Video URL | Notes
+ *   Add one row per "watch" quest (e.g. Level 1, Quest 2). Paste a YouTube
+ *   link in Video URL for it to play inline in the app; any other link
+ *   (Drive, Facebook, etc.) shows as a plain "Watch Video" button instead.
+ *   Leave the row blank/missing and students see "Video not uploaded yet."
+ *
+ * Sheet: STUDENT_VIDEO_SUBMISSIONS   (auto-filled — student-uploaded testimony videos)
+ * Headers (Row 1):
+ *   Submission ID | Student ID | Student Name | Table No | Level No | Quest No |
+ *   Video URL | File Name | File Size KB | Submitted At
+ *   A row is added automatically when a student uploads a video from the
+ *   Student app (e.g. Level 1, Quest 1). The video itself is saved to your
+ *   VIDEO_FOLDER_ID Drive folder; Video URL links to it there.
  ************************************************/
 
 /************************************************
@@ -108,6 +144,26 @@ function doGet(e) {
       case "questProgress":
         return output(getSheetData("STUDENT_QUEST_PROGRESS"));
 
+      // NEW: Notifications — student self-completions, read by Faculty/Table Guides
+      case "notifications":
+        return output(getSheetData("NOTIFICATIONS"));
+
+      // NEW: Director/Consultant-assigned "watch this video" links
+      case "questVideos":
+        return output(getSheetData("QUEST_VIDEOS"));
+
+      // NEW: Student-uploaded testimony videos. Pass ?studentId=... to get
+      // only that student's rows (the Student app always does this, so one
+      // student's device never receives another student's video links).
+      case "videoSubmissions":
+        var vsResult = getSheetData("STUDENT_VIDEO_SUBMISSIONS");
+        if (e.parameter.studentId) {
+          vsResult.data = vsResult.data.filter(function (r) {
+            return String(r["Student ID"]) === String(e.parameter.studentId);
+          });
+        }
+        return output(vsResult);
+
       // ── GAME SHOW STATE (cross-device sync) ──
       case "gameState":
         var gsRaw = PropertiesService.getScriptProperties().getProperty("GS_GAME_STATE");
@@ -168,8 +224,22 @@ function doPost(e) {
         return output(toggleActivity(data));
 
       // NEW: Team Games — toggle a single Level Challenge quest for a student
+      // (now called from the STUDENT app — students self-report their own quests)
       case "toggleQuest":
         return output(toggleQuest(data));
+
+      // NEW: Faculty/Table Guide marks one notification as read
+      case "markNotificationRead":
+        return output(markNotificationRead(data));
+
+      // NEW: Faculty/Table Guide marks all notifications for their table as read
+      case "markAllNotificationsRead":
+        return output(markAllNotificationsRead(data));
+
+      // NEW: Student uploads a testimony video (saved to Drive, recorded in
+      // STUDENT_VIDEO_SUBMISSIONS, and the quest is auto-marked complete)
+      case "uploadTestimonyVideo":
+        return output(uploadTestimonyVideo(data));
 
       // NEW: Bulk-save all devotional days for a student (replaces existing rows)
       case "saveStudentDevotionals":
@@ -460,8 +530,12 @@ function toggleDevotional(data) {
 
 /************************************************
  * TEAM GAMES — SOL2 Level Challenge
- * Toggle a single quest for a student
- * data: { studentId, studentName, tableNo, levelNo, questNo, completed, markedBy }
+ * Toggle a single quest for a student. Called from the STUDENT app —
+ * students self-report their own quests (no more table-guide checkoff).
+ * data: { studentId, studentName, tableNo, levelNo, questNo, questTitle,
+ *         levelName, completed, markedBy }
+ * When a student checks a quest complete, a row is added to NOTIFICATIONS
+ * so their Table Guide sees it (bell/badge) in the Faculty app.
  ************************************************/
 
 function toggleQuest(data) {
@@ -482,6 +556,7 @@ function toggleQuest(data) {
       // Update existing row
       sheet.getRange(i + 1, completedCol + 1).setValue(data.completed ? "Yes" : "No");
       sheet.getRange(i + 1, dateCol + 1).setValue(new Date());
+      if (data.completed) notifyTableGuideOfQuest(data);
       return { success: true, message: "Quest updated" };
     }
   }
@@ -498,7 +573,164 @@ function toggleQuest(data) {
     new Date(),
     data.markedBy || ""
   ]);
+  if (data.completed) notifyTableGuideOfQuest(data);
   return { success: true, message: "Quest recorded" };
+}
+
+/************************************************
+ * VIDEO TESTIMONY UPLOAD
+ * Saves the uploaded file to VIDEO_FOLDER_ID in Drive, replaces any prior
+ * submission row for this student+level+quest in STUDENT_VIDEO_SUBMISSIONS,
+ * then marks the quest complete the same way toggleQuest does (which also
+ * fires the Table Guide notification).
+ * data: { studentId, studentName, tableNo, levelNo, questNo, questTitle,
+ *         levelName, fileName, mimeType, base64Data, markedBy }
+ ************************************************/
+
+function uploadTestimonyVideo(data) {
+  if (!data.base64Data) {
+    return { success: false, message: "No video data received." };
+  }
+  if (!VIDEO_FOLDER_ID || VIDEO_FOLDER_ID.indexOf("PASTE_YOUR") === 0) {
+    throw new Error("VIDEO_FOLDER_ID is not configured — see the setup notes at the top of this script.");
+  }
+
+  const folder = DriveApp.getFolderById(VIDEO_FOLDER_ID);
+  const mimeType = data.mimeType || "video/mp4";
+  const safeName = String(data.studentId || "student") + "_L" + data.levelNo + "Q" + data.questNo +
+                    "_" + (data.fileName || "testimony.mp4");
+  const bytes = Utilities.base64Decode(data.base64Data);
+  const blob  = Utilities.newBlob(bytes, mimeType, safeName);
+  const file  = folder.createFile(blob);
+
+  // Let Directors/Consultants/Table Guides open it from the sheet without
+  // needing individual Drive access. If domain sharing policy blocks this,
+  // the file still saves fine — it just won't be link-shareable automatically.
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (shareErr) {
+    // ignore — see comment above
+  }
+
+  const videoUrl = "https://drive.google.com/file/d/" + file.getId() + "/view";
+
+  // Replace any earlier submission for this student+level+quest
+  const sheet   = getSheet("STUDENT_VIDEO_SUBMISSIONS");
+  const values  = sheet.getDataRange().getValues();
+  if (values.length > 1) {
+    const headers = values[0];
+    const sidCol   = headers.indexOf("Student ID");
+    const lvlCol   = headers.indexOf("Level No");
+    const questCol = headers.indexOf("Quest No");
+    for (let i = values.length - 1; i >= 1; i--) {
+      if (String(values[i][sidCol]) === String(data.studentId) &&
+          Number(values[i][lvlCol]) === Number(data.levelNo) &&
+          Number(values[i][questCol]) === Number(data.questNo)) {
+        sheet.deleteRow(i + 1);
+      }
+    }
+  }
+  sheet.appendRow([
+    Utilities.getUuid(),
+    data.studentId,
+    data.studentName,
+    data.tableNo,
+    data.levelNo,
+    data.questNo,
+    videoUrl,
+    data.fileName || "",
+    Math.round(bytes.length / 1024),
+    new Date()
+  ]);
+
+  // Mark the quest complete + notify the Table Guide, reusing the same path
+  // the Student app uses for text/watch quests.
+  toggleQuest({
+    studentId: data.studentId,
+    studentName: data.studentName,
+    tableNo: data.tableNo,
+    levelNo: data.levelNo,
+    questNo: data.questNo,
+    questTitle: data.questTitle || "Video Testimony",
+    levelName: data.levelName || "",
+    completed: true,
+    markedBy: data.markedBy || data.studentName || ""
+  });
+
+  return { success: true, message: "Testimony video uploaded", videoUrl: videoUrl };
+}
+
+/************************************************
+ * NOTIFICATIONS
+ * Sheet: NOTIFICATIONS
+ * Headers: Notification ID | Table No | Student ID | Student Name |
+ *          Level No | Quest No | Message | Created At | Read | Read By | Read At
+ ************************************************/
+
+function notifyTableGuideOfQuest(data) {
+  const sheet = getSheet("NOTIFICATIONS");
+  const questLabel = data.questTitle ? data.questTitle : ("Quest " + data.questNo);
+  const levelLabel = data.levelName ? data.levelName : ("Level " + data.levelNo);
+  const message = (data.studentName || "A student") + " completed \u201c" + questLabel +
+                  "\u201d (" + levelLabel + ")";
+  sheet.appendRow([
+    Utilities.getUuid(),
+    data.tableNo,
+    data.studentId,
+    data.studentName,
+    data.levelNo,
+    data.questNo,
+    message,
+    new Date(),
+    "No",
+    "",
+    ""
+  ]);
+}
+
+function markNotificationRead(data) {
+  const sheet   = getSheet("NOTIFICATIONS");
+  const values  = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const idCol      = headers.indexOf("Notification ID");
+  const readCol    = headers.indexOf("Read");
+  const readByCol  = headers.indexOf("Read By");
+  const readAtCol  = headers.indexOf("Read At");
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idCol]) === String(data.notificationId)) {
+      sheet.getRange(i + 1, readCol + 1).setValue("Yes");
+      sheet.getRange(i + 1, readByCol + 1).setValue(data.readBy || "");
+      sheet.getRange(i + 1, readAtCol + 1).setValue(new Date());
+      return { success: true, message: "Notification marked read" };
+    }
+  }
+  return { success: false, message: "Notification not found" };
+}
+
+// Marks every unread notification for a given Table No as read in one pass.
+// data: { tableNo, readBy }
+function markAllNotificationsRead(data) {
+  const sheet   = getSheet("NOTIFICATIONS");
+  const values  = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const tableCol   = headers.indexOf("Table No");
+  const readCol    = headers.indexOf("Read");
+  const readByCol  = headers.indexOf("Read By");
+  const readAtCol  = headers.indexOf("Read At");
+  let count = 0;
+
+  for (let i = 1; i < values.length; i++) {
+    const matchesTable = data.tableNo === undefined || data.tableNo === null || data.tableNo === "" ||
+                          String(values[i][tableCol]) === String(data.tableNo);
+    if (matchesTable && String(values[i][readCol]) !== "Yes") {
+      sheet.getRange(i + 1, readCol + 1).setValue("Yes");
+      sheet.getRange(i + 1, readByCol + 1).setValue(data.readBy || "");
+      sheet.getRange(i + 1, readAtCol + 1).setValue(new Date());
+      count++;
+    }
+  }
+  return { success: true, message: count + " notification(s) marked read" };
 }
 
 /************************************************
