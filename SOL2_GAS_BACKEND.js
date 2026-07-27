@@ -14,74 +14,31 @@
  *     (drive.google.com/drive/folders/ >>>COPY_THIS_PART<<<), and paste it
  *     into VIDEO_FOLDER_ID below. Also add the QUEST_VIDEOS and
  *     STUDENT_VIDEO_SUBMISSIONS sheets (see headers below).
- *  7. Deploy → Manage deployments → New deployment
+ *  7. Add a new sheet called MAKEUP_WEEK_ASSIGNMENTS with headers:
+ *     Record ID | Week No | Assigned To | Updated By | Updated At
+ *     This lets a Director/Consultant assign one facilitator to handle
+ *     ALL absent students' make-up classes for a given week (see
+ *     updateMakeupWeekAssignment below).
+ *  8. Deploy → Manage deployments → New deployment
  *     Execute as: Me | Who has access: Anyone
  ************************************************/
 
 const SPREADSHEET_ID = "1zfWtx5dFfyvWSeL1fC_EHLBoK9cejZXdlSdRGyk0-Pk"; // ← REPLACE THIS
-const VIDEO_FOLDER_ID = "PASTE_YOUR_DRIVE_FOLDER_ID_HERE"; // ← Drive folder for uploaded testimony videos
+const VIDEO_FOLDER_ID = "1io6sIDbwWn-ajM_Hws_5wpJj3Fj1bEBj"; // ← Drive folder for uploaded testimony videos
 
 /************************************************
  * NEW SHEETS REQUIRED IN YOUR GOOGLE SPREADSHEET:
  *
- * Sheet: STUDENT_DEVOTIONALS
+ * Sheet: STUDENT_LESSON_POINTS   (per-lesson Attendance/Participation/Homework/
+ *                                  Memory Verse points grid — this is what powers
+ *                                  the Faculty "Points" leaderboard AND the
+ *                                  Student app's own Current Points total)
  * Headers (Row 1):
- *   Devotional ID | Student ID | Student Name | Table No | Day No | Completed | Date Marked | Marked By
- *
- * Sheet: STUDENT_ACTIVITIES
- * Headers (Row 1):
- *   Activity ID | Student ID | Student Name | Table No | Day No | Completed | Date Marked | Marked By
- *
- * Sheet: STUDENT_LESSON_COMPLETION   (Module/Lesson certificate tracker)
- * Headers (Row 1):
- *   Completion ID | Student ID | Student Name | Table No | Module No | Lesson No | Status | Date Marked | Marked By
- *   Status = "Done" (✓ completed) | "Makeup" (✗ needs make-up class) | "" (not yet marked)
- *   SOL2 has 2 Modules, 10 Lessons each (20 total). A student is Certificate-Eligible
- *   only when all 20 rows for that student are "Done".
- *
- * Sheet: TABLE_GUIDES
- * Headers (Row 1):
- *   Table No | Facilitator ID | Facilitator Name | Table Name | Total Students | Notes
- *   ↑ Add "Table Name" column (Column D) — e.g. "Glorious Warrior"
- *   The dashboard will display "Name | Table X" everywhere a table is shown.
- * Headers (Row 1):
- *   Makeup ID | Attendance ID | Student ID | Student Name | Week No | Table No | Status | Updated By | Updated At | Notes
- *
- * Sheet: STUDENT_QUEST_PROGRESS   (Team Games — SOL2 Level Challenge)
- * Headers (Row 1):
- *   Quest ID | Student ID | Student Name | Table No | Level No | Quest No | Completed | Date Marked | Marked By
- *   10 levels, 3 quests each. A row exists once a student has checked (or
- *   unchecked) their own quest at least once; Completed = "Yes"/"No".
- *   NOTE: this is now self-reported by students in the separate STUDENT app —
- *   Faculty/Table Guides no longer check these off themselves.
- *
- * Sheet: STUDENTS — add one new column:
- *   PIN
- *   A 4-6 digit PIN each student uses (with their Student ID) to log into the
- *   Student app. Set an initial PIN for each student (e.g. their birth month+day).
- *
- * Sheet: NOTIFICATIONS   (new — powers the Faculty app's notification bell)
- * Headers (Row 1):
- *   Notification ID | Table No | Student ID | Student Name | Level No | Quest No |
- *   Message | Created At | Read | Read By | Read At
- *   A row is added automatically whenever a student marks a quest complete in
- *   the Student app. Read = "Yes"/"No".
- *
- * Sheet: QUEST_VIDEOS   (Director/Consultant-managed — "watch this video" quests)
- * Headers (Row 1):
- *   Level No | Quest No | Video Title | Video URL | Notes
- *   Add one row per "watch" quest (e.g. Level 1, Quest 2). Paste a YouTube
- *   link in Video URL for it to play inline in the app; any other link
- *   (Drive, Facebook, etc.) shows as a plain "Watch Video" button instead.
- *   Leave the row blank/missing and students see "Video not uploaded yet."
- *
- * Sheet: STUDENT_VIDEO_SUBMISSIONS   (auto-filled — student-uploaded testimony videos)
- * Headers (Row 1):
- *   Submission ID | Student ID | Student Name | Table No | Level No | Quest No |
- *   Video URL | File Name | File Size KB | Submitted At
- *   A row is added automatically when a student uploads a video from the
- *   Student app (e.g. Level 1, Quest 1). The video itself is saved to your
- *   VIDEO_FOLDER_ID Drive folder; Video URL links to it there.
+ *   Record ID | Student ID | Student Name | Table No | Module No | Lesson No |
+ *   Attendance Points | Participation Points | Homework Points | Memory Verse Points |
+ *   Date Marked | Marked By
+ *   (This sheet already exists in your spreadsheet with the right headers —
+ *   it was just never being written to. See the fix notes below.)
  ************************************************/
 
 /************************************************
@@ -112,8 +69,33 @@ function doGet(e) {
       case "payments":
         return output(getSheetData("PAYMENTS"));
 
+      // Pass ?studentId=... to get only that student's rows (the Student
+      // app always does this, so a student's device only ever sees their
+      // own points, never a table-mate's). Faculty app calls this with no
+      // studentId and still gets everyone, exactly as before.
       case "credits":
-        return output(getSheetData("LC_CREDITS"));
+        var creditsResult = getSheetData("POINTS_LOG");
+        if (e.parameter.studentId) {
+          creditsResult.data = creditsResult.data.filter(function (c) {
+            return String(c["Student ID"]) === String(e.parameter.studentId);
+          });
+        }
+        return output(creditsResult);
+
+      // FIX: this action was missing entirely, so the front-end's
+      // apiGet('lessonPoints') call always failed silently, and the
+      // Attendance/Participation/Homework/Memory Verse points grid never
+      // loaded any saved data (see toggleLessonPointBox below for the
+      // matching write-side fix). Pass ?studentId=... to get only that
+      // student's rows (the Student app does this).
+      case "lessonPoints":
+        var lpResult = getSheetData("STUDENT_LESSON_POINTS");
+        if (e.parameter.studentId) {
+          lpResult.data = lpResult.data.filter(function (r) {
+            return String(r["Student ID"]) === String(e.parameter.studentId);
+          });
+        }
+        return output(lpResult);
 
       case "qrscans":
         return output(getSheetData("QR_SCANS"));
@@ -124,35 +106,31 @@ function doGet(e) {
       case "settings":
         return output(getSheetData("SYSTEM_SETTINGS"));
 
-      // NEW: Devotionals
       case "devotionals":
         return output(getSheetData("STUDENT_DEVOTIONALS"));
 
-      // NEW: Activities
       case "activities":
         return output(getSheetData("STUDENT_ACTIVITIES"));
 
-      // NEW: Makeup status records
       case "makeupStatus":
         return output(getSheetData("MAKEUP_STATUS"));
 
-      // NEW: Module/Lesson completion records (drives Certificate eligibility)
+      case "makeupWeekAssignments":
+        return output(getSheetData("MAKEUP_WEEK_ASSIGNMENTS"));
+
       case "lessonCompletion":
         return output(getSheetData("STUDENT_LESSON_COMPLETION"));
 
-      // NEW: Team Games — SOL2 Level Challenge quest progress
       case "questProgress":
         return output(getSheetData("STUDENT_QUEST_PROGRESS"));
 
-      // NEW: Notifications — student self-completions, read by Faculty/Table Guides
       case "notifications":
         return output(getSheetData("NOTIFICATIONS"));
 
-      // NEW: Director/Consultant-assigned "watch this video" links
       case "questVideos":
         return output(getSheetData("QUEST_VIDEOS"));
 
-      // NEW: Student-uploaded testimony videos. Pass ?studentId=... to get
+      // Student-uploaded testimony videos. Pass ?studentId=... to get
       // only that student's rows (the Student app always does this, so one
       // student's device never receives another student's video links).
       case "videoSubmissions":
@@ -168,6 +146,20 @@ function doGet(e) {
       case "gameState":
         var gsRaw = PropertiesService.getScriptProperties().getProperty("GS_GAME_STATE");
         return output({ state: gsRaw ? JSON.parse(gsRaw) : null });
+
+      case "redeemItems":
+        return output(getSheetData("REDEEM_ITEMS"));
+
+      // Redemption log. Pass ?studentId=... to get only that
+      // student's rows (the Student app always does this).
+      case "redemptions":
+        var rdResult = getSheetData("REDEMPTIONS");
+        if (e.parameter.studentId) {
+          rdResult.data = rdResult.data.filter(function (r) {
+            return String(r["Student ID"]) === String(e.parameter.studentId);
+          });
+        }
+        return output(rdResult);
 
       case "student":
         return output(getStudentById(e.parameter.studentId));
@@ -212,70 +204,76 @@ function doPost(e) {
       case "addCredit":
         return output(addCredit(data));
 
+      // FIX: this action was missing entirely, so every time a Faculty/
+      // Table Guide tapped a box in the Attendance/Participation/Homework/
+      // Memory Verse points grid, the request fell through to the "Unknown
+      // action" default case below and nothing was ever saved to
+      // STUDENT_LESSON_POINTS. The points only ever existed in that one
+      // browser's in-memory state (which is why a leaderboard could show
+      // 5,000 pts for a student while their own device — reading fresh
+      // from the sheet — showed 0).
+      case "toggleLessonPointBox":
+        return output(toggleLessonPointBox(data));
+
       case "addQRScan":
         return output(addQRScan(data));
 
-      // NEW: Toggle a single devotional day for a student
       case "toggleDevotional":
         return output(toggleDevotional(data));
 
-      // NEW: Toggle a single activity day for a student
       case "toggleActivity":
         return output(toggleActivity(data));
 
-      // NEW: Team Games — toggle a single Level Challenge quest for a student
-      // (now called from the STUDENT app — students self-report their own quests)
       case "toggleQuest":
         return output(toggleQuest(data));
 
-      // NEW: Faculty/Table Guide marks one notification as read
       case "markNotificationRead":
         return output(markNotificationRead(data));
 
-      // NEW: Faculty/Table Guide marks all notifications for their table as read
       case "markAllNotificationsRead":
         return output(markAllNotificationsRead(data));
 
-      // NEW: Student uploads a testimony video (saved to Drive, recorded in
-      // STUDENT_VIDEO_SUBMISSIONS, and the quest is auto-marked complete)
       case "uploadTestimonyVideo":
         return output(uploadTestimonyVideo(data));
 
-      // NEW: Bulk-save all devotional days for a student (replaces existing rows)
       case "saveStudentDevotionals":
         return output(saveStudentDevotionals(data));
 
-      // NEW: Bulk-save all activity days for a student (replaces existing rows)
       case "saveStudentActivities":
         return output(saveStudentActivities(data));
 
-      // NEW: Update makeup status for an absence record
       case "updateMakeupStatus":
         return output(updateMakeupStatus(data));
 
-      // NEW: Set a single lesson's status ("Done" / "Makeup" / "") for a student
+      case "updateMakeupWeekAssignment":
+        return output(updateMakeupWeekAssignment(data));
+
       case "toggleLessonCompletion":
         return output(toggleLessonCompletion(data));
 
-      // NEW: Bulk-save all 20 module/lesson statuses for a student (replaces existing rows)
       case "saveStudentLessonCompletion":
         return output(saveStudentLessonCompletion(data));
 
-      // NEW: Update student status (Active / Dropped)
       case "updateStudentStatus":
         return output(updateStudentStatus(data));
 
-      // NEW: Add a new student (Director / Consultant / Record only —
-      // front-end already gates this behind login before it's reachable)
       case "addStudent":
         return output(addStudent(data));
+
+      // Student redeems a Redeem Store item. Balance is recomputed
+      // server-side (not trusted from the client) so a stale screen or a
+      // double-tap can never push a student below zero points.
+      case "redeemReward":
+        return output(redeemReward(data));
+
+      case "sendAdminNotification":
+        return output(sendAdminNotification(data));
+
       // ── GAME SHOW STATE (cross-device sync) ──
       case "setGameState":
         PropertiesService.getScriptProperties().setProperty("GS_GAME_STATE", JSON.stringify(data.state));
         return output({ success: true });
 
-      // appendGameEvent — used by phones to add a single event (buzz) without
-      // overwriting the host's full event queue
       case "appendGameEvent":
         var gsAppRaw = PropertiesService.getScriptProperties().getProperty("GS_GAME_STATE");
         var gsAppState = gsAppRaw ? JSON.parse(gsAppRaw) : { events: [] };
@@ -285,7 +283,6 @@ function doPost(e) {
         PropertiesService.getScriptProperties().setProperty("GS_GAME_STATE", JSON.stringify(gsAppState));
         return output({ success: true });
 
-      // getGameState via POST — avoids GAS GET CDN caching on mobile devices
       case "getGameState":
         var gsRaw2 = PropertiesService.getScriptProperties().getProperty("GS_GAME_STATE");
         return output({ state: gsRaw2 ? JSON.parse(gsRaw2) : null });
@@ -293,7 +290,6 @@ function doPost(e) {
       case "clearGameState":
         PropertiesService.getScriptProperties().deleteProperty("GS_GAME_STATE");
         return output({ success: true });
-
 
       default:
         return output({
@@ -446,11 +442,11 @@ function addPayment(data) {
 }
 
 /************************************************
- * POINTS
+ * POINTS (manual "Add Points" form — legacy path)
  ************************************************/
 
 function addCredit(data) {
-  const sheet = getSheet("LC_CREDITS");
+  const sheet = getSheet("POINTS_LOG");
   sheet.appendRow([
     Utilities.getUuid(),
     data.studentId,
@@ -464,6 +460,138 @@ function addCredit(data) {
   return {
     success: true,
     message: "Point Added"
+  };
+}
+
+/************************************************
+ * LESSON POINTS GRID (NEW — this was the missing piece)
+ * Sheet: STUDENT_LESSON_POINTS
+ * Headers: Record ID | Student ID | Student Name | Table No | Module No |
+ *          Lesson No | Attendance Points | Participation Points |
+ *          Homework Points | Memory Verse Points | Date Marked | Marked By
+ * data: { studentId, studentName, tableNo, moduleNo, lessonNo, category,
+ *         points, markedBy }
+ * "category" is one of: attendance | participation | homework | memoryVerse
+ ************************************************/
+
+function lessonPointsCategoryColumn(categoryKey) {
+  switch (categoryKey) {
+    case "attendance":    return "Attendance Points";
+    case "participation": return "Participation Points";
+    case "homework":      return "Homework Points";
+    case "memoryVerse":   return "Memory Verse Points";
+    default:
+      throw new Error("Unknown lesson points category: " + categoryKey);
+  }
+}
+
+function toggleLessonPointBox(data) {
+  const categoryCol = lessonPointsCategoryColumn(data.category);
+  const sheet   = getSheet("STUDENT_LESSON_POINTS");
+  const values  = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const studentIdCol = headers.indexOf("Student ID");
+  const moduleCol    = headers.indexOf("Module No");
+  const lessonCol    = headers.indexOf("Lesson No");
+  const catCol       = headers.indexOf(categoryCol);
+  const dateCol      = headers.indexOf("Date Marked");
+  const markedByCol  = headers.indexOf("Marked By");
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][studentIdCol]) === String(data.studentId) &&
+        Number(values[i][moduleCol]) === Number(data.moduleNo) &&
+        Number(values[i][lessonCol]) === Number(data.lessonNo)) {
+      sheet.getRange(i + 1, catCol + 1).setValue(Number(data.points) || 0);
+      sheet.getRange(i + 1, dateCol + 1).setValue(new Date());
+      sheet.getRange(i + 1, markedByCol + 1).setValue(data.markedBy || "");
+      return { success: true, message: "Lesson points updated" };
+    }
+  }
+
+  // No row yet for this student+module+lesson — insert one with the three
+  // other categories starting at 0.
+  sheet.appendRow([
+    Utilities.getUuid(),          // Record ID
+    data.studentId,                // Student ID
+    data.studentName || "",        // Student Name
+    data.tableNo || "",            // Table No
+    data.moduleNo,                  // Module No
+    data.lessonNo,                  // Lesson No
+    data.category === "attendance"    ? (Number(data.points) || 0) : 0,
+    data.category === "participation" ? (Number(data.points) || 0) : 0,
+    data.category === "homework"      ? (Number(data.points) || 0) : 0,
+    data.category === "memoryVerse"   ? (Number(data.points) || 0) : 0,
+    new Date(),                     // Date Marked
+    data.markedBy || ""             // Marked By
+  ]);
+  return { success: true, message: "Lesson points recorded" };
+}
+
+/************************************************
+ * REDEEM POINTS
+ * data: { studentId, studentName, tableNo, itemName, pointsCost, redeemedBy }
+ * Recomputes the student's available balance from POINTS_LOG + the lesson
+ * points grid, minus prior REDEMPTIONS rows (never trusts a balance sent
+ * from the client), so this is safe even if two devices try to redeem for
+ * the same student at once or the app's cached numbers are out of date.
+ ************************************************/
+
+function computeAvailablePoints(studentId) {
+  const earned = getSheetData("POINTS_LOG").data
+    .filter(function (c) { return String(c["Student ID"]) === String(studentId); })
+    .reduce(function (sum, c) { return sum + Number(c["Credits Added"] || 0); }, 0);
+
+  // FIX: this previously left out lesson-grid points entirely, so a
+  // student's redeemable balance didn't match the total shown on the
+  // Faculty leaderboard.
+  const lessonPoints = getSheetData("STUDENT_LESSON_POINTS").data
+    .filter(function (r) { return String(r["Student ID"]) === String(studentId); })
+    .reduce(function (sum, r) {
+      return sum + Number(r["Attendance Points"] || 0)
+                 + Number(r["Participation Points"] || 0)
+                 + Number(r["Homework Points"] || 0)
+                 + Number(r["Memory Verse Points"] || 0);
+    }, 0);
+
+  const redeemed = getSheetData("REDEMPTIONS").data
+    .filter(function (r) { return String(r["Student ID"]) === String(studentId); })
+    .reduce(function (sum, r) { return sum + Number(r["Points Cost"] || 0); }, 0);
+
+  return earned + lessonPoints - redeemed;
+}
+
+function redeemReward(data) {
+  if (!data.studentId) return { success: false, message: "Missing studentId." };
+  if (!data.itemName)  return { success: false, message: "Missing itemName." };
+
+  const cost = Number(data.pointsCost || 0);
+  if (!(cost > 0)) return { success: false, message: "Invalid point cost." };
+
+  const available = computeAvailablePoints(data.studentId);
+  if (available < cost) {
+    return {
+      success: false,
+      message: "Not enough points — you have " + available + " but this costs " + cost + "."
+    };
+  }
+
+  const sheet = getSheet("REDEMPTIONS");
+  sheet.appendRow([
+    Utilities.getUuid(),          // Redemption ID
+    data.studentId,                // Student ID
+    data.studentName || "",        // Student Name
+    data.tableNo || "",            // Table No
+    data.itemName,                 // Item Name
+    cost,                          // Points Cost
+    new Date()                     // Redeemed At
+  ]);
+
+  notifyTableGuideOfRedemption(data, cost);
+
+  return {
+    success: true,
+    message: data.itemName + " redeemed for " + cost + " pts",
+    remainingPoints: available - cost
   };
 }
 
@@ -491,7 +619,6 @@ function addQRScan(data) {
 
 /************************************************
  * DEVOTIONALS — Toggle single day
- * data: { studentId, studentName, tableNo, dayNo, completed, markedBy }
  ************************************************/
 
 function toggleDevotional(data) {
@@ -503,18 +630,15 @@ function toggleDevotional(data) {
   const completedCol = headers.indexOf("Completed");
   const dateCol      = headers.indexOf("Date Marked");
 
-  // Check if row already exists for this student + day
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][studentIdCol]) === String(data.studentId) &&
         Number(values[i][dayNoCol]) === Number(data.dayNo)) {
-      // Update existing row
       sheet.getRange(i + 1, completedCol + 1).setValue(data.completed ? "Yes" : "No");
       sheet.getRange(i + 1, dateCol + 1).setValue(new Date());
       return { success: true, message: "Devotional updated" };
     }
   }
 
-  // Insert new row
   sheet.appendRow([
     Utilities.getUuid(),
     data.studentId,
@@ -530,12 +654,6 @@ function toggleDevotional(data) {
 
 /************************************************
  * TEAM GAMES — SOL2 Level Challenge
- * Toggle a single quest for a student. Called from the STUDENT app —
- * students self-report their own quests (no more table-guide checkoff).
- * data: { studentId, studentName, tableNo, levelNo, questNo, questTitle,
- *         levelName, completed, markedBy }
- * When a student checks a quest complete, a row is added to NOTIFICATIONS
- * so their Table Guide sees it (bell/badge) in the Faculty app.
  ************************************************/
 
 function toggleQuest(data) {
@@ -548,12 +666,10 @@ function toggleQuest(data) {
   const completedCol = headers.indexOf("Completed");
   const dateCol      = headers.indexOf("Date Marked");
 
-  // Check if row already exists for this student + level + quest
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][studentIdCol]) === String(data.studentId) &&
         Number(values[i][levelNoCol]) === Number(data.levelNo) &&
         Number(values[i][questNoCol]) === Number(data.questNo)) {
-      // Update existing row
       sheet.getRange(i + 1, completedCol + 1).setValue(data.completed ? "Yes" : "No");
       sheet.getRange(i + 1, dateCol + 1).setValue(new Date());
       if (data.completed) notifyTableGuideOfQuest(data);
@@ -561,7 +677,6 @@ function toggleQuest(data) {
     }
   }
 
-  // Insert new row
   sheet.appendRow([
     Utilities.getUuid(),
     data.studentId,
@@ -579,12 +694,6 @@ function toggleQuest(data) {
 
 /************************************************
  * VIDEO TESTIMONY UPLOAD
- * Saves the uploaded file to VIDEO_FOLDER_ID in Drive, replaces any prior
- * submission row for this student+level+quest in STUDENT_VIDEO_SUBMISSIONS,
- * then marks the quest complete the same way toggleQuest does (which also
- * fires the Table Guide notification).
- * data: { studentId, studentName, tableNo, levelNo, questNo, questTitle,
- *         levelName, fileName, mimeType, base64Data, markedBy }
  ************************************************/
 
 function uploadTestimonyVideo(data) {
@@ -603,9 +712,6 @@ function uploadTestimonyVideo(data) {
   const blob  = Utilities.newBlob(bytes, mimeType, safeName);
   const file  = folder.createFile(blob);
 
-  // Let Directors/Consultants/Table Guides open it from the sheet without
-  // needing individual Drive access. If domain sharing policy blocks this,
-  // the file still saves fine — it just won't be link-shareable automatically.
   try {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   } catch (shareErr) {
@@ -614,7 +720,6 @@ function uploadTestimonyVideo(data) {
 
   const videoUrl = "https://drive.google.com/file/d/" + file.getId() + "/view";
 
-  // Replace any earlier submission for this student+level+quest
   const sheet   = getSheet("STUDENT_VIDEO_SUBMISSIONS");
   const values  = sheet.getDataRange().getValues();
   if (values.length > 1) {
@@ -643,8 +748,6 @@ function uploadTestimonyVideo(data) {
     new Date()
   ]);
 
-  // Mark the quest complete + notify the Table Guide, reusing the same path
-  // the Student app uses for text/watch quests.
   toggleQuest({
     studentId: data.studentId,
     studentName: data.studentName,
@@ -662,9 +765,6 @@ function uploadTestimonyVideo(data) {
 
 /************************************************
  * NOTIFICATIONS
- * Sheet: NOTIFICATIONS
- * Headers: Notification ID | Table No | Student ID | Student Name |
- *          Level No | Quest No | Message | Created At | Read | Read By | Read At
  ************************************************/
 
 function notifyTableGuideOfQuest(data) {
@@ -688,6 +788,48 @@ function notifyTableGuideOfQuest(data) {
   ]);
 }
 
+function notifyTableGuideOfRedemption(data, cost) {
+  const sheet = getSheet("NOTIFICATIONS");
+  const message = (data.studentName || "A student") + " redeemed \u201c" + data.itemName +
+                  "\u201d (" + cost + " pts) — please prepare it for pickup at Table " + (data.tableNo || "—") + ".";
+  sheet.appendRow([
+    Utilities.getUuid(),
+    data.tableNo,
+    data.studentId,
+    data.studentName,
+    "",
+    "",
+    message,
+    new Date(),
+    "No",
+    "",
+    ""
+  ]);
+}
+
+function sendAdminNotification(data) {
+  if (!data.tableNo) return { success: false, message: "Missing tableNo." };
+  const message = String(data.message || "").trim();
+  if (!message) return { success: false, message: "Message can't be empty." };
+
+  const sheet = getSheet("NOTIFICATIONS");
+  sheet.appendRow([
+    Utilities.getUuid(),
+    data.tableNo,
+    data.studentId || "",
+    data.studentName || "",
+    "",
+    "",
+    message,
+    new Date(),
+    "No",
+    "",
+    ""
+  ]);
+
+  return { success: true, message: "Notification sent to Table " + data.tableNo + "'s guide." };
+}
+
 function markNotificationRead(data) {
   const sheet   = getSheet("NOTIFICATIONS");
   const values  = sheet.getDataRange().getValues();
@@ -708,8 +850,6 @@ function markNotificationRead(data) {
   return { success: false, message: "Notification not found" };
 }
 
-// Marks every unread notification for a given Table No as read in one pass.
-// data: { tableNo, readBy }
 function markAllNotificationsRead(data) {
   const sheet   = getSheet("NOTIFICATIONS");
   const values  = sheet.getDataRange().getValues();
@@ -735,7 +875,6 @@ function markAllNotificationsRead(data) {
 
 /************************************************
  * ACTIVITIES — Toggle single day
- * data: { studentId, studentName, tableNo, dayNo, completed, markedBy }
  ************************************************/
 
 function toggleActivity(data) {
@@ -747,18 +886,15 @@ function toggleActivity(data) {
   const completedCol = headers.indexOf("Completed");
   const dateCol      = headers.indexOf("Date Marked");
 
-  // Check if row already exists for this student + day
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][studentIdCol]) === String(data.studentId) &&
         Number(values[i][dayNoCol]) === Number(data.dayNo)) {
-      // Update existing row
       sheet.getRange(i + 1, completedCol + 1).setValue(data.completed ? "Yes" : "No");
       sheet.getRange(i + 1, dateCol + 1).setValue(new Date());
       return { success: true, message: "Activity updated" };
     }
   }
 
-  // Insert new row
   sheet.appendRow([
     Utilities.getUuid(),
     data.studentId,
@@ -773,9 +909,7 @@ function toggleActivity(data) {
 }
 
 /************************************************
- * DEVOTIONALS — Bulk save all days for a student
- * data: { studentId, studentName, tableNo, days: number[], markedBy }
- * "days" = array of day numbers that are completed
+ * DEVOTIONALS — Bulk save
  ************************************************/
 
 function saveStudentDevotionals(data) {
@@ -784,14 +918,12 @@ function saveStudentDevotionals(data) {
   const headers = values[0];
   const studentIdCol = headers.indexOf("Student ID");
 
-  // Delete all existing rows for this student (go bottom-up)
   for (let i = values.length - 1; i >= 1; i--) {
     if (String(values[i][studentIdCol]) === String(data.studentId)) {
       sheet.deleteRow(i + 1);
     }
   }
 
-  // Re-insert all completed days
   const completedDays = new Set(data.days || []);
   for (let day = 1; day <= 63; day++) {
     sheet.appendRow([
@@ -809,9 +941,7 @@ function saveStudentDevotionals(data) {
 }
 
 /************************************************
- * MODULE/LESSON COMPLETION — Toggle a single lesson
- * data: { studentId, studentName, tableNo, moduleNo, lessonNo, status, markedBy }
- * status: "Done" | "Makeup" | "" (clears the mark)
+ * MODULE/LESSON COMPLETION
  ************************************************/
 
 function toggleLessonCompletion(data) {
@@ -850,27 +980,18 @@ function toggleLessonCompletion(data) {
   return { success: true, message: "Lesson status recorded" };
 }
 
-/************************************************
- * MODULE/LESSON COMPLETION — Bulk save all 20 lessons for a student
- * data: { studentId, studentName, tableNo, lessons: [{module, lesson, status}], markedBy }
- * "lessons" only needs to include entries with a non-blank status; any
- * module/lesson not included is saved as "" (not yet marked).
- ************************************************/
-
 function saveStudentLessonCompletion(data) {
   const sheet   = getSheet("STUDENT_LESSON_COMPLETION");
   const values  = sheet.getDataRange().getValues();
   const headers = values[0];
   const studentIdCol = headers.indexOf("Student ID");
 
-  // Delete all existing rows for this student (go bottom-up)
   for (let i = values.length - 1; i >= 1; i--) {
     if (String(values[i][studentIdCol]) === String(data.studentId)) {
       sheet.deleteRow(i + 1);
     }
   }
 
-  // Build a lookup of provided statuses
   const statusMap = {};
   (data.lessons || []).forEach(function (l) {
     statusMap[l.module + "-" + l.lesson] = l.status || "";
@@ -897,7 +1018,7 @@ function saveStudentLessonCompletion(data) {
 }
 
 /************************************************
- * ACTIVITIES — Bulk save all days for a student
+ * ACTIVITIES — Bulk save
  ************************************************/
 
 function saveStudentActivities(data) {
@@ -906,14 +1027,12 @@ function saveStudentActivities(data) {
   const headers = values[0];
   const studentIdCol = headers.indexOf("Student ID");
 
-  // Delete all existing rows for this student
   for (let i = values.length - 1; i >= 1; i--) {
     if (String(values[i][studentIdCol]) === String(data.studentId)) {
       sheet.deleteRow(i + 1);
     }
   }
 
-  // Re-insert all completed days
   const completedDays = new Set(data.days || []);
   for (let day = 1; day <= 63; day++) {
     sheet.appendRow([
@@ -931,9 +1050,7 @@ function saveStudentActivities(data) {
 }
 
 /************************************************
- * MAKEUP STATUS — Update status on an absence record
- * Statuses: Pending | Scheduled | Done
- * data: { attendanceId, studentId, studentName, weekNo, tableNo, status, updatedBy, notes }
+ * MAKEUP STATUS
  ************************************************/
 
 function updateMakeupStatus(data) {
@@ -948,7 +1065,6 @@ function updateMakeupStatus(data) {
     const updAtCol    = headers.indexOf("Updated At");
     const notesCol    = headers.indexOf("Notes");
 
-    // Update if existing row found
     for (let i = 1; i < values.length; i++) {
       if (String(values[i][attIdCol]) === String(data.attendanceId)) {
         sheet.getRange(i + 1, statusCol + 1).setValue(data.status);
@@ -960,26 +1076,65 @@ function updateMakeupStatus(data) {
     }
   }
 
-  // Insert new row
   sheet.appendRow([
-    Utilities.getUuid(),          // Makeup ID
-    data.attendanceId,            // Attendance ID (links back to STUDENT_ATTENDANCE)
-    data.studentId,               // Student ID
-    data.studentName,             // Student Name
-    data.weekNo,                  // Week No
-    data.tableNo,                 // Table No
-    data.status,                  // Status: Pending | Scheduled | Done
-    data.updatedBy || "",         // Updated By
-    new Date(),                   // Updated At
-    data.notes || ""              // Notes
+    Utilities.getUuid(),
+    data.attendanceId,
+    data.studentId,
+    data.studentName,
+    data.weekNo,
+    data.tableNo,
+    data.status,
+    data.updatedBy || "",
+    new Date(),
+    data.notes || ""
   ]);
   return { success: true, message: "Makeup status set to " + data.status };
 }
 
 /************************************************
- * STUDENT STATUS — Update Active / Dropped
- * data: { studentId, studentName, status, notes? }
- * status values: "Active" | "Dropped"
+ * MAKEUP WEEK ASSIGNMENT
+ * Sheet: MAKEUP_WEEK_ASSIGNMENTS
+ * Headers: Record ID | Week No | Assigned To | Updated By | Updated At
+ *
+ * One row per week. Assigns a single facilitator to handle ALL absent
+ * students' make-up classes for that week, rather than assigning
+ * per-student. Create this sheet (with those headers) if it doesn't
+ * exist yet.
+ ************************************************/
+
+function updateMakeupWeekAssignment(data) {
+  const sheet  = getSheet("MAKEUP_WEEK_ASSIGNMENTS");
+  const values = sheet.getDataRange().getValues();
+
+  if (values.length > 1) {
+    const headers    = values[0];
+    const weekCol     = headers.indexOf("Week No");
+    const assignedCol = headers.indexOf("Assigned To");
+    const updByCol    = headers.indexOf("Updated By");
+    const updAtCol    = headers.indexOf("Updated At");
+
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][weekCol]) === String(data.weekNo)) {
+        sheet.getRange(i + 1, assignedCol + 1).setValue(data.assignedTo || "");
+        sheet.getRange(i + 1, updByCol + 1).setValue(data.updatedBy || "");
+        sheet.getRange(i + 1, updAtCol + 1).setValue(new Date());
+        return { success: true, message: "Week " + data.weekNo + " make-up class assigned to " + (data.assignedTo || "nobody") };
+      }
+    }
+  }
+
+  sheet.appendRow([
+    Utilities.getUuid(),
+    data.weekNo,
+    data.assignedTo || "",
+    data.updatedBy || "",
+    new Date()
+  ]);
+  return { success: true, message: "Week " + data.weekNo + " make-up class assigned to " + (data.assignedTo || "nobody") };
+}
+
+/************************************************
+ * STUDENT STATUS
  ************************************************/
 
 function updateStudentStatus(data) {
@@ -988,7 +1143,7 @@ function updateStudentStatus(data) {
   const headers = values[0];
   const idCol     = headers.indexOf("Student ID");
   const statusCol = headers.indexOf("Status");
-  const notesCol  = headers.indexOf("Drop Notes"); // optional column; add if needed
+  const notesCol  = headers.indexOf("Drop Notes");
 
   if (idCol < 0 || statusCol < 0) {
     throw new Error("STUDENTS sheet missing 'Student ID' or 'Status' column.");
@@ -997,7 +1152,6 @@ function updateStudentStatus(data) {
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][idCol]) === String(data.studentId)) {
       sheet.getRange(i + 1, statusCol + 1).setValue(data.status);
-      // Write notes to Drop Notes column if it exists
       if (notesCol >= 0 && data.notes) {
         sheet.getRange(i + 1, notesCol + 1).setValue(data.notes);
       }
@@ -1015,10 +1169,6 @@ function updateStudentStatus(data) {
 
 /************************************************
  * ADD STUDENT
- * Student ID is generated here (next number after the highest
- * existing "STUDENT-####"), Facilitator is looked up from
- * TABLE_GUIDES based on the Table No chosen, Status defaults to
- * "Active", and Registration Date is set to right now.
  ************************************************/
 
 function addStudent(data) {
@@ -1034,7 +1184,6 @@ function addStudent(data) {
     return { success: false, message: "Full Name is required." };
   }
 
-  // Next sequential Student ID, e.g. STUDENT-0001 -> STUDENT-0002
   let maxNum = 0;
   for (let i = 1; i < values.length; i++) {
     const idStr = String(values[i][idCol] || "");
@@ -1047,7 +1196,6 @@ function addStudent(data) {
   const nextNum = maxNum + 1;
   const newId   = "STUDENT-" + ("0000" + nextNum).slice(-4);
 
-  // Look up the Facilitator assigned to the chosen table
   let facilitatorName = "";
   const tableGuides = getSheetData("TABLE_GUIDES").data;
   const guide = tableGuides.find(function (g) {
@@ -1059,17 +1207,17 @@ function addStudent(data) {
   const status = "Active";
 
   sheet.appendRow([
-    newId,                       // Student ID (auto)
-    data.fullName || "",         // Full Name
-    data.age || "",              // Age
-    data.gender || "",           // Gender
-    data.lgLeader || "",         // LG Leader
-    data.networkLeader || "",    // Network Leader
-    data.tableNo || "",          // Table No
-    facilitatorName,             // Facilitator (auto, from Table Guide)
-    data.contactNo || "",        // Contact No
-    status,                      // Status (auto)
-    registrationDate             // Registration Date (auto)
+    newId,
+    data.fullName || "",
+    data.age || "",
+    data.gender || "",
+    data.lgLeader || "",
+    data.networkLeader || "",
+    data.tableNo || "",
+    facilitatorName,
+    data.contactNo || "",
+    status,
+    registrationDate
   ]);
 
   return {

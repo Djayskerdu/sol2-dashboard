@@ -61,6 +61,7 @@ let APP = {
   totalFee: 500,
   devotionals: {},   // studentId -> Set of completed day numbers (1-140)
   makeupStatus: {},  // attendanceId -> { status, notes }
+  makeupWeekAssignments: {},  // weekNo -> assigned facilitator name (whole-week make-up assignment)
   lessonCompletion: {},  // studentId -> { "moduleNo-lessonNo": "Done" | "Makeup" }
   lessonPoints: {},  // studentId -> { "moduleNo-lessonNo": { attendance, participation, homework, memoryVerse } }
   questProgress: {},  // studentId -> { "levelNo-questNo": true }  (Level Challenge game)
@@ -222,10 +223,13 @@ const LEVEL_NAMES = {
   10: 'Mission Complete',
 };
 const QUESTS = {
+  // NOTE: kept in sync with the Student app's QUESTS (student/js/student.js).
+  // Level 1 was changed to 2 quests (video testimony + watch video) — if this
+  // list ever drifts from the Student app's again, the Faculty app will show
+  // the wrong "Level X/10" and wrong total quest counts for every student.
   1: [
-    { icon:'🎯', title:'Attend a LifeGroup' },
-    { icon:'🤝', title:'Introduce yourself to a new member' },
-    { icon:'📖', title:'Memorize one Bible verse' },
+    { icon:'🎥', type:'upload', title:'Create or upload a video testimony (at least 2 minutes long) sharing how God has worked in your life.' },
+    { icon:'▶️', type:'watch',  title:'Watch the assigned video to prepare for the upcoming lessons in Module 1 (Lessons 1 and 2).' },
   ],
   2: [
     { icon:'📖', title:'Read the Bible for 5 consecutive days' },
@@ -379,7 +383,7 @@ function renderFacultyNotifications() {
   if (!list) return;
   const rows = facultyNotifRows();
   if (!rows.length) {
-    list.innerHTML = '<div class="notif-empty">No notifications yet. When a student completes a Level Challenge quest in their app, it will show up here.</div>';
+    list.innerHTML = '<div class="notif-empty">No notifications yet. You\'ll see updates here when a student completes a quest, redeems a Redeem Store item, or a Director/Consultant sends your table a reminder.</div>';
     updateFacultyNotifBadges();
     return;
   }
@@ -430,10 +434,29 @@ function loadMakeupStatusFromSheet(rows) {
 }
 
 async function saveMakeupStatus(attendanceId, status, studentId, studentName, weekNo, tableNo, notes) {
+  const existing = APP.makeupStatus[attendanceId] || {};
   APP.makeupStatus[attendanceId] = { status, notes: notes || '' };
   try {
     await apiPost({ action: 'updateMakeupStatus', attendanceId, studentId, studentName, weekNo, tableNo, status, updatedBy: APP.currentFaculty?.['Full Name'] || 'Admin', notes: notes || '' });
   } catch(e) { console.warn('Makeup status sync failed:', e); }
+}
+
+// ── Make-up Class Weekly Assignment ──────────────────────────
+// One facilitator handles ALL absent students' make-up classes for a given
+// week, rather than assigning per-student.
+function loadMakeupWeekAssignmentsFromSheet(rows) {
+  APP.makeupWeekAssignments = {};
+  (rows || []).forEach(row => {
+    const wk = String(row['Week No'] || '');
+    if (wk) APP.makeupWeekAssignments[wk] = row['Assigned To'] || '';
+  });
+}
+
+async function saveMakeupWeekAssignment(weekNo, assignedTo) {
+  APP.makeupWeekAssignments[String(weekNo)] = assignedTo || '';
+  try {
+    await apiPost({ action: 'updateMakeupWeekAssignment', weekNo, assignedTo: assignedTo || '', updatedBy: APP.currentFaculty?.['Full Name'] || 'Admin' });
+  } catch(e) { console.warn('Makeup week assignment sync failed:', e); }
 }
 
 // ── Module / Lesson Completion (drives Certificate of Completion) ──────
@@ -840,7 +863,8 @@ async function loadAllData() {
     apiGet('lessonCompletion'),
     apiGet('lessonPoints'),
     apiGet('questProgress'),
-    apiGet('notifications')
+    apiGet('notifications'),
+    apiGet('makeupWeekAssignments')
   ]);
 
   APP.students          = safeData(results[0]);
@@ -866,10 +890,12 @@ async function loadAllData() {
   const lessonPointsRows     = safeData(results[13]);
   const questProgressRows    = safeData(results[14]);
   APP.notifications          = safeData(results[15]);
+  const makeupWeekAssignRows = safeData(results[16]);
 
   loadDevotionalsFromSheet(devotionalRows);
   loadDevotionalsLocal();   // fill blanks from localStorage (offline fallback)
   loadMakeupStatusFromSheet(makeupRows);
+  loadMakeupWeekAssignmentsFromSheet(makeupWeekAssignRows);
   loadLessonCompletionFromSheet(lessonCompletionRows);
   loadLessonPointsFromSheet(lessonPointsRows);
   loadQuestProgressFromSheet(questProgressRows);
@@ -973,6 +999,7 @@ function refreshCurrentScreen() {
   if (id === 's-a-makeup')      renderMakeup();
   if (id === 's-a-dropped')     renderDroppedStudents();
   if (id === 's-a-tables')      renderATables();
+  if (id === 's-a-notify')      renderANotifyTableSelect();
   if (id === 's-a-leaderboard') switchLeaderboardTab('students');
   if (id === 's-a-devotional')  renderADevotionalTables();
   if (id === 's-a-modcomp')     renderAModCompTables();
@@ -1020,6 +1047,7 @@ function go(id) {
   if (id === 's-a-makeup')      renderMakeup();
   if (id === 's-a-dropped')     renderDroppedStudents();
   if (id === 's-a-tables')      renderATables();
+  if (id === 's-a-notify')      renderANotifyTableSelect();
   if (id === 's-a-leaderboard') switchLeaderboardTab('students');
   if (id === 's-a-devotional')  renderADevotionalTables();
   if (id === 's-a-modcomp')     renderAModCompTables();
@@ -1059,9 +1087,16 @@ function renderWeeks(prefix) {
     grid.innerHTML = '<p style="padding:16px;color:var(--gray)">No lessons found.</p>';
     return;
   }
-  grid.innerHTML = APP.lessons.map(l => `
-    <div class="week-card" style="cursor:pointer;border:1.5px solid var(--border);border-radius:12px;padding:14px;background:#fff;transition:box-shadow 0.15s" onclick="showLessonDetail(${l['Week No']},'${prefix}')" onmouseover="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.10)'" onmouseout="this.style.boxShadow='none'">
-      <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:2px">WEEK ${l["Week No"]}</div>
+  // Sort so lessons within the same week stay grouped and ordered (Week 1
+  // Lesson 1, Week 1 Lesson 2, Week 2 Lesson 3, Week 2 Lesson 4, ...)
+  const sorted = APP.lessons.slice().sort((a, b) => {
+    const wDiff = Number(a["Week No"]) - Number(b["Week No"]);
+    if (wDiff !== 0) return wDiff;
+    return Number(a["Lesson No"] || 0) - Number(b["Lesson No"] || 0);
+  });
+  grid.innerHTML = sorted.map(l => `
+    <div class="week-card" style="cursor:pointer;border:1.5px solid var(--border);border-radius:12px;padding:14px;background:#fff;transition:box-shadow 0.15s" onclick="showLessonDetail(${l['Week No']},${l['Lesson No'] || 'null'},'${prefix}')" onmouseover="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.10)'" onmouseout="this.style.boxShadow='none'">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:2px">WEEK ${l["Week No"]}${l["Lesson No"] ? ` · LESSON ${l["Lesson No"]}` : ''}</div>
       <strong style="font-size:14px;color:var(--text1)">${l["Lesson Title"] || ""}</strong>
       <div style="margin-top:6px;font-size:11px;color:var(--text3)">${l["Status"] || ""}</div>
     </div>
@@ -1126,22 +1161,44 @@ function formatLessonContent(raw) {
   return html || `<p class="lc-para">${escapeHtml(text)}</p>`;
 }
 
-function showLessonDetail(weekNo, prefix) {
-  const lesson = APP.lessons.find(l => String(l["Week No"]) === String(weekNo));
+// Turns a normal Google Slides "share" link (the kind you get from the
+// Share button — e.g. .../presentation/d/XXXXX/edit?usp=sharing) into an
+// embeddable URL. Also accepts a link already in /embed or /pub form and
+// passes it through unchanged. Returns '' if it doesn't look like a Slides
+// link at all, so callers can safely fall back to the text content.
+function getSlidesEmbedUrl(raw) {
+  const url = String(raw || '').trim();
+  if (!url) return '';
+  if (!/docs\.google\.com\/presentation/i.test(url)) return '';
+  if (/\/embed/i.test(url) || /\/pub/i.test(url)) return url; // already embeddable
+  const m = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+  if (!m) return '';
+  return `https://docs.google.com/presentation/d/${m[1]}/embed?start=false&loop=false&delayms=3000`;
+}
+
+function showLessonDetail(weekNo, lessonNo, prefix) {
+  const lesson = (lessonNo !== null && lessonNo !== undefined && lessonNo !== '')
+    ? APP.lessons.find(l => String(l["Week No"]) === String(weekNo) && String(l["Lesson No"]) === String(lessonNo))
+    : APP.lessons.find(l => String(l["Week No"]) === String(weekNo));
   if (!lesson) return;
 
   const titleEl = document.getElementById('lesson-detail-title');
   const bodyEl  = document.getElementById('lesson-detail-body');
 
-  if (titleEl) titleEl.textContent = `Week ${lesson["Week No"]}`;
+  const slidesEmbedUrl = getSlidesEmbedUrl(lesson["Slides URL"]);
+  const contentBlockHtml = slidesEmbedUrl
+    ? `<div class="slides-embed-wrap"><iframe src="${slidesEmbedUrl}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe></div>`
+    : `<div class="lc-content">${formatLessonContent(lesson["Lesson Content"])}</div>`;
+
+  if (titleEl) titleEl.textContent = `Week ${lesson["Week No"]}${lesson["Lesson No"] ? ` · Lesson ${lesson["Lesson No"]}` : ''}`;
   if (bodyEl) bodyEl.innerHTML = `
     <div class="card" style="margin-bottom:12px;background:linear-gradient(135deg,var(--navy),var(--navy-light));padding:18px">
       <div style="font-size:11px;color:rgba(255,255,255,0.65);font-weight:600;margin-bottom:4px">LESSON TITLE</div>
       <div style="font-size:18px;font-weight:700;color:#fff;font-family:var(--font-head)">${lesson["Lesson Title"] || "—"}</div>
     </div>
-    <div class="card" style="margin-bottom:12px;padding:18px">
-      <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px">LESSON CONTENT</div>
-      <div class="lc-content">${formatLessonContent(lesson["Lesson Content"])}</div>
+    <div class="card" style="margin-bottom:12px;padding:${slidesEmbedUrl ? '14px' : '18px'}">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;${slidesEmbedUrl ? 'padding:0 4px' : ''}">${slidesEmbedUrl ? 'LESSON SLIDES' : 'LESSON CONTENT'}</div>
+      ${contentBlockHtml}
     </div>
     <div style="display:flex;gap:10px">
       <div class="card" style="flex:1;padding:14px;text-align:center">
@@ -1992,6 +2049,139 @@ function showTableDetail(tableNo) {
       <div>${getStudentCredits(s["Student ID"])} pts</div>
     </div>
   `).join('') || '<p style="padding:16px;color:var(--gray)">No students in this table.</p>';
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — NOTIFY TABLE GUIDE
+// Lets a Director/Consultant remind a Table Guide about a student's
+// remaining Level Challenge quests, or send a free-text note — both land
+// straight in that Table Guide's existing notification bell.
+// ═══════════════════════════════════════════
+function renderANotifyTableSelect() {
+  const sel = document.getElementById('a-notify-table-sel');
+  if (!sel) return;
+  const tables = [...new Set(APP.students.map(s => String(s['Table No'])))]
+    .filter(Boolean)
+    .sort((a, b) => Number(a) - Number(b));
+  sel.innerHTML = '<option value="">Select a table…</option>' +
+    tables.map(t => `<option value="${t}">${getTableLabel(t)}</option>`).join('');
+  // keep whatever table was previously selected, if any, when re-rendering
+  if (APP._notifyTableNo && tables.includes(APP._notifyTableNo)) sel.value = APP._notifyTableNo;
+  renderANotifyTableStudents(sel.value || '');
+}
+
+function onANotifyTableChange() {
+  const tableNo = document.getElementById('a-notify-table-sel')?.value || '';
+  renderANotifyTableStudents(tableNo);
+}
+
+function totalLevelChallengeQuests() {
+  return Object.keys(QUESTS).reduce((sum, lvl) => sum + QUESTS[lvl].length, 0);
+}
+
+function questsDoneCountFor(studentId) {
+  const state = APP.questProgress[studentId] || {};
+  return Object.keys(state).filter(k => state[k]).length;
+}
+
+function renderANotifyTableStudents(tableNo) {
+  APP._notifyTableNo = tableNo;
+  const wrap = document.getElementById('a-notify-students');
+  const guideInfo = document.getElementById('a-notify-guide-info');
+  if (!wrap) return;
+
+  if (!tableNo) {
+    wrap.innerHTML = '<p style="padding:16px 0;color:var(--gray)">Select a table above to see who still has quests left.</p>';
+    if (guideInfo) guideInfo.textContent = '';
+    return;
+  }
+
+  const guide = (APP.tableGuides || []).find(g => String(g['Table No']) === String(tableNo));
+  if (guideInfo) {
+    guideInfo.textContent = guide && guide['Facilitator Name']
+      ? `Table Guide: ${guide['Facilitator Name']}`
+      : 'No Table Guide on file for this table yet.';
+  }
+
+  const students = APP.students.filter(s =>
+    String(s['Table No']) === String(tableNo) &&
+    (s['Status'] || 'Active').toLowerCase() !== 'dropped'
+  );
+
+  const totalQuests = totalLevelChallengeQuests();
+  const withRemaining = students.filter(s => questsDoneCountFor(s['Student ID']) < totalQuests);
+
+  if (!students.length) {
+    wrap.innerHTML = '<p style="padding:16px 0;color:var(--gray)">No active students at this table.</p>';
+    return;
+  }
+  if (!withRemaining.length) {
+    wrap.innerHTML = '<p style="padding:16px 0;color:var(--gray)">🎉 Every student at this table has finished all their quests.</p>';
+    return;
+  }
+
+  wrap.innerHTML = withRemaining.map(s => {
+    const sid = s['Student ID'];
+    const done = questsDoneCountFor(sid);
+    const highest = getHighestLevel(sid);
+    const nameEsc = String(s['Full Name'] || '').replace(/'/g, "\\'");
+    return `
+      <div class="row" style="align-items:center">
+        <div>
+          <strong>${s['Full Name']}</strong>
+          <div style="font-size:11px;color:var(--gray)">Level ${highest}/${TOTAL_LEVELS} · ${done}/${totalQuests} quests done</div>
+        </div>
+        <button onclick="sendQuestReminder('${sid}','${nameEsc}',${done},${totalQuests})"
+          style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+          🔔 Remind
+        </button>
+      </div>`;
+  }).join('');
+}
+
+async function sendQuestReminder(studentId, studentName, done, totalQuests) {
+  const tableNo = APP._notifyTableNo;
+  if (!tableNo) { showToast('⚠️ Select a table first'); return; }
+  const remaining = totalQuests - done;
+  const message = `Reminder: ${studentName} still has ${remaining} quest${remaining === 1 ? '' : 's'} remaining ` +
+    `in the SOL2 Level Challenge (${done}/${totalQuests} done so far). Please check in with them.`;
+  if (!confirm(`Send this reminder to the Table Guide?\n\n"${message}"`)) return;
+  try {
+    await apiPost({
+      action: 'sendAdminNotification',
+      tableNo,
+      studentId,
+      studentName,
+      message,
+      sentBy: APP.currentFaculty?.['Full Name'] || 'Director/Consultant'
+    });
+    showToast(`✅ Reminder sent — Table ${tableNo}`);
+  } catch (e) {
+    console.warn('sendAdminNotification failed:', e);
+    showToast('⚠️ Could not send reminder — try again');
+  }
+}
+
+async function sendGeneralTableNote() {
+  const tableNo = APP._notifyTableNo;
+  const textEl = document.getElementById('a-notify-message');
+  const message = (textEl?.value || '').trim();
+  if (!tableNo) { showToast('⚠️ Select a table first'); return; }
+  if (!message) { showToast('⚠️ Write a message first'); return; }
+  if (!confirm(`Send this message to Table ${tableNo}'s guide?\n\n"${message}"`)) return;
+  try {
+    await apiPost({
+      action: 'sendAdminNotification',
+      tableNo,
+      message,
+      sentBy: APP.currentFaculty?.['Full Name'] || 'Director/Consultant'
+    });
+    if (textEl) textEl.value = '';
+    showToast(`✅ Message sent — Table ${tableNo}`);
+  } catch (e) {
+    console.warn('sendAdminNotification failed:', e);
+    showToast('⚠️ Could not send message — try again');
+  }
 }
 
 async function confirmDropStudentFromTable(studentId, studentName) {
@@ -3181,9 +3371,21 @@ function updateSyncStatus(ok, msg) {
 // WEEK DROPDOWNS
 // ═══════════════════════════════════════════
 function populateWeekDropdowns() {
-  const weekOptions = APP.lessons.map(l =>
-    `<option value="${l["Week No"]}"${Number(l["Week No"]) === APP.currentWeek ? ' selected' : ''}>Lesson ${l["Week No"]}${l["Lesson Title"] ? ' – ' + l["Lesson Title"] : ''}</option>`
-  ).join('');
+  // Attendance is recorded once per week (not per lesson), so dedupe down
+  // to one option per distinct Week No even though APP.lessons now has 2
+  // rows per week (one per lesson). Combine both lesson titles into the
+  // label so it's still clear which two lessons that week covers.
+  const weekMap = new Map();
+  APP.lessons.forEach(l => {
+    const wk = Number(l["Week No"]);
+    if (isNaN(wk)) return;
+    if (!weekMap.has(wk)) weekMap.set(wk, []);
+    if (l["Lesson Title"]) weekMap.get(wk).push(l["Lesson Title"]);
+  });
+  const weekOptions = Array.from(weekMap.keys()).sort((a, b) => a - b).map(wk => {
+    const titles = weekMap.get(wk).join(' & ');
+    return `<option value="${wk}"${wk === APP.currentWeek ? ' selected' : ''}>Week ${wk}${titles ? ' – ' + titles : ''}</option>`;
+  }).join('');
 
   const fWeek = document.getElementById('f-week-filter');
   if (fWeek && weekOptions) fWeek.innerHTML = weekOptions;
@@ -3199,9 +3401,21 @@ function populateWeekDropdowns() {
   if (rFacAtt && weekOptions) rFacAtt.innerHTML = weekOptions;
 
   const mkp = document.getElementById('makeup-week');
-  if (mkp && APP.lessons.length) {
+  if (mkp) {
+    let weekNumbers = (APP.lessons || [])
+      .map(l => Number(l["Week No"]))
+      .filter(n => !isNaN(n));
+    // Fallback: LESSON_WEEKS sheet is empty/unfilled — derive the week list
+    // from whatever weeks actually show up in the attendance records
+    // instead, so the dropdown is never left with zero options.
+    if (!weekNumbers.length) {
+      weekNumbers = (APP.attendance || [])
+        .map(a => Number(a["Week No"]))
+        .filter(n => !isNaN(n));
+    }
+    weekNumbers = Array.from(new Set(weekNumbers)).sort((a, b) => a - b);
     mkp.innerHTML = `<option value="0">All Weeks</option>` +
-      APP.lessons.map(l => `<option value="${l["Week No"]}">Week ${l["Week No"]} absences</option>`).join('');
+      weekNumbers.map(w => `<option value="${w}">Week ${w} absences</option>`).join('');
   }
 }
 
@@ -3315,13 +3529,44 @@ function renderAFacultyAtt() {
 // ADMIN — MAKEUP LESSONS
 // ═══════════════════════════════════════════
 function renderMakeup() {
-  const el   = document.getElementById('makeup-list');
-  const week = document.getElementById('makeup-week')?.value || "0";
+  const el       = document.getElementById('makeup-list');
+  const assignEl = document.getElementById('makeup-week-assign');
+  const week     = document.getElementById('makeup-week')?.value || "0";
   if (!el) return;
   let absences = APP.attendance.filter(a =>
     (a["Attendance Status"] || a["Status"] || "").toLowerCase() === "absent"
   );
   if (week !== "0") absences = absences.filter(a => String(a["Week No"]) === String(week));
+
+  // ── Whole-week make-up class assignment ──
+  // One facilitator is assigned to handle ALL absent students' make-up
+  // classes for the selected week (only shown when a specific week is
+  // picked, since "All Weeks" spans more than one make-up session).
+  if (assignEl) {
+    if (week === "0") {
+      assignEl.innerHTML = '<p style="padding:4px 2px;color:var(--text3);font-size:12.5px">Select a specific week above to assign a facilitator to that week\'s make-up class.</p>';
+    } else {
+      const assignedTo = APP.makeupWeekAssignments[String(week)] || '';
+      const facultyOptions = APP.faculty
+        .slice()
+        .sort((x, y) => (x['Full Name'] || '').localeCompare(y['Full Name'] || ''))
+        .map(f => `<option value="${f['Full Name']}" ${assignedTo === f['Full Name'] ? 'selected' : ''}>${f['Full Name']}</option>`)
+        .join('');
+      assignEl.innerHTML = `
+        <div class="card" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--text)">Week ${week} Make-up Class</div>
+            <div style="font-size:11.5px;color:var(--text3)">Assigned to: <strong style="color:${assignedTo ? 'var(--text)' : 'var(--text3)'}">${assignedTo || 'Unassigned'}</strong></div>
+          </div>
+          <select onchange="doUpdateMakeupWeekAssignee(${week}, this.value)"
+            style="font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--text2);font-weight:600;cursor:pointer">
+            <option value="">Assign to…</option>
+            ${facultyOptions}
+          </select>
+        </div>`;
+    }
+  }
+
   if (!absences.length) {
     el.innerHTML = '<p style="padding:16px;color:var(--gray)">No absences found.</p>';
     return;
@@ -3362,6 +3607,13 @@ async function doUpdateMakeupStatus(attendanceId, status, studentId, studentName
   await saveMakeupStatus(attendanceId, status, studentId, studentName, weekNo, tableNo, '');
   renderMakeup();
   showToast(`✅ Makeup status set to ${status}`);
+}
+
+async function doUpdateMakeupWeekAssignee(weekNo, assignedTo) {
+  showToast('⏳ Updating make-up class facilitator...');
+  await saveMakeupWeekAssignment(weekNo, assignedTo);
+  renderMakeup();
+  showToast(assignedTo ? `✅ Week ${weekNo} make-up class assigned to ${assignedTo}` : `✅ Week ${weekNo} make-up class unassigned`);
 }
 
 

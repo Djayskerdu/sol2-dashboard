@@ -47,6 +47,12 @@ let APP = {
   questProgress: {},   // studentId -> { "levelNo-questNo": true }
   questVideos: {},     // "levelNo-questNo" -> { title, url }  (director-assigned "watch" videos)
   videoSubmissions: {}, // "levelNo-questNo" -> url (this student's own uploaded testimony videos)
+  credits: [],          // this student's LC_CREDITS rows (their earned points)
+  lessonPoints: [],     // this student's STUDENT_LESSON_POINTS rows (Attendance/
+                        // Participation/Homework/Memory Verse grid — same source
+                        // the Faculty app's Points leaderboard totals come from)
+  redeemItems: [],      // Redeem Store catalog (REDEEM_ITEMS, Active items only)
+  redemptions: [],      // this student's REDEMPTIONS rows (points already spent)
   currentStudent: null,
   currentScreen: 's-login',
   currentWeek: 1        // from SYSTEM_SETTINGS "Current Week" — Level N stays locked until this reaches N
@@ -68,7 +74,7 @@ const LEVEL_NAMES = {
 };
 const QUESTS = {
   1: [
-    { icon:'🎥', type:'upload', title:'Create or upload a video testimony (up to 2 minutes long) sharing how God has worked in your life.' },
+    { icon:'🎥', type:'upload', title:'Create or upload a video testimony (at least 2 minutes long) sharing how God has worked in your life.' },
     { icon:'▶️', type:'watch',  title:'Watch the assigned video to prepare for the upcoming lessons in Module 1 (Lessons 1 and 2).' }
   ],
   2: [ { icon:'📖', title:'Read the Bible for 5 consecutive days' }, { icon:'🙏', title:'Pray for 10 minutes each day for 3 days' }, { icon:'💬', title:'Share one takeaway from your Bible reading' } ],
@@ -146,6 +152,11 @@ function go(id) {
     renderMap(); // render immediately with the cached week, then refresh silently
     refreshCurrentWeek().then(renderMap).catch(() => {});
   }
+  if (id === 's-redeem') {
+    renderRedeemScreen(); // render immediately with cached data, then refresh silently
+    const sid = APP.currentStudent && APP.currentStudent['Student ID'];
+    if (sid) loadPointsData(sid).then(renderRedeemScreen).catch(() => {});
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -187,6 +198,7 @@ async function doStudentLogin() {
     document.getElementById('stu-login-pin').value = '';
     await loadQuestProgress();
     await loadVideoSubmissions(student['Student ID']);
+    await loadPointsData(student['Student ID']);
     go('s-home');
   } catch (e) {
     showLoginError('Could not connect. Check your internet connection and try again.');
@@ -210,7 +222,19 @@ async function loadStaticData() {
   ]);
   APP.students    = studentsRes?.data || [];
   APP.tableGuides = guidesRes?.data || [];
-  await Promise.all([refreshCurrentWeek(), loadQuestVideos()]);
+  await Promise.all([refreshCurrentWeek(), loadQuestVideos(), loadRedeemItems()]);
+}
+
+// Pulls the Redeem Store catalog (Director/Consultant-managed). Only items
+// marked Active show up — blank/missing "Active" defaults to shown.
+async function loadRedeemItems() {
+  try {
+    const res = await apiGet('redeemItems');
+    const rows = res?.data || [];
+    APP.redeemItems = rows.filter(it => String(it['Active'] ?? 'Yes').trim().toLowerCase() !== 'no');
+  } catch (e) {
+    console.warn('Failed to load redeem store items:', e);
+  }
 }
 
 // Pulls Director/Consultant-assigned "watch this video" links from the
@@ -268,6 +292,24 @@ async function loadVideoSubmissions(studentId) {
   }
 }
 
+// Fetches only THIS student's earned points (LC_CREDITS) and past
+// redemptions (server-side filtered by studentId, so one student's device
+// never sees another student's points or spending history).
+async function loadPointsData(studentId) {
+  try {
+    const [creditsRes, redemptionsRes, lessonPointsRes] = await Promise.all([
+      apiGet('credits', `&studentId=${encodeURIComponent(studentId)}`),
+      apiGet('redemptions', `&studentId=${encodeURIComponent(studentId)}`),
+      apiGet('lessonPoints', `&studentId=${encodeURIComponent(studentId)}`)
+    ]);
+    APP.credits = creditsRes?.data || [];
+    APP.redemptions = redemptionsRes?.data || [];
+    APP.lessonPoints = lessonPointsRes?.data || [];
+  } catch (e) {
+    console.warn('Failed to load points data:', e);
+  }
+}
+
 // ═══════════════════════════════════════════
 // HOME DASHBOARD
 // ═══════════════════════════════════════════
@@ -284,6 +326,11 @@ function renderHome() {
   document.getElementById('stu-progress-badge').textContent =
     highest >= TOTAL_LEVELS ? 'All Done! 🏆' : `Level ${highest + 1}`;
   document.getElementById('stu-progress-fill').style.width = (totalQuests / TOTAL_QUESTS * 100) + '%';
+
+  const curEl = document.getElementById('stu-home-current-pts');
+  const redEl = document.getElementById('stu-home-redeem-pts');
+  if (curEl) curEl.textContent = getCurrentPoints(s['Student ID']).toLocaleString();
+  if (redEl) redEl.textContent = getAvailablePoints(s['Student ID']).toLocaleString();
 }
 
 // ═══════════════════════════════════════════
@@ -389,107 +436,6 @@ function openQuests(lvl) {
   renderQuestList();
 }
 
-// ── WATCH-QUEST ANTI-SKIP GUARD ──
-// Loads the real YouTube IFrame Player API (instead of a plain <iframe>) so
-// we can track playback, snap back any attempt to scrub ahead of what's
-// actually been watched, and keep the "Mark as Watched" button locked until
-// the video has actually played through to the end.
-let _ytApiPromise = null;
-let ytPlayers = {};         // idx -> YT.Player instance
-let watchGuardState = {};   // idx -> { maxWatched, unlocked, interval }
-
-function loadYouTubeIframeAPI() {
-  if (_ytApiPromise) return _ytApiPromise;
-  _ytApiPromise = new Promise((resolve) => {
-    if (window.YT && window.YT.Player) { resolve(window.YT); return; }
-    const prevReady = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      if (typeof prevReady === 'function') prevReady();
-      resolve(window.YT);
-    };
-    if (!document.getElementById('yt-iframe-api-script')) {
-      const tag = document.createElement('script');
-      tag.id = 'yt-iframe-api-script';
-      tag.src = 'https://www.youtube.com/iframe_api';
-      document.head.appendChild(tag);
-    }
-  });
-  return _ytApiPromise;
-}
-
-function extractYouTubeId(url) {
-  if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
-  return m ? m[1] : null;
-}
-
-function isWatchUnlocked(idx) {
-  return !!(watchGuardState[idx] && watchGuardState[idx].unlocked);
-}
-
-function initWatchGuards() {
-  const guards = document.querySelectorAll('.qv-video-frame[data-yt-id]');
-  if (!guards.length) return;
-  loadYouTubeIframeAPI().then((YT) => {
-    guards.forEach((div) => {
-      const idx = Number(div.dataset.idx);
-      const videoId = div.dataset.ytId;
-      if (!watchGuardState[idx]) watchGuardState[idx] = { maxWatched: 0, unlocked: false, interval: null };
-      ytPlayers[idx] = new YT.Player(div, {
-        videoId: videoId,
-        playerVars: { rel: 0, modestbranding: 1, disablekb: 1, playsinline: 1 },
-        events: {
-          onStateChange: (e) => onWatchGuardStateChange(idx, e, YT)
-        }
-      });
-    });
-  });
-}
-
-function onWatchGuardStateChange(idx, e, YT) {
-  const state = watchGuardState[idx];
-  if (!state) return;
-  if (e.data === YT.PlayerState.PLAYING) {
-    if (state.interval) clearInterval(state.interval);
-    state.interval = setInterval(() => pollWatchGuard(idx), 500);
-  } else if (state.interval) {
-    clearInterval(state.interval);
-    state.interval = null;
-  }
-}
-
-function pollWatchGuard(idx) {
-  const player = ytPlayers[idx];
-  const state = watchGuardState[idx];
-  if (!player || !state || typeof player.getCurrentTime !== 'function') return;
-
-  let current, duration;
-  try {
-    current = player.getCurrentTime();
-    duration = player.getDuration();
-  } catch (e) { return; }
-  if (!isFinite(current) || !isFinite(duration) || duration <= 0) return;
-
-  const tolerance = 2; // small leeway for normal playback drift
-  if (current > state.maxWatched + tolerance) {
-    player.seekTo(state.maxWatched, true); // snap back — no skipping ahead
-  } else {
-    state.maxWatched = Math.max(state.maxWatched, current);
-  }
-
-  if (!state.unlocked && state.maxWatched >= duration - 2) {
-    state.unlocked = true;
-    const btn = document.getElementById(`qv-complete-btn-${idx}`);
-    const note = document.getElementById(`qv-watch-note-${idx}`);
-    if (btn) {
-      btn.disabled = false;
-      btn.classList.remove('qv-btn-disabled');
-      btn.textContent = 'Mark as Watched — Complete';
-    }
-    if (note) note.textContent = '✅ Video watched — you can mark this complete now.';
-  }
-}
-
 function renderQuestList() {
   const s = APP.currentStudent;
   if (!s) return;
@@ -512,7 +458,6 @@ function renderQuestList() {
       </div>`;
   }).join('');
   updateQuestProgressBar();
-  initWatchGuards();
 }
 
 // Converts a YouTube link into an embeddable URL. Returns null for anything
@@ -526,18 +471,15 @@ function embedVideoUrl(url) {
 
 function renderWatchQuestCard(q, idx, done, totalInLevel) {
   const vid = APP.questVideos[questKey(currentLevel, idx + 1)] || {};
-  const ytId = extractYouTubeId(vid.url);
+  const embed = embedVideoUrl(vid.url);
   let player;
   if (!vid.url) {
     player = `<div class="qv-watch-link qv-disabled">📹 Video not uploaded yet — check back soon</div>`;
-  } else if (ytId) {
-    player = `<div class="qv-video-frame" id="yt-guard-${idx}" data-yt-id="${ytId}" data-idx="${idx}"></div>
-      <div class="qv-note" id="qv-watch-note-${idx}">▶️ Watch the full video to unlock the complete button — skipping ahead will jump you back.</div>`;
+  } else if (embed) {
+    player = `<div class="qv-video-frame"><iframe src="${embed}" allowfullscreen allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" loading="lazy"></iframe></div>`;
   } else {
     player = `<a class="qv-watch-link" href="${vid.url}" target="_blank" rel="noopener">▶️ Watch Video${vid.title ? ' — ' + escapeHtml(vid.title) : ''}</a>`;
   }
-  const unlocked = done || !ytId || isWatchUnlocked(idx);
-  const btnLocked = !!ytId && !done && !unlocked;
   return `
     <div class="quest-card qc-video${done ? ' qc-done' : ''}">
       <div class="qv-header">
@@ -548,9 +490,8 @@ function renderWatchQuestCard(q, idx, done, totalInLevel) {
         </div>
       </div>
       ${player}
-      <button class="qv-complete-btn${done ? ' qv-done' : ''}${btnLocked ? ' qv-btn-disabled' : ''}"
-        id="qv-complete-btn-${idx}" ${btnLocked ? 'disabled' : ''} onclick="toggleQuestSelf(${idx})">
-        ${done ? '✓ Marked as watched — tap to undo' : (btnLocked ? '🔒 Watch the full video to unlock' : 'Mark as Watched — Complete')}
+      <button class="qv-complete-btn${done ? ' qv-done' : ''}" onclick="toggleQuestSelf(${idx})">
+        ${done ? '✓ Marked as watched — tap to undo' : 'Mark as Watched — Complete'}
       </button>
     </div>`;
 }
@@ -562,7 +503,7 @@ function renderUploadQuestCard(q, idx, done, totalInLevel) {
   const bodyContent = (done && submittedUrl)
     ? `<a class="qv-watch-link" href="${submittedUrl}" target="_blank" rel="noopener">🎬 View your submitted video</a>
        <label class="qv-replace-link" for="${inputId}">Replace video</label>`
-    : `<label class="qv-upload-zone" for="${inputId}">📤 Tap to choose your testimony video<br><span>MP4/MOV, up to ${Math.round(MAX_UPLOAD_BYTES/1024/1024)}MB, max 2 minutes</span></label>`;
+    : `<label class="qv-upload-zone" for="${inputId}">📤 Tap to choose your testimony video<br><span>MP4/MOV, up to ${Math.round(MAX_UPLOAD_BYTES/1024/1024)}MB, at least 2 minutes</span></label>`;
   return `
     <div class="quest-card qc-video${done ? ' qc-done' : ''}">
       <div class="qv-header">
@@ -629,21 +570,25 @@ async function toggleQuestSelf(idx) {
   }
 }
 
-function showSentToast() {
+function showSentToast(message) {
   const toast = document.getElementById('stu-sent-toast');
+  const prevText = toast.textContent;
+  if (message) toast.textContent = message;
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2200);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    if (message) toast.textContent = prevText;
+  }, 2200);
 }
 
 // ═══════════════════════════════════════════
 // LEVEL CHALLENGE — VIDEO TESTIMONY UPLOAD
 // ═══════════════════════════════════════════
 // Raw file cap. Base64 adds ~33% on top of this when sent to Apps Script,
-// which caps incoming web-app requests around ~50MB. Videos are capped at
-// 2 minutes max, which keeps files naturally small — 15MB leaves comfortable
-// headroom while still avoiding large-payload upload failures.
-const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
-const MAX_TESTIMONY_SECONDS = 120;
+// which caps incoming web-app requests around ~50MB — keeping the raw file
+// under 30MB leaves comfortable headroom.
+const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+const MIN_TESTIMONY_SECONDS = 120;
 
 let pendingVideoFiles = {}; // idx -> File, chosen but not yet submitted
 
@@ -667,23 +612,17 @@ function handleVideoChosen(idx, file) {
     <video class="qv-preview" src="${objUrl}" controls playsinline></video>
     <div class="qv-file-name">${escapeHtml(file.name)} · ${(file.size/1024/1024).toFixed(1)}MB</div>
     <div id="qv-dur-${idx}"></div>
-    <div id="qv-submit-wrap-${idx}"><button class="qv-complete-btn" onclick="submitTestimony(${idx})">Submit Testimony</button></div>`;
+    <button class="qv-complete-btn" onclick="submitTestimony(${idx})">Submit Testimony</button>`;
 
-  // Hard duration check — video must be 2 minutes or under. Some mobile
-  // browsers/formats won't report duration reliably, so we only block when
-  // we can actually confirm it's too long; otherwise we let it through.
+  // Best-effort duration check — some mobile browsers/formats won't report
+  // this reliably, so it's a heads-up, not a hard block.
   const probe = document.createElement('video');
   probe.preload = 'metadata';
   probe.onloadedmetadata = () => {
     const durEl = document.getElementById(`qv-dur-${idx}`);
-    const submitWrap = document.getElementById(`qv-submit-wrap-${idx}`);
-    if (isFinite(probe.duration) && probe.duration > 0 && probe.duration > MAX_TESTIMONY_SECONDS) {
-      if (durEl) {
-        durEl.className = 'qv-error';
-        durEl.textContent = `This clip is about ${Math.round(probe.duration)}s — the task asks for a maximum of 2 minutes. Please trim it or record a shorter one, then choose it again.`;
-      }
-      if (submitWrap) submitWrap.innerHTML = '';
-      delete pendingVideoFiles[idx];
+    if (durEl && isFinite(probe.duration) && probe.duration > 0 && probe.duration < MIN_TESTIMONY_SECONDS) {
+      durEl.className = 'qv-error';
+      durEl.textContent = `Heads up — this clip is about ${Math.round(probe.duration)}s, and the task asks for at least 2 minutes. You can still submit, but consider re-recording a longer one.`;
     }
     URL.revokeObjectURL(probe.src);
   };
@@ -699,14 +638,14 @@ async function submitTestimony(idx) {
   const statusEl = document.getElementById(`qv-status-${idx}`);
   if (statusEl) {
     statusEl.innerHTML = `
-      <div class="qv-progress-track"><div class="qv-progress-fill qv-progress-indeterminate"></div></div>
-      <div class="qv-note">Uploading… this may take a moment.</div>`;
+      <div class="qv-progress-track"><div class="qv-progress-fill" id="qv-prog-${idx}"></div></div>
+      <div class="qv-note" id="qv-prog-label-${idx}">Uploading… 0%</div>`;
   }
 
   try {
     const base64 = await fileToBase64(file);
     const quest = questsForLevel(currentLevel)[idx];
-    const result = await uploadTestimonyFetch({
+    const result = await uploadTestimonyXHR({
       studentId: sid,
       studentName: s['Full Name'] || '',
       tableNo: s['Table No'] || '',
@@ -718,6 +657,11 @@ async function submitTestimony(idx) {
       mimeType: file.type || 'video/mp4',
       base64Data: base64,
       markedBy: s['Full Name'] || ''
+    }, pct => {
+      const fill = document.getElementById(`qv-prog-${idx}`);
+      const label = document.getElementById(`qv-prog-label-${idx}`);
+      if (fill) fill.style.width = pct + '%';
+      if (label) label.textContent = `Uploading… ${pct}%`;
     });
 
     if (!APP.questProgress[sid]) APP.questProgress[sid] = {};
@@ -731,8 +675,7 @@ async function submitTestimony(idx) {
     if (isLevelDoneFor(sid, currentLevel)) setTimeout(finishLevel, 350);
   } catch (e) {
     console.warn('Testimony upload failed:', e);
-    const detail = (e && e.message) ? e.message : 'Unknown error';
-    if (statusEl) statusEl.innerHTML = `<div class="qv-error">Upload failed: ${escapeHtml(detail)}<br>Check your connection and try again. If your video is large, try trimming it shorter first.</div>
+    if (statusEl) statusEl.innerHTML = `<div class="qv-error">Upload failed — check your connection and try again. If your video is large, try trimming it shorter first.</div>
       <button class="qv-complete-btn" onclick="submitTestimony(${idx})">Try Again</button>`;
   }
 }
@@ -746,20 +689,27 @@ function fileToBase64(file) {
   });
 }
 
-function uploadTestimonyFetch(payload) {
-  return fetchWithTimeout(GAS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain" }, // same as apiPost — avoids the CORS preflight GAS rejects
-    body: JSON.stringify(Object.assign({ action: 'uploadTestimonyVideo' }, payload))
-  }, 5 * 60 * 1000) // large uploads on slow connections need room
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
-    .then(result => {
-      if (result && result.success) return result;
-      throw new Error((result && result.message) || 'Upload failed');
-    });
+function uploadTestimonyXHR(payload, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', GAS_URL, true);
+    xhr.timeout = 5 * 60 * 1000; // large uploads on slow connections need room
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      try {
+        const res = JSON.parse(xhr.responseText);
+        if (res && res.success) resolve(res);
+        else reject(new Error((res && res.message) || 'Upload failed'));
+      } catch (e) {
+        reject(new Error('Unexpected response from server'));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out'));
+    xhr.send(JSON.stringify(Object.assign({ action: 'uploadTestimonyVideo' }, payload)));
+  });
 }
 
 function finishLevel() {
@@ -818,6 +768,170 @@ function launchConfetti(container) {
     c.style.animationDelay = (Math.random() * 0.4) + 's';
     container.appendChild(c);
     setTimeout(() => c.remove(), 2200);
+  }
+}
+
+// ═══════════════════════════════════════════
+// REDEEM POINTS
+// ═══════════════════════════════════════════
+let currentStoreItems = [];   // items currently shown in the store grid (indexed for onclick)
+let pendingRedeemItem = null; // item awaiting Yes/No confirmation
+
+// A student's total earned points = manual "Add Points" credits (LC_CREDITS)
+// PLUS the Attendance/Participation/Homework/Memory Verse lesson-points grid.
+// This must match getStudentCredits() in the Faculty/Admin app exactly, or
+// the two apps show different totals for the same student.
+function getCurrentPoints(studentId) {
+  const manualCredits = (APP.credits || [])
+    .filter(c => String(c['Student ID']) === String(studentId))
+    .reduce((sum, c) => sum + Number(c['Credits Added'] || 0), 0);
+
+  const lessonGridPoints = (APP.lessonPoints || [])
+    .filter(r => String(r['Student ID']) === String(studentId))
+    .reduce((sum, r) =>
+      sum + Number(r['Attendance Points'] || 0)
+          + Number(r['Participation Points'] || 0)
+          + Number(r['Homework Points'] || 0)
+          + Number(r['Memory Verse Points'] || 0), 0);
+
+  return manualCredits + lessonGridPoints;
+}
+
+// Sum of everything this student has already redeemed.
+function getRedeemedTotal(studentId) {
+  return (APP.redemptions || [])
+    .filter(r => String(r['Student ID']) === String(studentId))
+    .reduce((sum, r) => sum + Number(r['Points Cost'] || 0), 0);
+}
+
+// What's left to spend = earned minus already redeemed.
+function getAvailablePoints(studentId) {
+  return getCurrentPoints(studentId) - getRedeemedTotal(studentId);
+}
+
+function renderRedeemScreen() {
+  const s = APP.currentStudent;
+  if (!s) return;
+  const sid = s['Student ID'];
+  const current = getCurrentPoints(sid);
+  const available = getAvailablePoints(sid);
+
+  document.getElementById('rd-student-name').textContent = s['Full Name'] || '—';
+  document.getElementById('rd-current-pts').textContent = current.toLocaleString();
+  document.getElementById('rd-redeem-pts').textContent = available.toLocaleString();
+
+  currentStoreItems = (APP.redeemItems || [])
+    .slice()
+    .sort((a, b) => Number(a['Points Cost'] || 0) - Number(b['Points Cost'] || 0));
+
+  const grid = document.getElementById('rd-store-grid');
+  if (!currentStoreItems.length) {
+    grid.innerHTML = `<div class="rd-empty">No redeemable items have been set up yet — check back soon!</div>`;
+  } else {
+    grid.innerHTML = currentStoreItems.map((it, idx) => {
+      const cost = Number(it['Points Cost'] || 0);
+      const canAfford = available >= cost;
+      return `
+        <div class="rd-item-card${canAfford ? '' : ' rd-item-disabled'}">
+          <div class="rd-item-icon">🎁</div>
+          <div class="rd-item-name">${escapeHtml(it['Item Name'] || '')}</div>
+          <div class="rd-item-cost">${cost.toLocaleString()} pts</div>
+          <button class="rd-item-btn" ${canAfford ? '' : 'disabled'} onclick="openRedeemConfirm(${idx})">
+            ${canAfford ? 'Redeem' : 'Not enough pts'}
+          </button>
+        </div>`;
+    }).join('');
+  }
+
+  const hist = document.getElementById('rd-history-list');
+  const myRedemptions = (APP.redemptions || [])
+    .slice()
+    .sort((a, b) => new Date(b['Redeemed At']) - new Date(a['Redeemed At']));
+  if (!myRedemptions.length) {
+    hist.innerHTML = `<div class="rd-empty">No redemptions yet.</div>`;
+  } else {
+    hist.innerHTML = myRedemptions.map(r => {
+      const dt = r['Redeemed At'] ? new Date(r['Redeemed At']) : null;
+      const dateLabel = dt && !isNaN(dt) ? dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      return `
+        <div class="rd-hist-row">
+          <div>
+            <div class="rd-hist-name">${escapeHtml(r['Item Name'] || '')}</div>
+            <div class="rd-hist-date">${dateLabel}</div>
+          </div>
+          <div class="rd-hist-cost">-${Number(r['Points Cost'] || 0).toLocaleString()} pts</div>
+        </div>`;
+    }).join('');
+  }
+}
+
+function openRedeemConfirm(idx) {
+  const s = APP.currentStudent;
+  if (!s) return;
+  const it = currentStoreItems[idx];
+  if (!it) return;
+
+  const cost = Number(it['Points Cost'] || 0);
+  const available = getAvailablePoints(s['Student ID']);
+  if (available < cost) { renderRedeemScreen(); return; } // stale tap guard
+
+  pendingRedeemItem = it;
+  document.getElementById('rd-confirm-title').textContent = `Redeem ${it['Item Name']}?`;
+  document.getElementById('rd-confirm-sub').textContent =
+    `This will use ${cost.toLocaleString()} of your ${available.toLocaleString()} available points. ` +
+    `Click Yes if you want to redeem this, or No if you change your mind.`;
+  document.getElementById('rd-confirm-overlay').classList.add('show');
+}
+
+function closeRedeemConfirm() {
+  pendingRedeemItem = null;
+  document.getElementById('rd-confirm-overlay').classList.remove('show');
+}
+
+async function confirmRedeem() {
+  const s = APP.currentStudent;
+  const it = pendingRedeemItem;
+  if (!s || !it) return;
+
+  const btn = document.getElementById('rd-confirm-yes-btn');
+  btn.disabled = true; btn.textContent = 'Redeeming…';
+
+  try {
+    const cost = Number(it['Points Cost'] || 0);
+    const res = await apiPost({
+      action: 'redeemReward',
+      studentId: s['Student ID'],
+      studentName: s['Full Name'] || '',
+      tableNo: s['Table No'] || '',
+      itemName: it['Item Name'] || '',
+      pointsCost: cost,
+      redeemedBy: s['Full Name'] || ''
+    });
+
+    if (res && res.success) {
+      // Reflect it locally right away so the balance updates instantly.
+      APP.redemptions.push({
+        'Student ID': s['Student ID'],
+        'Student Name': s['Full Name'] || '',
+        'Table No': s['Table No'] || '',
+        'Item Name': it['Item Name'] || '',
+        'Points Cost': cost,
+        'Redeemed At': new Date().toISOString()
+      });
+      closeRedeemConfirm();
+      renderRedeemScreen();
+      renderHome();
+      showSentToast(`🎉 Redeemed: ${it['Item Name']}!`);
+    } else {
+      closeRedeemConfirm();
+      showSentToast((res && res.message) || 'Could not redeem — please try again.');
+      loadPointsData(s['Student ID']).then(renderRedeemScreen).catch(() => {}); // resync if balance was stale
+    }
+  } catch (e) {
+    closeRedeemConfirm();
+    showSentToast('Network error — please try again.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Yes, Redeem';
   }
 }
 
