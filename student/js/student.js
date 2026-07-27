@@ -693,6 +693,7 @@ function uploadTestimonyXHR(payload, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', GAS_URL, true);
+    xhr.setRequestHeader('Content-Type', 'text/plain'); // avoids CORS preflight GAS rejects (same fix as apiPost)
     xhr.timeout = 5 * 60 * 1000; // large uploads on slow connections need room
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
