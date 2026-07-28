@@ -65,6 +65,8 @@ let APP = {
   lessonCompletion: {},  // studentId -> { "moduleNo-lessonNo": "Done" | "Makeup" }
   lessonPoints: {},  // studentId -> { "moduleNo-lessonNo": { attendance, participation, homework, memoryVerse } }
   questProgress: {},  // studentId -> { "levelNo-questNo": true }  (Level Challenge game)
+  levelQuests: {},    // Director/Consultant-customized tasks: levelNo -> [{icon,type,title}]
+                      // (LEVEL_QUESTS sheet). A level with no rows falls back to QUESTS below.
   notifications: []   // rows from the NOTIFICATIONS sheet (student quest completions)
 };
 
@@ -232,53 +234,50 @@ const QUESTS = {
     { icon:'▶️', type:'watch',  title:'Watch the assigned video to prepare for the upcoming lessons in Module 1 (Lessons 1 and 2).' },
   ],
   2: [
-    { icon:'📖', title:'Read the Bible for 5 consecutive days' },
-    { icon:'🙏', title:'Pray for 10 minutes each day for 3 days' },
-    { icon:'💬', title:'Share one takeaway from your Bible reading' },
+    { icon:'▶️', type:'watch',       title:'Watch the assigned video for Level 2.' },
+    { icon:'📸', type:'photoUpload', title:'Submit a photo of your LifeGroup (or a photo with your LifeGroup).' },
   ],
-  3: [
-    { icon:'🎯', title:'Attend another LifeGroup' },
-    { icon:'📖', title:'Encourage someone with a Bible verse' },
-    { icon:'🤝', title:'Invite one friend to a LifeGroup' },
-  ],
-  4: [
-    { icon:'🙌', title:'Volunteer during a church activity' },
-    { icon:'🙏', title:'Pray with someone' },
-    { icon:'❤️', title:'Perform one act of kindness without expecting anything in return' },
-  ],
-  5: [
-    { icon:'💬', title:'Share your personal testimony' },
-    { icon:'✝️', title:'Share the Gospel with one person' },
-    { icon:'🎉', title:'Invite someone to church or a church event' },
-  ],
-  6: [
-    { icon:'📖', title:'Complete a Bible study lesson' },
-    { icon:'🙏', title:'Fast for one meal while praying' },
-    { icon:'📖', title:'Memorize three Bible verses' },
-  ],
-  7: [
-    { icon:'🤝', title:'Follow up with a first-time guest' },
-    { icon:'🙏', title:'Pray for three friends by name' },
-    { icon:'🎯', title:'Encourage someone to join a LifeGroup' },
-  ],
-  8: [
-    { icon:'🗣️', title:'Help facilitate a LifeGroup activity' },
-    { icon:'🌱', title:'Mentor or encourage a newer believer' },
-    { icon:'🙏', title:'Lead the opening prayer in a gathering' },
-  ],
-  9: [
-    { icon:'✝️', title:"Share God's Word with two people" },
-    { icon:'🎉', title:'Bring one new guest to church' },
-    { icon:'🌍', title:'Participate in an outreach or mission activity' },
-  ],
-  10: [
-    { icon:'🎯', title:'Attend a LifeGroup' },
-    { icon:'✝️', title:'Share the Gospel with three people' },
-    { icon:'❤️', title:'Lead one person to Christ (or begin a discipleship journey with them)' },
-  ],
+  // Levels 3–10: placeholder only, on purpose — the Director/Consultant
+  // hasn't decided these tasks yet. Kept to exactly one lightweight task
+  // per level (rather than zero) because a level with zero quests would
+  // auto-count as "complete" for every student the instant they reach it,
+  // silently unlocking the rest of the path. Replace these anytime via
+  // Admin Home → Level Challenge Tasks — no code changes needed.
+  3:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  4:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  5:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  6:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  7:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  8:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  9:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  10: [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
 };
-function questsForLevel(lvl) { return QUESTS[lvl] || QUESTS[TOTAL_LEVELS]; }
+function questsForLevel(lvl) {
+  const custom = APP.levelQuests[lvl];
+  if (custom && custom.length) return custom;
+  return QUESTS[lvl] || QUESTS[TOTAL_LEVELS];
+}
 function questKey(levelNo, questNo) { return levelNo + '-' + questNo; }
+
+// Pulls Director/Consultant-customized Level Challenge tasks from the
+// LEVEL_QUESTS sheet (edited on the "Level Challenge Tasks" admin screen).
+// A level with no rows there is left out of the map, so questsForLevel()
+// falls back to the QUESTS default above for it.
+function loadLevelQuestsFromSheet(rows) {
+  const byLevel = {};
+  (rows || []).forEach(r => {
+    const lvl = Number(r['Level No']), qNo = Number(r['Quest No']);
+    if (!lvl || !qNo) return;
+    if (!byLevel[lvl]) byLevel[lvl] = [];
+    byLevel[lvl][qNo - 1] = {
+      icon: r['Icon'] || '⭐',
+      type: String(r['Type'] || '').trim() || undefined,
+      title: r['Title'] || ''
+    };
+  });
+  Object.keys(byLevel).forEach(lvl => { byLevel[lvl] = byLevel[lvl].filter(Boolean); });
+  APP.levelQuests = byLevel;
+}
 
 // ── Quest progress (synced to Google Sheets, same pattern as devotionals) ──
 function loadQuestProgressFromSheet(sheetRows) {
@@ -864,7 +863,8 @@ async function loadAllData() {
     apiGet('lessonPoints'),
     apiGet('questProgress'),
     apiGet('notifications'),
-    apiGet('makeupWeekAssignments')
+    apiGet('makeupWeekAssignments'),
+    apiGet('levelQuests')
   ]);
 
   APP.students          = safeData(results[0]);
@@ -891,6 +891,8 @@ async function loadAllData() {
   const questProgressRows    = safeData(results[14]);
   APP.notifications          = safeData(results[15]);
   const makeupWeekAssignRows = safeData(results[16]);
+  const levelQuestsRows      = safeData(results[17]);
+  loadLevelQuestsFromSheet(levelQuestsRows);
 
   loadDevotionalsFromSheet(devotionalRows);
   loadDevotionalsLocal();   // fill blanks from localStorage (offline fallback)
@@ -1003,6 +1005,7 @@ function refreshCurrentScreen() {
   if (id === 's-a-leaderboard') switchLeaderboardTab('students');
   if (id === 's-a-devotional')  renderADevotionalTables();
   if (id === 's-a-modcomp')     renderAModCompTables();
+  if (id === 's-a-quests')      renderAQuests();
   if (id === 's-record-home')   renderRecordStats();
   if (id === 's-r-qr')          { switchQRTab('scan'); }
   if (id === 's-r-attendance')  switchAttTab('students');
@@ -1051,6 +1054,7 @@ function go(id) {
   if (id === 's-a-leaderboard') switchLeaderboardTab('students');
   if (id === 's-a-devotional')  renderADevotionalTables();
   if (id === 's-a-modcomp')     renderAModCompTables();
+  if (id === 's-a-quests')      renderAQuests();
   if (id === 's-record-home')   renderRecordStats();
   if (id === 's-r-qr')          { switchQRTab('scan'); }
   if (id === 's-r-attendance')  switchAttTab('students');
@@ -1395,6 +1399,129 @@ function toggleDevot(studentId, day, checked) {
 // ═══════════════════════════════════════════
 // ADMIN — DEVOTIONAL & ACTIVITIES RECORDS VIEW
 // ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+// ADMIN — LEVEL CHALLENGE TASKS EDITOR
+// Director/Consultant customizes each level's quests. Edits happen in a
+// local "draft" array; nothing is written to the sheet until Save. Saving
+// replaces the whole level's rows in LEVEL_QUESTS at once (see
+// saveLevelQuests in the GAS backend).
+// ═══════════════════════════════════════════
+let questsEditLevel = 1;
+let questsEditDraft = [];
+
+function openQuestsEditorLevel(lvl) {
+  questsEditLevel = lvl;
+  seedQuestsEditDraft();
+  renderAQuests();
+}
+
+function seedQuestsEditDraft() {
+  const source = (APP.levelQuests[questsEditLevel] && APP.levelQuests[questsEditLevel].length)
+    ? APP.levelQuests[questsEditLevel]
+    : (QUESTS[questsEditLevel] || []);
+  questsEditDraft = source.map(q => ({ icon: q.icon || '⭐', type: q.type || '', title: q.title || '' }));
+}
+
+function renderAQuests() {
+  const tabs = document.getElementById('a-quests-level-tabs');
+  if (!tabs) return;
+  if (!questsEditDraft.length) seedQuestsEditDraft();
+
+  tabs.innerHTML = Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1).map(lvl => {
+    const active = lvl === questsEditLevel;
+    const customized = !!(APP.levelQuests[lvl] && APP.levelQuests[lvl].length);
+    return `<button class="menu-item" style="width:auto;padding:8px 12px;margin:0;${active ? 'background:var(--green);color:#fff' : ''}" onclick="openQuestsEditorLevel(${lvl})">
+      <div class="mi-text"><div class="mi-title" style="${active ? 'color:#fff' : ''}">L${lvl}${customized ? ' •' : ''}</div></div>
+    </button>`;
+  }).join('');
+
+  renderQuestsEditorRows();
+  const status = document.getElementById('a-quests-status');
+  if (status) status.textContent = `Editing Level ${questsEditLevel} — ${LEVEL_NAMES[questsEditLevel] || ''}`;
+}
+
+function renderQuestsEditorRows() {
+  const list = document.getElementById('a-quests-list');
+  if (!list) return;
+  const typeSelect = (i, val) => `
+    <select onchange="questsEditDraft[${i}].type=this.value" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-top:6px">
+      <option value="" ${!val ? 'selected' : ''}>Normal task (student self check-off)</option>
+      <option value="watch" ${val === 'watch' ? 'selected' : ''}>Watch video</option>
+      <option value="upload" ${val === 'upload' ? 'selected' : ''}>Upload video testimony</option>
+      <option value="photoUpload" ${val === 'photoUpload' ? 'selected' : ''}>Upload photo</option>
+    </select>`;
+
+  list.innerHTML = questsEditDraft.map((q, i) => `
+    <div style="border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <input type="text" value="${escapeAttr(q.icon)}" maxlength="4" placeholder="🎯"
+          oninput="questsEditDraft[${i}].icon=this.value"
+          style="width:52px;flex:0 0 auto;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:16px;text-align:center">
+        <textarea rows="2" placeholder="Task description…"
+          oninput="questsEditDraft[${i}].title=this.value"
+          style="flex:1;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;resize:vertical;font-family:var(--font)">${escapeHtmlAdmin(q.title)}</textarea>
+        <button onclick="removeQuestsEditorRow(${i})" title="Remove task"
+          style="flex:0 0 auto;width:34px;height:34px;border:none;border-radius:8px;background:#fdecea;color:#e53935;font-weight:700;cursor:pointer">✕</button>
+      </div>
+      ${typeSelect(i, q.type)}
+    </div>`).join('') || '<p style="color:var(--gray);font-size:13px">No tasks yet — tap "+ Add Task" below.</p>';
+}
+
+function escapeHtmlAdmin(str) {
+  return String(str || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+function escapeAttr(str) {
+  return String(str || '').replace(/"/g, '&quot;');
+}
+
+function addQuestsEditorRow() {
+  questsEditDraft.push({ icon: '⭐', type: '', title: '' });
+  renderQuestsEditorRows();
+}
+
+function removeQuestsEditorRow(i) {
+  questsEditDraft.splice(i, 1);
+  renderQuestsEditorRows();
+}
+
+function resetQuestsEditorToDefault() {
+  const def = QUESTS[questsEditLevel] || [];
+  questsEditDraft = def.map(q => ({ icon: q.icon || '⭐', type: q.type || '', title: q.title || '' }));
+  renderQuestsEditorRows();
+  showToast('Reset to default — tap Save Changes to apply');
+}
+
+async function saveQuestsEditor() {
+  const cleaned = questsEditDraft
+    .map(q => ({ icon: (q.icon || '⭐').trim(), type: (q.type || '').trim(), title: (q.title || '').trim() }))
+    .filter(q => q.title);
+
+  if (!cleaned.length) {
+    showToast('Add at least one task with a description first.');
+    return;
+  }
+
+  try {
+    const res = await apiPost({
+      action: 'saveLevelQuests',
+      levelNo: questsEditLevel,
+      quests: cleaned,
+      updatedBy: APP.currentFaculty?.['Full Name'] || ''
+    });
+    if (res && res.success) {
+      APP.levelQuests[questsEditLevel] = cleaned;
+      questsEditDraft = cleaned.map(q => ({ ...q }));
+      renderAQuests();
+      showToast(res.message || 'Saved');
+    } else {
+      showToast((res && res.message) || 'Save failed — please try again.');
+    }
+  } catch (e) {
+    console.warn('saveLevelQuests failed:', e);
+    showToast('Could not reach the server — please try again.');
+  }
+}
+
 function renderADevotionalTables() {
   const el = document.getElementById('a-devot-tables');
   if (!el) return;
@@ -2076,7 +2203,9 @@ function onANotifyTableChange() {
 }
 
 function totalLevelChallengeQuests() {
-  return Object.keys(QUESTS).reduce((sum, lvl) => sum + QUESTS[lvl].length, 0);
+  let sum = 0;
+  for (let lvl = 1; lvl <= TOTAL_LEVELS; lvl++) sum += questsForLevel(lvl).length;
+  return sum;
 }
 
 function questsDoneCountFor(studentId) {

@@ -47,12 +47,15 @@ let APP = {
   questProgress: {},   // studentId -> { "levelNo-questNo": true }
   questVideos: {},     // "levelNo-questNo" -> { title, url }  (director-assigned "watch" videos)
   videoSubmissions: {}, // "levelNo-questNo" -> url (this student's own uploaded testimony videos)
+  photoSubmissions: {}, // "levelNo-questNo" -> url (this student's own uploaded quest photos)
   credits: [],          // this student's LC_CREDITS rows (their earned points)
   lessonPoints: [],     // this student's STUDENT_LESSON_POINTS rows (Attendance/
                         // Participation/Homework/Memory Verse grid — same source
                         // the Faculty app's Points leaderboard totals come from)
   redeemItems: [],      // Redeem Store catalog (REDEEM_ITEMS, Active items only)
   redemptions: [],      // this student's REDEMPTIONS rows (points already spent)
+  levelQuests: {},      // Director/Consultant-customized tasks: levelNo -> [{icon,type,title}]
+                        // (LEVEL_QUESTS sheet). A level with no rows falls back to QUESTS below.
   currentStudent: null,
   currentScreen: 's-login',
   currentWeek: 1        // from SYSTEM_SETTINGS "Current Week" — Level N stays locked until this reaches N
@@ -114,21 +117,41 @@ const QUESTS = {
     { icon:'🎥', type:'upload', title:'Create or upload a video testimony (at least 2 minutes long) sharing how God has worked in your life.' },
     { icon:'▶️', type:'watch',  title:'Watch the assigned video to prepare for the upcoming lessons in Module 1 (Lessons 1 and 2).' }
   ],
-  2: [ { icon:'📖', title:'Read the Bible for 5 consecutive days' }, { icon:'🙏', title:'Pray for 10 minutes each day for 3 days' }, { icon:'💬', title:'Share one takeaway from your Bible reading' } ],
-  3: [ { icon:'🎯', title:'Attend another LifeGroup' }, { icon:'📖', title:'Encourage someone with a Bible verse' }, { icon:'🤝', title:'Invite one friend to a LifeGroup' } ],
-  4: [ { icon:'🙌', title:'Volunteer during a church activity' }, { icon:'🙏', title:'Pray with someone' }, { icon:'❤️', title:'Perform one act of kindness without expecting anything in return' } ],
-  5: [ { icon:'💬', title:'Share your personal testimony' }, { icon:'✝️', title:'Share the Gospel with one person' }, { icon:'🎉', title:'Invite someone to church or a church event' } ],
-  6: [ { icon:'📖', title:'Complete a Bible study lesson' }, { icon:'🙏', title:'Fast for one meal while praying' }, { icon:'📖', title:'Memorize three Bible verses' } ],
-  7: [ { icon:'🤝', title:'Follow up with a first-time guest' }, { icon:'🙏', title:'Pray for three friends by name' }, { icon:'🎯', title:'Encourage someone to join a LifeGroup' } ],
-  8: [ { icon:'🗣️', title:'Help facilitate a LifeGroup activity' }, { icon:'🌱', title:'Mentor or encourage a newer believer' }, { icon:'🙏', title:'Lead the opening prayer in a gathering' } ],
-  9: [ { icon:'✝️', title:"Share God's Word with two people" }, { icon:'🎉', title:'Bring one new guest to church' }, { icon:'🌍', title:'Participate in an outreach or mission activity' } ],
-  10:[ { icon:'🎯', title:'Attend a LifeGroup' }, { icon:'✝️', title:'Share the Gospel with three people' }, { icon:'❤️', title:'Lead one person to Christ (or begin a discipleship journey with them)' } ],
+  2: [
+    { icon:'▶️', type:'watch',       title:'Watch the assigned video for Level 2.' },
+    { icon:'📸', type:'photoUpload', title:'Submit a photo of your LifeGroup (or a photo with your LifeGroup).' }
+  ],
+  // Levels 3–10: placeholder only, on purpose — the Director/Consultant
+  // hasn't decided these tasks yet. Kept to exactly one lightweight task
+  // per level (rather than zero) because a level with zero quests would
+  // auto-count as "complete" for every student the instant they reach it
+  // (see isLevelDoneFor below), silently unlocking the rest of the path.
+  // Replace these anytime via Admin Home → Level Challenge Tasks — no
+  // code changes needed, see LEVEL_QUESTS / questsForLevel below.
+  3:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  4:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  5:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  6:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  7:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  8:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  9:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  10: [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
 };
-function questsForLevel(lvl) { return QUESTS[lvl] || QUESTS[TOTAL_LEVELS]; }
+function questsForLevel(lvl) {
+  const custom = APP.levelQuests[lvl];
+  if (custom && custom.length) return custom;
+  return QUESTS[lvl] || QUESTS[TOTAL_LEVELS];
+}
 function questKey(levelNo, questNo) { return levelNo + '-' + questNo; }
-// Levels used to be a flat 3 quests each; now some levels (e.g. video quests)
-// can have a different count, so total is computed instead of assumed.
-const TOTAL_QUESTS = Object.keys(QUESTS).reduce((sum, lvl) => sum + QUESTS[lvl].length, 0);
+// Levels used to be a flat 3 quests each; now some levels (e.g. video quests,
+// or a Director/Consultant-customized level) can have a different count, so
+// this is computed from whatever questsForLevel() currently returns for each
+// level rather than assumed from the static QUESTS default.
+function totalQuestsCount() {
+  let sum = 0;
+  for (let lvl = 1; lvl <= TOTAL_LEVELS; lvl++) sum += questsForLevel(lvl).length;
+  return sum;
+}
 
 function loadQuestProgressFromSheet(rows) {
   APP.questProgress = {};
@@ -235,6 +258,7 @@ async function doStudentLogin() {
     document.getElementById('stu-login-pin').value = '';
     await loadQuestProgress();
     await loadVideoSubmissions(student['Student ID']);
+    await loadPhotoSubmissions(student['Student ID']);
     await loadPointsData(student['Student ID']);
     go('s-home');
   } catch (e) {
@@ -259,7 +283,33 @@ async function loadStaticData() {
   ]);
   APP.students    = studentsRes?.data || [];
   APP.tableGuides = guidesRes?.data || [];
-  await Promise.all([refreshCurrentWeek(), loadQuestVideos(), loadRedeemItems()]);
+  await Promise.all([refreshCurrentWeek(), loadQuestVideos(), loadRedeemItems(), loadLevelQuests()]);
+}
+
+// Pulls Director/Consultant-customized Level Challenge tasks from the
+// LEVEL_QUESTS sheet. A level with no rows there is left out of the map,
+// so questsForLevel() falls back to the built-in QUESTS default for it.
+async function loadLevelQuests() {
+  try {
+    const res = await apiGet('levelQuests');
+    const rows = res?.data || [];
+    const byLevel = {};
+    rows.forEach(r => {
+      const lvl = Number(r['Level No']), qNo = Number(r['Quest No']);
+      if (!lvl || !qNo) return;
+      if (!byLevel[lvl]) byLevel[lvl] = [];
+      byLevel[lvl][qNo - 1] = {
+        icon: r['Icon'] || '⭐',
+        type: String(r['Type'] || '').trim() || undefined,
+        title: r['Title'] || ''
+      };
+    });
+    // Drop any gaps left by a skipped Quest No so the array is dense.
+    Object.keys(byLevel).forEach(lvl => { byLevel[lvl] = byLevel[lvl].filter(Boolean); });
+    APP.levelQuests = byLevel;
+  } catch (e) {
+    console.warn('Failed to load custom level quests:', e);
+  }
 }
 
 // Pulls the Redeem Store catalog (Director/Consultant-managed). Only items
@@ -329,6 +379,23 @@ async function loadVideoSubmissions(studentId) {
   }
 }
 
+// Fetches only THIS student's saved quest-photo links (server-side
+// filtered by studentId) so other students' submissions never reach the device.
+async function loadPhotoSubmissions(studentId) {
+  try {
+    const res = await apiGet('photoSubmissions', `&studentId=${encodeURIComponent(studentId)}`);
+    const rows = res?.data || [];
+    const map = {};
+    rows.forEach(r => {
+      const lvl = Number(r['Level No']), q = Number(r['Quest No']);
+      if (lvl && q && r['Photo URL']) map[questKey(lvl, q)] = String(r['Photo URL']);
+    });
+    APP.photoSubmissions = map;
+  } catch (e) {
+    console.warn('Failed to load photo submissions:', e);
+  }
+}
+
 // Fetches only THIS student's earned points (LC_CREDITS) and past
 // redemptions (server-side filtered by studentId, so one student's device
 // never sees another student's points or spending history).
@@ -359,10 +426,10 @@ function renderHome() {
   const highest = getHighestLevel(s['Student ID']);
   const totalQuests = totalQuestsDoneFor(s['Student ID']);
   document.getElementById('stu-info-level').textContent = `${highest}/${TOTAL_LEVELS}`;
-  document.getElementById('stu-info-quests').textContent = `${totalQuests}/${TOTAL_QUESTS}`;
+  document.getElementById('stu-info-quests').textContent = `${totalQuests}/${totalQuestsCount()}`;
   document.getElementById('stu-progress-badge').textContent =
     highest >= TOTAL_LEVELS ? 'All Done! 🏆' : `Level ${highest + 1}`;
-  document.getElementById('stu-progress-fill').style.width = (totalQuests / TOTAL_QUESTS * 100) + '%';
+  document.getElementById('stu-progress-fill').style.width = (totalQuests / totalQuestsCount() * 100) + '%';
 
   const curEl = document.getElementById('stu-home-current-pts');
   const redEl = document.getElementById('stu-home-redeem-pts');
@@ -487,8 +554,9 @@ function renderQuestList() {
 
   list.innerHTML = quests.map((q, idx) => {
     const done = !!state[questKey(currentLevel, idx + 1)];
-    if (q.type === 'watch')  return renderWatchQuestCard(q, idx, done, quests.length);
-    if (q.type === 'upload') return renderUploadQuestCard(q, idx, done, quests.length);
+    if (q.type === 'watch')       return renderWatchQuestCard(q, idx, done, quests.length);
+    if (q.type === 'upload')      return renderUploadQuestCard(q, idx, done, quests.length);
+    if (q.type === 'photoUpload') return renderPhotoUploadQuestCard(q, idx, done, quests.length);
     return `
       <div class="quest-card${done ? ' qc-done' : ''}">
         <div class="quest-icon">${q.icon}</div>
@@ -722,6 +790,28 @@ function renderUploadQuestCard(q, idx, done, totalInLevel) {
     </div>`;
 }
 
+function renderPhotoUploadQuestCard(q, idx, done, totalInLevel) {
+  const inputId = `qp-file-${idx}`;
+  const submittedUrl = (APP.photoSubmissions && APP.photoSubmissions[questKey(currentLevel, idx + 1)]) || '';
+  const bodyContent = (done && submittedUrl)
+    ? `<a class="qv-watch-link" href="${submittedUrl}" target="_blank" rel="noopener">📸 View your submitted photo</a>
+       <label class="qv-replace-link" for="${inputId}">Replace photo</label>`
+    : `<label class="qv-upload-zone" for="${inputId}">📤 Tap to choose a photo<br><span>JPG/PNG, up to ${Math.round(MAX_PHOTO_BYTES/1024/1024)}MB</span></label>`;
+  return `
+    <div class="quest-card qc-video${done ? ' qc-done' : ''}">
+      <div class="qv-header">
+        <div class="quest-icon">${q.icon}</div>
+        <div class="quest-text">
+          <div class="quest-title">${q.title}</div>
+          <div class="quest-hint">Quest ${idx + 1} of ${totalInLevel}</div>
+        </div>
+      </div>
+      <div id="qp-body-${idx}">${bodyContent}</div>
+      <input type="file" accept="image/*" id="${inputId}" style="display:none" onchange="handlePhotoChosen(${idx}, this.files[0])">
+      <div id="qp-status-${idx}"></div>
+    </div>`;
+}
+
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -897,6 +987,115 @@ function fileToBase64(file) {
     reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
     reader.onerror = () => reject(new Error('Could not read the file.'));
     reader.readAsDataURL(file);
+  });
+}
+
+// ═══════════════════════════════════════════
+// LEVEL CHALLENGE — QUEST PHOTO UPLOAD (e.g. Level 2 LifeGroup photo)
+// ═══════════════════════════════════════════
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // raw file cap; base64 adds ~33% on top when sent to Apps Script
+
+let pendingPhotoFiles = {}; // idx -> File, chosen but not yet submitted
+
+function handlePhotoChosen(idx, file) {
+  if (!file) return;
+  const statusEl = document.getElementById(`qp-status-${idx}`);
+  if (!statusEl) return;
+
+  if (!file.type.startsWith('image/')) {
+    statusEl.innerHTML = `<div class="qv-error">Please choose an image file.</div>`;
+    return;
+  }
+  if (file.size > MAX_PHOTO_BYTES) {
+    statusEl.innerHTML = `<div class="qv-error">That photo is ${(file.size/1024/1024).toFixed(1)}MB — please keep it under ${Math.round(MAX_PHOTO_BYTES/1024/1024)}MB.</div>`;
+    return;
+  }
+
+  pendingPhotoFiles[idx] = file;
+  const objUrl = URL.createObjectURL(file);
+  statusEl.innerHTML = `
+    <img class="qv-preview" src="${objUrl}" alt="Selected photo">
+    <div class="qv-file-name">${escapeHtml(file.name)} · ${(file.size/1024/1024).toFixed(1)}MB</div>
+    <button class="qv-complete-btn" onclick="submitPhoto(${idx})">Submit Photo</button>`;
+}
+
+async function submitPhoto(idx) {
+  const file = pendingPhotoFiles[idx];
+  const s = APP.currentStudent;
+  if (!file || !s) return;
+  const sid = s['Student ID'];
+  const questNo = idx + 1;
+  const statusEl = document.getElementById(`qp-status-${idx}`);
+  if (statusEl) {
+    statusEl.innerHTML = `
+      <div class="qv-progress-track"><div class="qv-progress-fill" id="qp-prog-${idx}"></div></div>
+      <div class="qv-note" id="qp-prog-label-${idx}">Uploading… 0%</div>`;
+  }
+
+  try {
+    const base64 = await fileToBase64(file);
+    const quest = questsForLevel(currentLevel)[idx];
+    const result = await uploadPhotoXHR({
+      studentId: sid,
+      studentName: s['Full Name'] || '',
+      tableNo: s['Table No'] || '',
+      levelNo: currentLevel,
+      questNo: questNo,
+      questTitle: quest ? quest.title : 'Photo Submission',
+      levelName: LEVEL_NAMES[currentLevel] || '',
+      fileName: file.name,
+      mimeType: file.type || 'image/jpeg',
+      base64Data: base64,
+      markedBy: s['Full Name'] || ''
+    }, pct => {
+      const fill = document.getElementById(`qp-prog-${idx}`);
+      const label = document.getElementById(`qp-prog-label-${idx}`);
+      if (pct === null) {
+        if (fill) { fill.style.width = '100%'; fill.classList.add('qv-progress-indeterminate'); }
+        if (label) label.textContent = 'Uploading… this may take a minute';
+      } else {
+        if (fill) fill.style.width = pct + '%';
+        if (label) label.textContent = `Uploading… ${pct}%`;
+      }
+    });
+
+    if (!APP.questProgress[sid]) APP.questProgress[sid] = {};
+    APP.questProgress[sid][questKey(currentLevel, questNo)] = true;
+    if (!APP.photoSubmissions) APP.photoSubmissions = {};
+    if (result && result.photoUrl) APP.photoSubmissions[questKey(currentLevel, questNo)] = result.photoUrl;
+    delete pendingPhotoFiles[idx];
+
+    renderQuestList();
+    showSentToast();
+    if (isLevelDoneFor(sid, currentLevel)) setTimeout(finishLevel, 350);
+  } catch (e) {
+    console.warn('Photo upload failed:', e);
+    if (statusEl) statusEl.innerHTML = `<div class="qv-error">Upload failed — check your connection and try again.</div>
+      <button class="qv-complete-btn" onclick="submitPhoto(${idx})">Try Again</button>`;
+  }
+}
+
+function uploadPhotoXHR(payload, onProgress) {
+  return new Promise((resolve, reject) => {
+    // See the note in uploadTestimonyXHR above — no upload.onprogress
+    // listener, on purpose, to avoid a CORS preflight Apps Script can't answer.
+    if (onProgress) onProgress(null);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', GAS_URL, true);
+    xhr.setRequestHeader('Content-Type', 'text/plain');
+    xhr.timeout = 5 * 60 * 1000;
+    xhr.onload = () => {
+      try {
+        const res = JSON.parse(xhr.responseText);
+        if (res && res.success) resolve(res);
+        else reject(new Error((res && res.message) || 'Upload failed'));
+      } catch (e) {
+        reject(new Error('Unexpected response from server'));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out'));
+    xhr.send(JSON.stringify(Object.assign({ action: 'uploadPhotoSubmission' }, payload)));
   });
 }
 

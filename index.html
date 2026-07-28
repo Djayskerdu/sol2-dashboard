@@ -599,6 +599,11 @@
       <div class="mi-text"><div class="mi-title">Completion of Module</div><div class="mi-sub">2 Modules × 10 Lessons — certificate eligibility</div></div>
       <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
+    <button class="menu-item" onclick="go('s-a-quests')">
+      <div class="mi-icon" style="background:#fff5e0"><svg viewBox="0 0 24 24" stroke="#c9960c" fill="none"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+      <div class="mi-text"><div class="mi-title">Level Challenge Tasks</div><div class="mi-sub">Customize each level's quests/tasks</div></div>
+      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
   </div>
   <div class="bnav" style="--active-color:var(--green)">
     <button class="ni active" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
@@ -1260,6 +1265,36 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     ADMIN — LEVEL CHALLENGE TASKS (customize quests per level)
+══════════════════════════════════════════ -->
+<div class="screen" id="s-a-quests">
+  <div class="topbar" style="background:var(--green)">
+    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="topbar-title">Level Challenge Tasks</span>
+  </div>
+  <div class="body">
+    <div style="background:linear-gradient(135deg,#1e3a8a,#3b5fc9);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
+      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">10 Levels · Student "SOL2 Level Challenge"</div>
+      <div style="font-size:15px;font-weight:700">Pick a level, edit its tasks, then Save</div>
+    </div>
+    <div id="a-quests-level-tabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+    <div class="card" style="padding:14px 16px">
+      <div id="a-quests-list"></div>
+      <button class="menu-item" onclick="addQuestsEditorRow()" style="justify-content:center;margin-top:4px">
+        <div class="mi-text" style="text-align:center;width:100%"><div class="mi-title">+ Add Task</div></div>
+      </button>
+    </div>
+    <div id="a-quests-status" style="font-size:12px;color:var(--text2);margin:8px 2px 0"></div>
+    <button class="btn-primary" style="background:var(--green);margin-top:12px" onclick="saveQuestsEditor()">Save Changes</button>
+    <button class="btn-primary" style="background:rgba(0,0,0,0.06);color:var(--text2);margin-top:8px" onclick="resetQuestsEditorToDefault()">Reset This Level to Default</button>
+  </div>
+  <div class="bnav" style="--active-color:var(--green)">
+    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
+    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tasks</button>
+    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════
      FACULTY MODULE COMPLETION (Student List)
@@ -3220,7 +3255,7 @@ function updateSidebar() {
     .forEach(id => { var el = document.getElementById(id); if(el) el.style.display = 'none'; });
 
   var facultyScreens = ['s-faculty-home','s-f-lessons','s-f-students','s-f-payment','s-f-credits','s-add-credit','s-f-devotional','s-f-devot-detail'];
-  var adminScreens   = ['s-admin-home','s-a-student-att','s-a-faculty-att','s-a-tables','s-a-table-detail','s-a-leaderboard','s-a-makeup','s-a-dropped','s-a-devotional','s-a-devot-table'];
+  var adminScreens   = ['s-admin-home','s-a-student-att','s-a-faculty-att','s-a-tables','s-a-table-detail','s-a-leaderboard','s-a-makeup','s-a-dropped','s-a-devotional','s-a-devot-table','s-a-modcomp','s-a-quests'];
   var recordScreens  = ['s-record-home','s-r-qr','s-r-attendance','s-r-payment','s-r-balances'];
 
   var role = typeof getRoleType === 'function' ? getRoleType(faculty['Role']) : 'faculty';
@@ -3277,7 +3312,8 @@ function updateSidebar() {
     's-a-tables':'sidebar-admin-nav','s-a-table-detail':'sidebar-admin-nav',
     's-a-leaderboard':'sidebar-admin-nav','s-a-makeup':'sidebar-admin-nav',
     's-a-dropped':'sidebar-admin-nav','s-a-devotional':'sidebar-admin-nav',
-    's-a-devot-table':'sidebar-admin-nav','s-record-home':'sidebar-record-nav',
+    's-a-devot-table':'sidebar-admin-nav','s-a-modcomp':'sidebar-admin-nav',
+    's-a-quests':'sidebar-admin-nav','s-record-home':'sidebar-record-nav',
     's-r-qr':'sidebar-record-nav','s-r-attendance':'sidebar-record-nav',
     's-r-payment':'sidebar-record-nav','s-r-balances':'sidebar-record-nav'
   };

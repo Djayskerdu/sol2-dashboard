@@ -19,12 +19,24 @@
  *     This lets a Director/Consultant assign one facilitator to handle
  *     ALL absent students' make-up classes for a given week (see
  *     updateMakeupWeekAssignment below).
- *  8. Deploy → Manage deployments → New deployment
+ *  8. Add a new sheet called LEVEL_QUESTS with headers:
+ *     Record ID | Level No | Quest No | Icon | Type | Title | Updated By | Updated At
+ *     This lets a Director/Consultant edit each Level Challenge's tasks
+ *     from the Faculty app (Admin Home → Level Challenge Tasks) instead
+ *     of the tasks being hard-coded. A level with no rows here just falls
+ *     back to the app's built-in defaults (see saveLevelQuests below).
+ *  9. For photo quests (e.g. Level 2's "submit a LifeGroup photo" quest):
+ *     create a Google Drive folder for submitted photos, copy its ID from
+ *     the URL (drive.google.com/drive/folders/ >>>COPY_THIS_PART<<<), and
+ *     paste it into PHOTO_FOLDER_ID below. Also add the
+ *     STUDENT_PHOTO_SUBMISSIONS sheet (see headers below).
+ * 10. Deploy → Manage deployments → New deployment
  *     Execute as: Me | Who has access: Anyone
  ************************************************/
 
 const SPREADSHEET_ID = "1zfWtx5dFfyvWSeL1fC_EHLBoK9cejZXdlSdRGyk0-Pk"; // ← REPLACE THIS
 const VIDEO_FOLDER_ID = "1io6sIDbwWn-ajM_Hws_5wpJj3Fj1bEBj"; // ← Drive folder for uploaded testimony videos
+const PHOTO_FOLDER_ID = "PASTE_YOUR_PHOTO_FOLDER_ID_HERE"; // ← Drive folder for uploaded quest photos (e.g. LifeGroup photos)
 
 /************************************************
  * NEW SHEETS REQUIRED IN YOUR GOOGLE SPREADSHEET:
@@ -130,6 +142,12 @@ function doGet(e) {
       case "questVideos":
         return output(getSheetData("QUEST_VIDEOS"));
 
+      // Director/Consultant-customized Level Challenge tasks. If a level
+      // has no rows here yet, the Student and Faculty apps fall back to
+      // their own built-in defaults (see saveLevelQuests below).
+      case "levelQuests":
+        return output(getSheetData("LEVEL_QUESTS"));
+
       // Student-uploaded testimony videos. Pass ?studentId=... to get
       // only that student's rows (the Student app always does this, so one
       // student's device never receives another student's video links).
@@ -141,6 +159,19 @@ function doGet(e) {
           });
         }
         return output(vsResult);
+
+      // Student-uploaded quest photos (e.g. LifeGroup photo). Pass
+      // ?studentId=... to get only that student's rows (the Student app
+      // always does this, so one student's device never receives another
+      // student's photo links).
+      case "photoSubmissions":
+        var psResult = getSheetData("STUDENT_PHOTO_SUBMISSIONS");
+        if (e.parameter.studentId) {
+          psResult.data = psResult.data.filter(function (r) {
+            return String(r["Student ID"]) === String(e.parameter.studentId);
+          });
+        }
+        return output(psResult);
 
       // ── GAME SHOW STATE (cross-device sync) ──
       case "gameState":
@@ -236,6 +267,9 @@ function doPost(e) {
       case "uploadTestimonyVideo":
         return output(uploadTestimonyVideo(data));
 
+      case "uploadPhotoSubmission":
+        return output(uploadPhotoSubmission(data));
+
       case "saveStudentDevotionals":
         return output(saveStudentDevotionals(data));
 
@@ -247,6 +281,9 @@ function doPost(e) {
 
       case "updateMakeupWeekAssignment":
         return output(updateMakeupWeekAssignment(data));
+
+      case "saveLevelQuests":
+        return output(saveLevelQuests(data));
 
       case "toggleLessonCompletion":
         return output(toggleLessonCompletion(data));
@@ -764,6 +801,85 @@ function uploadTestimonyVideo(data) {
 }
 
 /************************************************
+ * QUEST PHOTO UPLOAD (e.g. Level 2's "submit a LifeGroup photo" quest)
+ * Sheet: STUDENT_PHOTO_SUBMISSIONS
+ * Headers: Record ID | Student ID | Student Name | Table No | Level No |
+ *          Quest No | Photo URL | File Name | File Size KB | Uploaded At
+ * data: { studentId, studentName, tableNo, levelNo, questNo, questTitle,
+ *         levelName, fileName, mimeType, base64Data, markedBy }
+ * Mirrors uploadTestimonyVideo above, minus the video-specific bits (no
+ * duration, saved to its own folder/sheet so photos and testimony videos
+ * never mix in the same Drive folder or sheet).
+ ************************************************/
+
+function uploadPhotoSubmission(data) {
+  if (!data.base64Data) {
+    return { success: false, message: "No photo data received." };
+  }
+  if (!PHOTO_FOLDER_ID || PHOTO_FOLDER_ID.indexOf("PASTE_YOUR") === 0) {
+    throw new Error("PHOTO_FOLDER_ID is not configured — see the setup notes at the top of this script.");
+  }
+
+  const folder = DriveApp.getFolderById(PHOTO_FOLDER_ID);
+  const mimeType = data.mimeType || "image/jpeg";
+  const safeName = String(data.studentId || "student") + "_L" + data.levelNo + "Q" + data.questNo +
+                    "_" + (data.fileName || "photo.jpg");
+  const bytes = Utilities.base64Decode(data.base64Data);
+  const blob  = Utilities.newBlob(bytes, mimeType, safeName);
+  const file  = folder.createFile(blob);
+
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (shareErr) {
+    // ignore — see comment above uploadTestimonyVideo
+  }
+
+  const photoUrl = "https://drive.google.com/file/d/" + file.getId() + "/view";
+
+  const sheet   = getSheet("STUDENT_PHOTO_SUBMISSIONS");
+  const values  = sheet.getDataRange().getValues();
+  if (values.length > 1) {
+    const headers = values[0];
+    const sidCol   = headers.indexOf("Student ID");
+    const lvlCol   = headers.indexOf("Level No");
+    const questCol = headers.indexOf("Quest No");
+    for (let i = values.length - 1; i >= 1; i--) {
+      if (String(values[i][sidCol]) === String(data.studentId) &&
+          Number(values[i][lvlCol]) === Number(data.levelNo) &&
+          Number(values[i][questCol]) === Number(data.questNo)) {
+        sheet.deleteRow(i + 1);
+      }
+    }
+  }
+  sheet.appendRow([
+    Utilities.getUuid(),
+    data.studentId,
+    data.studentName,
+    data.tableNo,
+    data.levelNo,
+    data.questNo,
+    photoUrl,
+    data.fileName || "",
+    Math.round(bytes.length / 1024),
+    new Date()
+  ]);
+
+  toggleQuest({
+    studentId: data.studentId,
+    studentName: data.studentName,
+    tableNo: data.tableNo,
+    levelNo: data.levelNo,
+    questNo: data.questNo,
+    questTitle: data.questTitle || "Photo Submission",
+    levelName: data.levelName || "",
+    completed: true,
+    markedBy: data.markedBy || data.studentName || ""
+  });
+
+  return { success: true, message: "Photo uploaded", photoUrl: photoUrl };
+}
+
+/************************************************
  * NOTIFICATIONS
  ************************************************/
 
@@ -1131,6 +1247,54 @@ function updateMakeupWeekAssignment(data) {
     new Date()
   ]);
   return { success: true, message: "Week " + data.weekNo + " make-up class assigned to " + (data.assignedTo || "nobody") };
+}
+
+/************************************************
+ * LEVEL CHALLENGE — CUSTOM TASKS (Director/Consultant editable)
+ * Sheet: LEVEL_QUESTS
+ * Headers: Record ID | Level No | Quest No | Icon | Type | Title |
+ *          Updated By | Updated At
+ * "Type" is one of: "" (normal self check-off) | "watch" | "upload"
+ *
+ * data: { levelNo, quests: [{ icon, type, title }, ...], updatedBy }
+ * Whole-level replace: wipes every row for that level, then re-inserts in
+ * the given order (Quest No = array position + 1). This keeps the sheet
+ * as the single source of truth and avoids having to diff row-by-row.
+ ************************************************/
+
+function saveLevelQuests(data) {
+  if (!data.levelNo) return { success: false, message: "Missing levelNo." };
+  const quests = Array.isArray(data.quests) ? data.quests : [];
+  if (!quests.length) return { success: false, message: "A level needs at least one task." };
+
+  const sheet  = getSheet("LEVEL_QUESTS");
+  const values = sheet.getDataRange().getValues();
+
+  if (values.length > 1) {
+    const headers    = values[0];
+    const levelCol   = headers.indexOf("Level No");
+    for (let i = values.length - 1; i >= 1; i--) {
+      if (Number(values[i][levelCol]) === Number(data.levelNo)) {
+        sheet.deleteRow(i + 1);
+      }
+    }
+  }
+
+  const now = new Date();
+  quests.forEach(function (q, i) {
+    sheet.appendRow([
+      Utilities.getUuid(),
+      Number(data.levelNo),
+      i + 1,
+      q.icon || "⭐",
+      (q.type || "").trim(),
+      q.title || "",
+      data.updatedBy || "",
+      now
+    ]);
+  });
+
+  return { success: true, message: "Level " + data.levelNo + " tasks saved (" + quests.length + " task" + (quests.length === 1 ? "" : "s") + ")" };
 }
 
 /************************************************
