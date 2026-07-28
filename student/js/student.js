@@ -61,6 +61,43 @@ let APP = {
 let currentLevel = 1;
 
 // ═══════════════════════════════════════════
+// LEVEL CHALLENGE — WATCH-QUEST VIDEO GATING
+// Director/Consultant rule: a student must actually watch the assigned
+// video start-to-finish (no dragging the seek bar ahead) before the
+// "Mark as Watched — Complete" button will work. Enforced only for
+// YouTube-hosted quest videos, since that's the only case where the
+// YouTube IFrame Player API gives us real playback control; a plain
+// "open in a new tab" link (non-YouTube host) can't be policed this way.
+// ═══════════════════════════════════════════
+let ytApiPromise = null;
+const ytPlayers = {};      // questKey -> YT.Player instance
+const ytPollTimers = {};   // questKey -> setInterval id
+const watchProgress = {};  // questKey -> { furthest: seconds, duration: seconds, ended: bool }
+const SEEK_TOLERANCE_SEC = 1.5; // small allowance for normal playback drift, not real skipping
+
+function ensureYouTubeApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve) => {
+    const prevReady = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function () {
+      if (typeof prevReady === 'function') prevReady();
+      resolve();
+    };
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  });
+  return ytApiPromise;
+}
+
+function extractYouTubeId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
+  return m ? m[1] : null;
+}
+
+// ═══════════════════════════════════════════
 // LEVEL CHALLENGE — same 10 levels / 3 quests as the Faculty app used to have.
 // Edit wording here if the quests change; keep in sync with SOL2_GAS_BACKEND.js
 // notification message building (levelName/questTitle are sent along so the
@@ -443,6 +480,11 @@ function renderQuestList() {
   const state = APP.questProgress[sid] || {};
   const quests = questsForLevel(currentLevel);
   const list = document.getElementById('stu-quest-list');
+
+  // Tear down any live YouTube players/timers before wiping the DOM —
+  // otherwise their poll intervals keep firing against detached iframes.
+  destroyWatchPlayers();
+
   list.innerHTML = quests.map((q, idx) => {
     const done = !!state[questKey(currentLevel, idx + 1)];
     if (q.type === 'watch')  return renderWatchQuestCard(q, idx, done, quests.length);
@@ -458,6 +500,7 @@ function renderQuestList() {
       </div>`;
   }).join('');
   updateQuestProgressBar();
+  initWatchPlayers(quests, state);
 }
 
 // Converts a YouTube link into an embeddable URL. Returns null for anything
@@ -470,16 +513,42 @@ function embedVideoUrl(url) {
 }
 
 function renderWatchQuestCard(q, idx, done, totalInLevel) {
-  const vid = APP.questVideos[questKey(currentLevel, idx + 1)] || {};
-  const embed = embedVideoUrl(vid.url);
+  const key = questKey(currentLevel, idx + 1);
+  const vid = APP.questVideos[key] || {};
+  const ytId = extractYouTubeId(vid.url);
+  const alreadyEnded = !!(watchProgress[key] && watchProgress[key].ended);
+  // Gate the complete button (no fast-forward past what's actually been
+  // watched, no completing before the video ends) only when we have real
+  // playback control — i.e. a YouTube-hosted video that isn't already
+  // marked complete. Anything else (no video yet, or a non-YouTube link
+  // that only opens in a new tab) can't be technically policed, so it
+  // falls back to the previous behavior.
+  const gated = !done && !!ytId;
+
   let player;
   if (!vid.url) {
     player = `<div class="qv-watch-link qv-disabled">📹 Video not uploaded yet — check back soon</div>`;
-  } else if (embed) {
-    player = `<div class="qv-video-frame"><iframe src="${embed}" allowfullscreen allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" loading="lazy"></iframe></div>`;
+  } else if (gated) {
+    player = `
+      <div class="qv-video-frame" id="qv-yt-${key}"></div>
+      <div class="qv-controls-row">
+        <button type="button" class="qv-playpause-btn" id="qv-playpause-${key}" onclick="toggleYtPlayback('${key}')">▶ Play</button>
+        <div class="qv-progress-track"><div class="qv-progress-fill" id="qv-fill-${key}"></div></div>
+        <span class="qv-time-label" id="qv-time-${key}">0:00 / 0:00</span>
+      </div>
+      <div class="qv-note">Watch the full video without skipping ahead — the button below unlocks once it's finished.</div>`;
+  } else if (ytId) {
+    // Already marked complete — no need to enforce anything, just let them rewatch normally.
+    player = `<div class="qv-video-frame"><iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" loading="lazy"></iframe></div>`;
   } else {
     player = `<a class="qv-watch-link" href="${vid.url}" target="_blank" rel="noopener">▶️ Watch Video${vid.title ? ' — ' + escapeHtml(vid.title) : ''}</a>`;
   }
+
+  const locked = gated && !alreadyEnded;
+  const btnLabel = done
+    ? '✓ Marked as watched — tap to undo'
+    : (locked ? '🔒 Watch the full video to unlock' : 'Mark as Watched — Complete');
+
   return `
     <div class="quest-card qc-video${done ? ' qc-done' : ''}">
       <div class="qv-header">
@@ -490,10 +559,144 @@ function renderWatchQuestCard(q, idx, done, totalInLevel) {
         </div>
       </div>
       ${player}
-      <button class="qv-complete-btn${done ? ' qv-done' : ''}" onclick="toggleQuestSelf(${idx})">
-        ${done ? '✓ Marked as watched — tap to undo' : 'Mark as Watched — Complete'}
+      <button class="qv-complete-btn${done ? ' qv-done' : ''}${locked ? ' qv-locked' : ''}" id="qv-btn-${key}"
+        ${locked ? 'disabled' : ''} onclick="toggleQuestSelf(${idx})">
+        ${btnLabel}
       </button>
     </div>`;
+}
+
+/************************************************
+ * WATCH-QUEST PLAYER LIFECYCLE (anti-fast-forward + completion gate)
+ ************************************************/
+
+function initWatchPlayers(quests, state) {
+  quests.forEach((q, idx) => {
+    if (q.type !== 'watch') return;
+    const key = questKey(currentLevel, idx + 1);
+    const done = !!state[key];
+    const vid = APP.questVideos[key] || {};
+    const ytId = extractYouTubeId(vid.url);
+    if (done || !ytId) return; // nothing to gate — either finished already, or not a policeable video
+
+    if (!watchProgress[key]) watchProgress[key] = { furthest: 0, duration: 0, ended: false };
+    ensureYouTubeApi().then(() => {
+      const container = document.getElementById(`qv-yt-${key}`);
+      if (!container) return; // list was re-rendered again before the API loaded
+      ytPlayers[key] = new YT.Player(`qv-yt-${key}`, {
+        videoId: ytId,
+        playerVars: {
+          controls: 0, disablekb: 1, rel: 0, modestbranding: 1,
+          iv_load_policy: 3, playsinline: 1, origin: location.origin
+        },
+        events: {
+          onReady: () => onWatchPlayerReady(key),
+          onStateChange: (e) => onWatchPlayerStateChange(key, e)
+        }
+      });
+    });
+  });
+}
+
+function destroyWatchPlayers() {
+  Object.keys(ytPollTimers).forEach(stopWatchPolling);
+  Object.keys(ytPlayers).forEach(key => {
+    try { ytPlayers[key].destroy(); } catch (e) { /* iframe already gone — fine */ }
+    delete ytPlayers[key];
+  });
+}
+
+function onWatchPlayerReady(key) {
+  const p = ytPlayers[key];
+  if (!p) return;
+  watchProgress[key].duration = p.getDuration() || 0;
+  updateWatchProgressUI(key, watchProgress[key].furthest, watchProgress[key].duration);
+}
+
+function onWatchPlayerStateChange(key, e) {
+  const p = ytPlayers[key];
+  if (!p || !window.YT) return;
+  const btn = document.getElementById(`qv-playpause-${key}`);
+  if (e.data === YT.PlayerState.PLAYING) {
+    if (btn) btn.textContent = '⏸ Pause';
+    startWatchPolling(key);
+  } else if (e.data === YT.PlayerState.PAUSED) {
+    if (btn) btn.textContent = '▶ Play';
+    stopWatchPolling(key);
+  } else if (e.data === YT.PlayerState.ENDED) {
+    if (btn) btn.textContent = '▶ Play';
+    stopWatchPolling(key);
+    const st = watchProgress[key];
+    st.ended = true;
+    st.furthest = st.duration || st.furthest;
+    updateWatchProgressUI(key, st.furthest, st.duration);
+    unlockWatchCompleteButton(key);
+  }
+}
+
+function startWatchPolling(key) {
+  stopWatchPolling(key);
+  ytPollTimers[key] = setInterval(() => pollWatchProgress(key), 400);
+}
+
+function stopWatchPolling(key) {
+  if (ytPollTimers[key]) {
+    clearInterval(ytPollTimers[key]);
+    delete ytPollTimers[key];
+  }
+}
+
+function pollWatchProgress(key) {
+  const p = ytPlayers[key];
+  const st = watchProgress[key];
+  if (!p || !st || typeof p.getCurrentTime !== 'function') return;
+  const cur = p.getCurrentTime();
+  const dur = p.getDuration() || st.duration || 0;
+
+  if (cur > st.furthest + SEEK_TOLERANCE_SEC) {
+    // Student dragged/skipped ahead of what they've actually watched —
+    // snap the playhead back so they can't fast-forward through it.
+    p.seekTo(st.furthest, true);
+  } else {
+    st.furthest = Math.max(st.furthest, cur);
+  }
+
+  updateWatchProgressUI(key, st.furthest, dur);
+
+  if (dur && st.furthest >= dur - 0.75 && !st.ended) {
+    st.ended = true;
+    unlockWatchCompleteButton(key);
+  }
+}
+
+function updateWatchProgressUI(key, cur, dur) {
+  const fill = document.getElementById(`qv-fill-${key}`);
+  const time = document.getElementById(`qv-time-${key}`);
+  if (fill) fill.style.width = dur ? Math.min(100, (cur / dur) * 100) + '%' : '0%';
+  if (time) time.textContent = `${formatSeconds(cur)} / ${formatSeconds(dur)}`;
+}
+
+function formatSeconds(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+function unlockWatchCompleteButton(key) {
+  const btn = document.getElementById(`qv-btn-${key}`);
+  if (!btn) return;
+  btn.disabled = false;
+  btn.classList.remove('qv-locked');
+  btn.textContent = 'Mark as Watched — Complete';
+}
+
+function toggleYtPlayback(key) {
+  const p = ytPlayers[key];
+  if (!p || typeof p.getPlayerState !== 'function') return;
+  const state = p.getPlayerState();
+  if (state === 1 /* YT.PlayerState.PLAYING */) p.pauseVideo();
+  else p.playVideo();
 }
 
 function renderUploadQuestCard(q, idx, done, totalInLevel) {
