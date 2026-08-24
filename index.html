@@ -785,6 +785,13 @@
     <span class="topbar-title">Notify Table Guide</span>
   </div>
   <div class="body">
+    <div class="slabel">Send to</div>
+    <div class="notify-aud-toggle">
+      <button id="a-notify-aud-guide" class="notify-aud-btn active" onclick="setNotifyAudience('guide')">🧑‍🏫 Table Guide</button>
+      <button id="a-notify-aud-student" class="notify-aud-btn" onclick="setNotifyAudience('student')">🎓 Student</button>
+    </div>
+    <div id="a-notify-aud-hint" style="font-size:11.5px;color:var(--text3);margin:-6px 0 12px">Lands in the Table Guide's own bell — the student won't see this.</div>
+
     <div class="filter-bar"><select id="a-notify-table-sel" onchange="onANotifyTableChange()"><option value="">Select a table…</option></select></div>
     <div id="a-notify-guide-info" style="font-size:12.5px;color:var(--text2);margin:2px 0 12px"></div>
 
@@ -793,12 +800,14 @@
       <p style="padding:16px 0;color:var(--gray)">Select a table above to see who still has quests left.</p>
     </div>
 
-    <div class="slabel">Send a general reminder</div>
-    <div class="card">
-      <div class="field">
-        <textarea id="a-notify-message" rows="3" placeholder="e.g. Please follow up with your table on their remaining Level Challenge quests this week." style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;color:var(--text);background:var(--bg);outline:none;resize:vertical;font-family:var(--font)"></textarea>
+    <div id="a-notify-general-wrap">
+      <div class="slabel">Send a general reminder</div>
+      <div class="card">
+        <div class="field">
+          <textarea id="a-notify-message" rows="3" placeholder="e.g. Please follow up with your table on their remaining Level Challenge quests this week." style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;color:var(--text);background:var(--bg);outline:none;resize:vertical;font-family:var(--font)"></textarea>
+        </div>
+        <button class="btn-primary" style="background:var(--green)" onclick="sendGeneralTableNote()">Send to Table Guide</button>
       </div>
-      <button class="btn-primary" style="background:var(--green)" onclick="sendGeneralTableNote()">Send to Table Guide</button>
     </div>
   </div>
   <div class="bnav" style="--active-color:var(--green)">
