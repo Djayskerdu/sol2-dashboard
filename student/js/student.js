@@ -56,6 +56,9 @@ let APP = {
   redemptions: [],      // this student's REDEMPTIONS rows (points already spent)
   levelQuests: {},      // Director/Consultant-customized tasks: levelNo -> [{icon,type,title}]
                         // (LEVEL_QUESTS sheet). A level with no rows falls back to QUESTS below.
+  notifications: [],    // this student's own NOTIFICATIONS rows (server-side filtered by
+                        // studentId — quest/redemption confirmations, plus any reminder an
+                        // Admin/Table Guide sent them by name). Powers the bell on Home.
   currentStudent: null,
   currentScreen: 's-login',
   currentWeek: 1        // from SYSTEM_SETTINGS "Current Week" — Level N stays locked until this reaches N
@@ -217,6 +220,7 @@ function go(id) {
     const sid = APP.currentStudent && APP.currentStudent['Student ID'];
     if (sid) loadPointsData(sid).then(renderRedeemScreen).catch(() => {});
   }
+  if (id === 's-notifications') renderStudentNotifications();
 }
 
 // ═══════════════════════════════════════════
@@ -260,6 +264,8 @@ async function doStudentLogin() {
     await loadVideoSubmissions(student['Student ID']);
     await loadPhotoSubmissions(student['Student ID']);
     await loadPointsData(student['Student ID']);
+    await loadNotifications(student['Student ID']);
+    updateStudentNotifBadges();
     go('s-home');
   } catch (e) {
     showLoginError('Could not connect. Check your internet connection and try again.');
@@ -270,6 +276,8 @@ async function doStudentLogin() {
 
 function studentLogout() {
   APP.currentStudent = null;
+  APP.notifications = [];
+  updateStudentNotifBadges();
   go('s-login');
 }
 
@@ -396,6 +404,18 @@ async function loadPhotoSubmissions(studentId) {
   }
 }
 
+// Fetches only THIS student's own notifications (server-side filtered by
+// studentId, so one student's device never sees another student's or
+// their table's messages). Powers the bell badge/list on Home.
+async function loadNotifications(studentId) {
+  try {
+    const res = await apiGet('notifications', `&studentId=${encodeURIComponent(studentId)}`);
+    APP.notifications = res?.data || [];
+  } catch (e) {
+    console.warn('Failed to load notifications:', e);
+  }
+}
+
 // Fetches only THIS student's earned points (LC_CREDITS) and past
 // redemptions (server-side filtered by studentId, so one student's device
 // never sees another student's points or spending history).
@@ -412,6 +432,83 @@ async function loadPointsData(studentId) {
   } catch (e) {
     console.warn('Failed to load points data:', e);
   }
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS — Student bell (mirrors the Faculty/Table Guide bell)
+// Rows are already filtered server-side to this student's own Student ID
+// (see loadNotifications above), so this just sorts/renders what's cached.
+// ═══════════════════════════════════════════
+function studentNotifRows() {
+  return (APP.notifications || []).slice()
+    .sort((a, b) => new Date(b["Created At"]) - new Date(a["Created At"]));
+}
+
+function unreadStudentNotifCount() {
+  return studentNotifRows().filter(n => n["Read"] !== "Yes" && n["Read"] !== true).length;
+}
+
+function updateStudentNotifBadges() {
+  const count = unreadStudentNotifCount();
+  const el = document.getElementById('stu-home-notif-badge');
+  if (!el) return;
+  el.style.display = count > 0 ? '' : 'none';
+  el.textContent = count > 9 ? '9+' : String(count);
+}
+
+function renderStudentNotifications() {
+  const list = document.getElementById('stu-notif-list');
+  if (!list) return;
+  const rows = studentNotifRows();
+  if (!rows.length) {
+    list.innerHTML = '<div class="notif-empty">No notifications yet. You\'ll see updates here when you complete a quest, redeem a Redeem Store item, or your Table Guide/Director sends you a reminder.</div>';
+    updateStudentNotifBadges();
+    return;
+  }
+  list.innerHTML = rows.map(n => {
+    const isRead = n["Read"] === "Yes" || n["Read"] === true;
+    const when = n["Created At"] ? new Date(n["Created At"]).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+      <div class="notif-item ${isRead ? 'read' : 'unread'}" onclick="markStudentNotifRead('${n["Notification ID"]}')">
+        <div class="notif-dot"></div>
+        <div class="notif-body">
+          <div class="notif-msg">${escapeHtml(n["Message"] || '')}</div>
+          <div class="notif-time">${when}${isRead ? ' · read' : ''}</div>
+        </div>
+      </div>`;
+  }).join('');
+  updateStudentNotifBadges();
+}
+
+async function markStudentNotifRead(notificationId) {
+  const n = (APP.notifications || []).find(x => String(x["Notification ID"]) === String(notificationId));
+  if (n) n["Read"] = "Yes"; // optimistic update
+  renderStudentNotifications();
+  try {
+    await apiPost({ action: 'markNotificationRead', notificationId, readBy: APP.currentStudent?.['Full Name'] || '' });
+  } catch (e) { console.warn('markNotificationRead failed:', e); }
+}
+
+async function markAllNotifsReadForStudent() {
+  const sid = APP.currentStudent && APP.currentStudent['Student ID'];
+  if (!sid) return;
+  (APP.notifications || []).forEach(n => { n["Read"] = "Yes"; });
+  renderStudentNotifications();
+  try {
+    await apiPost({ action: 'markAllNotificationsRead', studentId: sid, readBy: APP.currentStudent?.['Full Name'] || '' });
+  } catch (e) { console.warn('markAllNotificationsRead failed:', e); }
+}
+
+// Re-fetches just this student's own notifications so the bell badge/list
+// stay current without re-pulling every other sheet.
+async function pollStudentNotifications() {
+  const sid = APP.currentStudent && APP.currentStudent['Student ID'];
+  if (!sid) return; // no one logged in yet
+  try {
+    await loadNotifications(sid);
+    updateStudentNotifBadges();
+    if (APP.currentScreen === 's-notifications') renderStudentNotifications();
+  } catch (e) { /* silent — will retry on next tick */ }
 }
 
 // ═══════════════════════════════════════════
@@ -1360,4 +1457,5 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
+  setInterval(pollStudentNotifications, 45000); // light-weight refresh, doesn't touch the rest of the data
 });
