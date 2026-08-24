@@ -194,6 +194,11 @@ input, select, button, textarea { font-family: var(--font); }
 .notif-time { font-size:11px; color:var(--text3); margin-top:3px; }
 .notif-empty { text-align:center; color:var(--text3); font-size:13px; padding:40px 20px; }
 
+/* ADMIN — NOTIFY TABLE GUIDE / NOTIFY STUDENT audience toggle */
+.notify-aud-toggle { display:flex; gap:8px; margin-bottom:8px; }
+.notify-aud-btn { flex:1; padding:9px 10px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--card); color:var(--text2); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
+.notify-aud-btn.active { background:var(--navy); border-color:var(--navy); color:#fff; }
+
 /* MENU ITEMS */
 .menu-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--card); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; border: none; width: 100%; text-align: left; box-shadow: var(--shadow); transition: transform 0.1s; }
 .menu-item:active { transform: scale(0.98); }
