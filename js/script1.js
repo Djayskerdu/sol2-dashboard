@@ -67,7 +67,8 @@ let APP = {
   questProgress: {},  // studentId -> { "levelNo-questNo": true }  (Level Challenge game)
   levelQuests: {},    // Director/Consultant-customized tasks: levelNo -> [{icon,type,title}]
                       // (LEVEL_QUESTS sheet). A level with no rows falls back to QUESTS below.
-  notifications: []   // rows from the NOTIFICATIONS sheet (student quest completions)
+  notifications: [],  // rows from the NOTIFICATIONS sheet (student quest completions)
+  _notifyAudience: 'guide'  // Admin "Notify Table Guide" screen: 'guide' or 'student' (see setNotifyAudience)
 };
 
 // Point-box categories shown per lesson in the Points grid. Each box's
@@ -358,6 +359,12 @@ function facultyNotifRows() {
   const isTableGuideOnly = role.includes('faculty') && !role.includes('admin');
   const tableNo = APP.currentFaculty?.["Table Assigned"];
   let rows = APP.notifications || [];
+  // Rows explicitly addressed Audience="student" (e.g. an Admin "Notify
+  // Student" reminder) belong only in that student's own Student-app bell —
+  // keep them out of the Table Guide/Admin bell here even if they mention
+  // one of this table's students. Blank/legacy Audience defaults to "guide"
+  // for backward compatibility with rows written before this column existed.
+  rows = rows.filter(n => String(n["Audience"] || "guide").trim().toLowerCase() !== "student");
   if (isTableGuideOnly && tableNo) {
     rows = rows.filter(n => String(n["Table No"]) === String(tableNo));
   }
@@ -2179,14 +2186,53 @@ function showTableDetail(tableNo) {
 }
 
 // ═══════════════════════════════════════════
-// ADMIN — NOTIFY TABLE GUIDE
+// ADMIN — NOTIFY TABLE GUIDE / NOTIFY STUDENT
 // Lets a Director/Consultant remind a Table Guide about a student's
-// remaining Level Challenge quests, or send a free-text note — both land
-// straight in that Table Guide's existing notification bell.
+// remaining Level Challenge quests, or send a free-text note — these land
+// in that Table Guide's own bell. The "Send to" toggle switches the target
+// to the Student instead — those messages land ONLY in that one student's
+// own bell in the Student app, never the Table Guide's (see the Audience
+// column filtering in facultyNotifRows()/doGet's "notifications" case).
 // ═══════════════════════════════════════════
+function setNotifyAudience(audience) {
+  APP._notifyAudience = (audience === 'student') ? 'student' : 'guide';
+  const guideBtn = document.getElementById('a-notify-aud-guide');
+  const studentBtn = document.getElementById('a-notify-aud-student');
+  const hint = document.getElementById('a-notify-aud-hint');
+  const generalWrap = document.getElementById('a-notify-general-wrap');
+  if (guideBtn) guideBtn.classList.toggle('active', APP._notifyAudience === 'guide');
+  if (studentBtn) studentBtn.classList.toggle('active', APP._notifyAudience === 'student');
+  if (hint) {
+    hint.textContent = APP._notifyAudience === 'student'
+      ? "Lands only in that student's own bell (in the Student app) — the Table Guide won't see it."
+      : "Lands in the Table Guide's own bell — the student won't see this.";
+  }
+  // The general free-text note is a table-wide broadcast to the guide only —
+  // hide it for Student audience since a "student" message needs one named
+  // recipient (use a per-student 🔔 button above instead).
+  if (generalWrap) generalWrap.style.display = APP._notifyAudience === 'student' ? 'none' : '';
+  renderANotifyTableStudents(APP._notifyTableNo || '');
+}
+
 function renderANotifyTableSelect() {
   const sel = document.getElementById('a-notify-table-sel');
   if (!sel) return;
+
+  // Sync the Send-to toggle buttons/hint/general-note visibility with
+  // whatever audience was last selected (defaults to 'guide').
+  const guideBtn = document.getElementById('a-notify-aud-guide');
+  const studentBtn = document.getElementById('a-notify-aud-student');
+  const hint = document.getElementById('a-notify-aud-hint');
+  const generalWrap = document.getElementById('a-notify-general-wrap');
+  if (guideBtn) guideBtn.classList.toggle('active', APP._notifyAudience !== 'student');
+  if (studentBtn) studentBtn.classList.toggle('active', APP._notifyAudience === 'student');
+  if (hint) {
+    hint.textContent = APP._notifyAudience === 'student'
+      ? "Lands only in that student's own bell (in the Student app) — the Table Guide won't see it."
+      : "Lands in the Table Guide's own bell — the student won't see this.";
+  }
+  if (generalWrap) generalWrap.style.display = APP._notifyAudience === 'student' ? 'none' : '';
+
   const tables = [...new Set(APP.students.map(s => String(s['Table No'])))]
     .filter(Boolean)
     .sort((a, b) => Number(a) - Number(b));
@@ -2254,6 +2300,7 @@ function renderANotifyTableStudents(tableNo) {
     const done = questsDoneCountFor(sid);
     const highest = getHighestLevel(sid);
     const nameEsc = String(s['Full Name'] || '').replace(/'/g, "\\'");
+    const isStudentAud = APP._notifyAudience === 'student';
     return `
       <div class="row" style="align-items:center">
         <div>
@@ -2262,7 +2309,7 @@ function renderANotifyTableStudents(tableNo) {
         </div>
         <button onclick="sendQuestReminder('${sid}','${nameEsc}',${done},${totalQuests})"
           style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
-          🔔 Remind
+          ${isStudentAud ? '📣 Notify Student' : '🔔 Remind Guide'}
         </button>
       </div>`;
   }).join('');
@@ -2270,21 +2317,32 @@ function renderANotifyTableStudents(tableNo) {
 
 async function sendQuestReminder(studentId, studentName, done, totalQuests) {
   const tableNo = APP._notifyTableNo;
+  const audience = APP._notifyAudience === 'student' ? 'student' : 'guide';
   if (!tableNo) { showToast('⚠️ Select a table first'); return; }
   const remaining = totalQuests - done;
-  const message = `Reminder: ${studentName} still has ${remaining} quest${remaining === 1 ? '' : 's'} remaining ` +
-    `in the SOL2 Level Challenge (${done}/${totalQuests} done so far). Please check in with them.`;
-  if (!confirm(`Send this reminder to the Table Guide?\n\n"${message}"`)) return;
+
+  const message = audience === 'student'
+    ? `You still have ${remaining} quest${remaining === 1 ? '' : 's'} remaining in the SOL2 Level Challenge ` +
+      `(${done}/${totalQuests} done so far). Keep going!`
+    : `Reminder: ${studentName} still has ${remaining} quest${remaining === 1 ? '' : 's'} remaining ` +
+      `in the SOL2 Level Challenge (${done}/${totalQuests} done so far). Please check in with them.`;
+
+  const confirmMsg = audience === 'student'
+    ? `Send this reminder directly to ${studentName}?\n\n"${message}"`
+    : `Send this reminder to the Table Guide?\n\n"${message}"`;
+  if (!confirm(confirmMsg)) return;
+
   try {
     await apiPost({
       action: 'sendAdminNotification',
+      audience,
       tableNo,
       studentId,
       studentName,
       message,
       sentBy: APP.currentFaculty?.['Full Name'] || 'Director/Consultant'
     });
-    showToast(`✅ Reminder sent — Table ${tableNo}`);
+    showToast(audience === 'student' ? `✅ Sent to ${studentName}` : `✅ Reminder sent — Table ${tableNo}`);
   } catch (e) {
     console.warn('sendAdminNotification failed:', e);
     showToast('⚠️ Could not send reminder — try again');
@@ -2301,6 +2359,7 @@ async function sendGeneralTableNote() {
   try {
     await apiPost({
       action: 'sendAdminNotification',
+      audience: 'guide',
       tableNo,
       message,
       sentBy: APP.currentFaculty?.['Full Name'] || 'Director/Consultant'
