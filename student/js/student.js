@@ -879,8 +879,8 @@ function showSentToast(message) {
 // ═══════════════════════════════════════════
 // Raw file cap. Base64 adds ~33% on top of this when sent to Apps Script,
 // which caps incoming web-app requests around ~50MB — keeping the raw file
-// under 30MB leaves comfortable headroom.
-const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+// under 120MB leaves comfortable headroom.
+const MAX_UPLOAD_BYTES = 120 * 1024 * 1024;
 const MIN_TESTIMONY_SECONDS = 120;
 
 let pendingVideoFiles = {}; // idx -> File, chosen but not yet submitted
