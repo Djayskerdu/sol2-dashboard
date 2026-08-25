@@ -56,9 +56,6 @@ let APP = {
   redemptions: [],      // this student's REDEMPTIONS rows (points already spent)
   levelQuests: {},      // Director/Consultant-customized tasks: levelNo -> [{icon,type,title}]
                         // (LEVEL_QUESTS sheet). A level with no rows falls back to QUESTS below.
-  notifications: [],    // this student's own NOTIFICATIONS rows (server-side filtered by
-                        // studentId — quest/redemption confirmations, plus any reminder an
-                        // Admin/Table Guide sent them by name). Powers the bell on Home.
   currentStudent: null,
   currentScreen: 's-login',
   currentWeek: 1        // from SYSTEM_SETTINGS "Current Week" — Level N stays locked until this reaches N
@@ -220,7 +217,6 @@ function go(id) {
     const sid = APP.currentStudent && APP.currentStudent['Student ID'];
     if (sid) loadPointsData(sid).then(renderRedeemScreen).catch(() => {});
   }
-  if (id === 's-notifications') renderStudentNotifications();
 }
 
 // ═══════════════════════════════════════════
@@ -264,8 +260,6 @@ async function doStudentLogin() {
     await loadVideoSubmissions(student['Student ID']);
     await loadPhotoSubmissions(student['Student ID']);
     await loadPointsData(student['Student ID']);
-    await loadNotifications(student['Student ID']);
-    updateStudentNotifBadges();
     go('s-home');
   } catch (e) {
     showLoginError('Could not connect. Check your internet connection and try again.');
@@ -276,8 +270,6 @@ async function doStudentLogin() {
 
 function studentLogout() {
   APP.currentStudent = null;
-  APP.notifications = [];
-  updateStudentNotifBadges();
   go('s-login');
 }
 
@@ -404,18 +396,6 @@ async function loadPhotoSubmissions(studentId) {
   }
 }
 
-// Fetches only THIS student's own notifications (server-side filtered by
-// studentId, so one student's device never sees another student's or
-// their table's messages). Powers the bell badge/list on Home.
-async function loadNotifications(studentId) {
-  try {
-    const res = await apiGet('notifications', `&studentId=${encodeURIComponent(studentId)}`);
-    APP.notifications = res?.data || [];
-  } catch (e) {
-    console.warn('Failed to load notifications:', e);
-  }
-}
-
 // Fetches only THIS student's earned points (LC_CREDITS) and past
 // redemptions (server-side filtered by studentId, so one student's device
 // never sees another student's points or spending history).
@@ -432,83 +412,6 @@ async function loadPointsData(studentId) {
   } catch (e) {
     console.warn('Failed to load points data:', e);
   }
-}
-
-// ═══════════════════════════════════════════
-// NOTIFICATIONS — Student bell (mirrors the Faculty/Table Guide bell)
-// Rows are already filtered server-side to this student's own Student ID
-// (see loadNotifications above), so this just sorts/renders what's cached.
-// ═══════════════════════════════════════════
-function studentNotifRows() {
-  return (APP.notifications || []).slice()
-    .sort((a, b) => new Date(b["Created At"]) - new Date(a["Created At"]));
-}
-
-function unreadStudentNotifCount() {
-  return studentNotifRows().filter(n => n["Read"] !== "Yes" && n["Read"] !== true).length;
-}
-
-function updateStudentNotifBadges() {
-  const count = unreadStudentNotifCount();
-  const el = document.getElementById('stu-home-notif-badge');
-  if (!el) return;
-  el.style.display = count > 0 ? '' : 'none';
-  el.textContent = count > 9 ? '9+' : String(count);
-}
-
-function renderStudentNotifications() {
-  const list = document.getElementById('stu-notif-list');
-  if (!list) return;
-  const rows = studentNotifRows();
-  if (!rows.length) {
-    list.innerHTML = '<div class="notif-empty">No notifications yet. You\'ll see updates here when you complete a quest, redeem a Redeem Store item, or your Table Guide/Director sends you a reminder.</div>';
-    updateStudentNotifBadges();
-    return;
-  }
-  list.innerHTML = rows.map(n => {
-    const isRead = n["Read"] === "Yes" || n["Read"] === true;
-    const when = n["Created At"] ? new Date(n["Created At"]).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-    return `
-      <div class="notif-item ${isRead ? 'read' : 'unread'}" onclick="markStudentNotifRead('${n["Notification ID"]}')">
-        <div class="notif-dot"></div>
-        <div class="notif-body">
-          <div class="notif-msg">${escapeHtml(n["Message"] || '')}</div>
-          <div class="notif-time">${when}${isRead ? ' · read' : ''}</div>
-        </div>
-      </div>`;
-  }).join('');
-  updateStudentNotifBadges();
-}
-
-async function markStudentNotifRead(notificationId) {
-  const n = (APP.notifications || []).find(x => String(x["Notification ID"]) === String(notificationId));
-  if (n) n["Read"] = "Yes"; // optimistic update
-  renderStudentNotifications();
-  try {
-    await apiPost({ action: 'markNotificationRead', notificationId, readBy: APP.currentStudent?.['Full Name'] || '' });
-  } catch (e) { console.warn('markNotificationRead failed:', e); }
-}
-
-async function markAllNotifsReadForStudent() {
-  const sid = APP.currentStudent && APP.currentStudent['Student ID'];
-  if (!sid) return;
-  (APP.notifications || []).forEach(n => { n["Read"] = "Yes"; });
-  renderStudentNotifications();
-  try {
-    await apiPost({ action: 'markAllNotificationsRead', studentId: sid, readBy: APP.currentStudent?.['Full Name'] || '' });
-  } catch (e) { console.warn('markAllNotificationsRead failed:', e); }
-}
-
-// Re-fetches just this student's own notifications so the bell badge/list
-// stay current without re-pulling every other sheet.
-async function pollStudentNotifications() {
-  const sid = APP.currentStudent && APP.currentStudent['Student ID'];
-  if (!sid) return; // no one logged in yet
-  try {
-    await loadNotifications(sid);
-    updateStudentNotifBadges();
-    if (APP.currentScreen === 's-notifications') renderStudentNotifications();
-  } catch (e) { /* silent — will retry on next tick */ }
 }
 
 // ═══════════════════════════════════════════
@@ -974,11 +877,21 @@ function showSentToast(message) {
 // ═══════════════════════════════════════════
 // LEVEL CHALLENGE — VIDEO TESTIMONY UPLOAD
 // ═══════════════════════════════════════════
-// Raw file cap. Base64 adds ~33% on top of this when sent to Apps Script,
-// which caps incoming web-app requests around ~50MB — keeping the raw file
-// under 120MB leaves comfortable headroom.
-const MAX_UPLOAD_BYTES = 120 * 1024 * 1024;
+// Raw file cap. This used to be capped near Apps Script's ~50MB per-request
+// ceiling (minus base64 overhead), because the whole video was sent as one
+// POST. Uploads now go out in small chunks (see VIDEO_CHUNK_BYTES and
+// uploadTestimonyChunked below) that get relayed into a Google Drive
+// resumable-upload session, so this limit is no longer about what one
+// request can carry — it's just a sane cap on how big a testimony video is
+// allowed to be.
+const MAX_UPLOAD_BYTES = 250 * 1024 * 1024;
 const MIN_TESTIMONY_SECONDS = 120;
+
+// Size of each piece sent to the server. Kept well under Apps Script's
+// ~50MB per-request ceiling (with room to spare even after base64's ~33%
+// inflation) so each chunk request is small, fast, and easy to retry on a
+// flaky mobile connection.
+const VIDEO_CHUNK_BYTES = 6 * 1024 * 1024;
 
 let pendingVideoFiles = {}; // idx -> File, chosen but not yet submitted
 
@@ -1033,9 +946,8 @@ async function submitTestimony(idx) {
   }
 
   try {
-    const base64 = await fileToBase64(file);
     const quest = questsForLevel(currentLevel)[idx];
-    const result = await uploadTestimonyXHR({
+    const result = await uploadTestimonyChunked(file, {
       studentId: sid,
       studentName: s['Full Name'] || '',
       tableNo: s['Table No'] || '',
@@ -1045,21 +957,12 @@ async function submitTestimony(idx) {
       levelName: LEVEL_NAMES[currentLevel] || '',
       fileName: file.name,
       mimeType: file.type || 'video/mp4',
-      base64Data: base64,
       markedBy: s['Full Name'] || ''
     }, pct => {
       const fill = document.getElementById(`qv-prog-${idx}`);
       const label = document.getElementById(`qv-prog-label-${idx}`);
-      if (pct === null) {
-        // Indeterminate — we no longer track real upload progress (see
-        // uploadTestimonyXHR for why), so show a full, pulsing bar instead
-        // of a stuck 0%.
-        if (fill) { fill.style.width = '100%'; fill.classList.add('qv-progress-indeterminate'); }
-        if (label) label.textContent = 'Uploading… this may take a minute';
-      } else {
-        if (fill) fill.style.width = pct + '%';
-        if (label) label.textContent = `Uploading… ${pct}%`;
-      }
+      if (fill) fill.style.width = pct + '%';
+      if (label) label.textContent = `Uploading… ${pct}%`;
     });
 
     if (!APP.questProgress[sid]) APP.questProgress[sid] = {};
@@ -1084,6 +987,80 @@ function fileToBase64(file) {
     reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
     reader.onerror = () => reject(new Error('Could not read the file.'));
     reader.readAsDataURL(file);
+  });
+}
+
+// ── CHUNKED VIDEO UPLOAD ──
+// Splits the video into VIDEO_CHUNK_BYTES pieces and POSTs each one to the
+// backend's "uploadVideoChunk" action, which relays it into a Google Drive
+// resumable-upload session server-side. This is what lets testimony videos
+// go well past what a single Apps Script request could ever carry — see
+// the comment above uploadVideoChunk in the backend script for the why.
+function makeUploadId() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+async function uploadTestimonyChunked(file, meta, onProgress) {
+  const uploadId = makeUploadId();
+  const total = file.size;
+  let start = 0;
+  let chunkIndex = 0;
+  let lastResult = null;
+
+  if (onProgress) onProgress(0);
+
+  while (start < total) {
+    const end = Math.min(start + VIDEO_CHUNK_BYTES, total);
+    const chunkBlob = file.slice(start, end);
+    const base64Chunk = await fileToBase64(chunkBlob);
+
+    const payload = Object.assign({
+      action: 'uploadVideoChunk',
+      uploadId: uploadId,
+      chunkIndex: chunkIndex,
+      rangeStart: start,
+      totalBytes: total,
+      base64Chunk: base64Chunk
+    }, meta);
+
+    lastResult = await postJSONWithRetry(payload, 3);
+    if (!lastResult || !lastResult.success) {
+      throw new Error((lastResult && lastResult.message) || 'Upload failed');
+    }
+
+    start = end;
+    chunkIndex++;
+    if (onProgress) onProgress(Math.round((start / total) * 100));
+  }
+
+  return lastResult;
+}
+
+// Posts one chunk, retrying on network hiccups (not on a real server-side
+// rejection, which won't fix itself by retrying).
+function postJSONWithRetry(payload, retriesLeft) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', GAS_URL, true);
+    xhr.setRequestHeader('Content-Type', 'text/plain'); // avoids CORS preflight GAS rejects
+    xhr.timeout = 3 * 60 * 1000;
+    xhr.onload = () => {
+      try {
+        resolve(JSON.parse(xhr.responseText));
+      } catch (e) {
+        reject(new Error('Unexpected response from server'));
+      }
+    };
+    const retryOrFail = (err) => {
+      if (retriesLeft > 0) {
+        postJSONWithRetry(payload, retriesLeft - 1).then(resolve, reject);
+      } else {
+        reject(err);
+      }
+    };
+    xhr.onerror = () => retryOrFail(new Error('Network error while uploading'));
+    xhr.ontimeout = () => retryOrFail(new Error('Upload timed out'));
+    xhr.send(JSON.stringify(payload));
   });
 }
 
@@ -1196,6 +1173,10 @@ function uploadPhotoXHR(payload, onProgress) {
   });
 }
 
+// NOTE: no longer used for testimony videos (see uploadTestimonyChunked
+// above) — kept only in case you want a simple single-shot path for some
+// other small file type later. The CORS-preflight note below still applies
+// to any single-request upload you build off of this.
 function uploadTestimonyXHR(payload, onProgress) {
   return new Promise((resolve, reject) => {
     // NOTE: We intentionally do NOT attach an xhr.upload.onprogress listener.
@@ -1457,5 +1438,4 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
-  setInterval(pollStudentNotifications, 45000); // light-weight refresh, doesn't touch the rest of the data
 });
