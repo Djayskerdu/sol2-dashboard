@@ -54,6 +54,7 @@ let APP = {
   credits: [],
   qrScans: [],
   tableGuides: [],
+  staffMessages: [],
   settings: {},
   currentScreen: 's-portal',
   selectedReason: 'Attendance',
@@ -871,7 +872,8 @@ async function loadAllData() {
     apiGet('questProgress'),
     apiGet('notifications'),
     apiGet('makeupWeekAssignments'),
-    apiGet('levelQuests')
+    apiGet('levelQuests'),
+    apiGet('staffMessages')
   ]);
 
   APP.students          = safeData(results[0]);
@@ -900,6 +902,9 @@ async function loadAllData() {
   const makeupWeekAssignRows = safeData(results[16]);
   const levelQuestsRows      = safeData(results[17]);
   loadLevelQuestsFromSheet(levelQuestsRows);
+  // Sort newest-first so the "Recently Sent" list on the Message
+  // Faculty & Staff screen shows the latest blast at the top.
+  APP.staffMessages = safeData(results[18]).slice().reverse();
 
   loadDevotionalsFromSheet(devotionalRows);
   loadDevotionalsLocal();   // fill blanks from localStorage (offline fallback)
@@ -1009,6 +1014,7 @@ function refreshCurrentScreen() {
   if (id === 's-a-dropped')     renderDroppedStudents();
   if (id === 's-a-tables')      renderATables();
   if (id === 's-a-notify')      renderANotifyTableSelect();
+  if (id === 's-a-staff-sms')   renderAStaffSmsScreen();
   if (id === 's-a-leaderboard') switchLeaderboardTab('students');
   if (id === 's-a-devotional')  renderADevotionalTables();
   if (id === 's-a-modcomp')     renderAModCompTables();
@@ -1058,6 +1064,7 @@ function go(id) {
   if (id === 's-a-dropped')     renderDroppedStudents();
   if (id === 's-a-tables')      renderATables();
   if (id === 's-a-notify')      renderANotifyTableSelect();
+  if (id === 's-a-staff-sms')   renderAStaffSmsScreen();
   if (id === 's-a-leaderboard') switchLeaderboardTab('students');
   if (id === 's-a-devotional')  renderADevotionalTables();
   if (id === 's-a-modcomp')     renderAModCompTables();
@@ -2370,6 +2377,149 @@ async function sendGeneralTableNote() {
     console.warn('sendAdminNotification failed:', e);
     showToast('⚠️ Could not send message — try again');
   }
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — MESSAGE FACULTY & STAFF (SMS)
+// ═══════════════════════════════════════════
+// Faculty rows carry their mobile number in a "Contact No" column added to
+// the FACULTY_STAFF sheet (see the setup note in SOL2_GAS_BACKEND.js).
+// Anyone with a blank number just can't be selected here.
+function staffHasContactNo(f) {
+  return String(f['Contact No'] || '').trim().length > 0;
+}
+
+function renderAStaffSmsScreen() {
+  const wrap = document.getElementById('a-staff-sms-list');
+  if (!wrap) return;
+
+  const staff = (APP.faculty || []).slice().sort((a, b) =>
+    String(a['Full Name'] || '').localeCompare(String(b['Full Name'] || '')));
+
+  if (!staff.length) {
+    wrap.innerHTML = '<p style="padding:16px 0;color:var(--gray)">No faculty/staff on file yet.</p>';
+  } else {
+    wrap.innerHTML = staff.map(f => {
+      const id = f['Faculty ID'];
+      const name = f['Full Name'] || '—';
+      const role = f['Role'] || '';
+      const phone = String(f['Contact No'] || '').trim();
+      const has = phone.length > 0;
+      return `
+        <div class="row" style="align-items:center">
+          <label style="display:flex;align-items:center;gap:10px;flex:1;cursor:${has ? 'pointer' : 'not-allowed'};opacity:${has ? '1' : '0.5'}">
+            <input type="checkbox" class="a-staff-sms-check" data-id="${id}" data-name="${String(name).replace(/"/g,'&quot;')}" data-phone="${phone}" ${has ? '' : 'disabled'} onchange="updateStaffSmsCount()">
+            <div>
+              <div style="font-size:13.5px;font-weight:600">${name}</div>
+              <div style="font-size:11px;color:var(--text3)">${role}${role ? ' · ' : ''}${has ? phone : 'No number on file'}</div>
+            </div>
+          </label>
+        </div>`;
+    }).join('');
+  }
+
+  updateStaffSmsCount();
+  renderAStaffSmsLog();
+}
+
+function setAllStaffSmsChecked(checked) {
+  document.querySelectorAll('.a-staff-sms-check').forEach(cb => {
+    if (!cb.disabled) cb.checked = checked;
+  });
+  updateStaffSmsCount();
+}
+
+function getSelectedStaffSmsContacts() {
+  return Array.from(document.querySelectorAll('.a-staff-sms-check:checked')).map(cb => ({
+    name: cb.dataset.name,
+    phone: cb.dataset.phone
+  }));
+}
+
+function updateStaffSmsCount() {
+  const countEl = document.getElementById('a-staff-sms-count');
+  if (!countEl) return;
+  const n = getSelectedStaffSmsContacts().length;
+  countEl.textContent = `${n} recipient${n === 1 ? '' : 's'} selected`;
+}
+
+function renderAStaffSmsLog() {
+  const el = document.getElementById('a-staff-sms-log');
+  if (!el) return;
+  const rows = (APP.staffMessages || []).slice(0, 8);
+  if (!rows.length) {
+    el.innerHTML = '<p style="padding:16px 0;color:var(--gray)">Nothing sent yet.</p>';
+    return;
+  }
+  el.innerHTML = rows.map(r => `
+    <div class="row" style="align-items:flex-start;flex-direction:column;gap:2px">
+      <div style="font-size:12.5px;font-weight:600">${r['Recipients'] || '—'}</div>
+      <div style="font-size:12px;color:var(--text2)">${r['Message'] || ''}</div>
+      <div style="font-size:10.5px;color:var(--text3)">${formatDate(r['Sent At'])} · by ${r['Sent By'] || '—'}</div>
+    </div>`).join('');
+}
+
+async function sendStaffSms() {
+  const contacts = getSelectedStaffSmsContacts();
+  const textEl = document.getElementById('a-staff-sms-message');
+  const message = (textEl?.value || '').trim();
+
+  if (!contacts.length) { showToast('⚠️ Select at least one recipient'); return; }
+  if (!message) { showToast('⚠️ Write a message first'); return; }
+
+  const numbers = contacts.map(c => c.phone);
+  const names = contacts.map(c => c.name);
+
+  // Comma-separated recipients works for the default Messages app on both
+  // Android and modern iOS. body= carries the pre-filled text.
+  const smsUri = `sms:${numbers.join(',')}?body=${encodeURIComponent(message)}`;
+
+  try {
+    await apiPost({
+      action: 'logStaffMessage',
+      recipients: names.join(', '),
+      numbers: numbers.join(', '),
+      message,
+      sentBy: APP.currentFaculty?.['Full Name'] || 'Director/Consultant'
+    });
+    APP.staffMessages.unshift({
+      'Recipients': names.join(', '),
+      'Recipient Numbers': numbers.join(', '),
+      'Message': message,
+      'Sent By': APP.currentFaculty?.['Full Name'] || 'Director/Consultant',
+      'Sent At': new Date()
+    });
+    renderAStaffSmsLog();
+  } catch (e) {
+    console.warn('logStaffMessage failed:', e);
+    // Not fatal — still let her send the SMS even if the log write failed.
+  }
+
+  window.location.href = smsUri;
+  showToast(`📱 Opening Messages for ${contacts.length} recipient${contacts.length === 1 ? '' : 's'}…`);
+}
+
+async function copyToClipboardSafe(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function copyStaffSmsNumbers() {
+  const contacts = getSelectedStaffSmsContacts();
+  if (!contacts.length) { showToast('⚠️ Select at least one recipient'); return; }
+  const ok = await copyToClipboardSafe(contacts.map(c => c.phone).join(', '));
+  showToast(ok ? '✅ Numbers copied' : '⚠️ Could not copy — copy manually');
+}
+
+async function copyStaffSmsMessage() {
+  const message = (document.getElementById('a-staff-sms-message')?.value || '').trim();
+  if (!message) { showToast('⚠️ Write a message first'); return; }
+  const ok = await copyToClipboardSafe(message);
+  showToast(ok ? '✅ Message copied' : '⚠️ Could not copy — copy manually');
 }
 
 async function confirmDropStudentFromTable(studentId, studentName) {
