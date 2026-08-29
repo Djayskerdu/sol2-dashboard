@@ -2470,33 +2470,41 @@ async function sendStaffSms() {
   const numbers = contacts.map(c => c.phone);
   const names = contacts.map(c => c.name);
 
-  // Comma-separated recipients works for the default Messages app on both
-  // Android and modern iOS. body= carries the pre-filled text.
-  const smsUri = `sms:${numbers.join(',')}?body=${encodeURIComponent(message)}`;
+  if (!confirm(`Send this SMS to ${contacts.length} recipient(s)?\n\n${names.join(', ')}\n\n"${message}"`)) return;
+
+  const btn = document.getElementById('a-staff-sms-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
   try {
-    await apiPost({
-      action: 'logStaffMessage',
+    const res = await apiPost({
+      action: 'sendStaffSms',
       recipients: names.join(', '),
-      numbers: numbers.join(', '),
+      numbers: numbers.join(','),
       message,
       sentBy: APP.currentFaculty?.['Full Name'] || 'Director/Consultant'
     });
-    APP.staffMessages.unshift({
-      'Recipients': names.join(', '),
-      'Recipient Numbers': numbers.join(', '),
-      'Message': message,
-      'Sent By': APP.currentFaculty?.['Full Name'] || 'Director/Consultant',
-      'Sent At': new Date()
-    });
-    renderAStaffSmsLog();
-  } catch (e) {
-    console.warn('logStaffMessage failed:', e);
-    // Not fatal — still let her send the SMS even if the log write failed.
-  }
 
-  window.location.href = smsUri;
-  showToast(`📱 Opening Messages for ${contacts.length} recipient${contacts.length === 1 ? '' : 's'}…`);
+    if (res && res.success) {
+      APP.staffMessages.unshift({
+        'Recipients': names.join(', '),
+        'Recipient Numbers': numbers.join(', '),
+        'Message': message,
+        'Sent By': APP.currentFaculty?.['Full Name'] || 'Director/Consultant',
+        'Sent At': new Date()
+      });
+      renderAStaffSmsLog();
+      if (textEl) textEl.value = '';
+      setAllStaffSmsChecked(false);
+      showToast(`✅ SMS sent to ${contacts.length} recipient(s)`);
+    } else {
+      showToast('❌ ' + ((res && res.message) || 'Send failed — please try again.'));
+    }
+  } catch (e) {
+    console.warn('sendStaffSms failed:', e);
+    showToast('⚠️ Could not reach the server — please try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📩 Send SMS Now'; }
+  }
 }
 
 async function copyToClipboardSafe(text) {
