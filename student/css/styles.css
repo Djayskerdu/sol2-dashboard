@@ -675,7 +675,7 @@ svg.map-svg { width:100%; display:block; }
 .lc-shake { animation:lc-shakeit .3s; }
 @keyframes lc-shakeit { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
 
-#s-lc-quests, #s-quests { background:linear-gradient(180deg,#12183a 0%, #1b2856 100%); }
+#s-lc-quests, #s-quests, #s-makeup { background:linear-gradient(180deg,#12183a 0%, #1b2856 100%); }
 .quest-topbar { display:flex; align-items:center; gap:10px; padding:16px 16px 4px; }
 .quest-topbar .topbar-title { color:#fff; }
 .quest-sub { padding:0 20px 12px; color:rgba(255,255,255,.55); font-size:11.5px; line-height:1.5; }
