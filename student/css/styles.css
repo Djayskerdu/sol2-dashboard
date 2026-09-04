@@ -718,6 +718,9 @@ svg.map-svg { width:100%; display:block; }
 .qv-controls-row .qv-progress-track { flex:1; margin-top:0; }
 .qv-time-label { flex:0 0 auto; font-size:11px; color:rgba(255,255,255,.6); font-variant-numeric:tabular-nums; }
 .qv-complete-btn.qv-locked { background:rgba(255,255,255,.06); color:rgba(255,255,255,.4); cursor:not-allowed; }
+.qv-subvideo { margin-bottom:14px; }
+.qv-subvideo:last-of-type { margin-bottom:10px; }
+.qv-subvideo-title { font-family:var(--font-head); font-weight:700; font-size:12px; color:rgba(255,255,255,.75); margin-bottom:6px; }
 
 .overlay { position:absolute; inset:0; background:rgba(10,14,32,.72); display:none; align-items:center; justify-content:center; padding:24px; z-index:20; }
 .overlay.show { display:flex; }
