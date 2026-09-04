@@ -467,28 +467,35 @@ async function saveMakeupWeekAssignment(weekNo, assignedTo) {
   } catch(e) { console.warn('Makeup week assignment sync failed:', e); }
 }
 
-// ── Makeup Class Video (one YouTube link per week) ─────────────
-// Every student marked Absent for a given week sees this same video in
-// the Student app and must watch it start-to-finish (no fast-forwarding)
-// before their make-up class can be marked done — same enforcement as a
-// Level Challenge "watch" quest.
+// ── Makeup Class Video(s) (one OR MORE YouTube links per week) ─────────
+// Every student marked Absent for a given week sees all of that week's
+// videos in the Student app and must watch each one start-to-finish (no
+// fast-forwarding) before their make-up class can be marked done — same
+// enforcement as a Level Challenge "watch" quest.
 function loadMakeupVideosFromSheet(rows) {
   APP.makeupVideos = {};
   (rows || []).forEach(row => {
     const wk = row['Week No'];
     if (wk === '' || wk === undefined || wk === null) return;
-    APP.makeupVideos[String(wk)] = { title: row['Video Title'] || '', url: row['Video URL'] || '' };
+    const url = String(row['Video URL'] || '').trim();
+    if (!url) return;
+    const key = String(wk);
+    if (!APP.makeupVideos[key]) APP.makeupVideos[key] = [];
+    APP.makeupVideos[key].push({ title: row['Video Title'] || '', url });
   });
 }
 
-async function saveMakeupVideoForWeek(weekNo, videoTitle, videoUrl) {
-  APP.makeupVideos[String(weekNo)] = { title: videoTitle || '', url: videoUrl || '' };
+// Whole-week replace: videos is [{title, url}, ...] in the order they
+// should appear. Saving with an empty/blank list is rejected server-side
+// (a week needs at least one video with a URL to be saved at all — to
+// clear a week entirely, remove all its rows directly in the sheet).
+async function saveMakeupVideosForWeek(weekNo, videos) {
+  APP.makeupVideos[String(weekNo)] = videos;
   try {
     await apiPost({
       action: 'saveMakeupVideo',
       weekNo,
-      videoTitle: videoTitle || '',
-      videoUrl: videoUrl || '',
+      videos,
       updatedBy: APP.currentFaculty?.['Full Name'] || 'Admin'
     });
   } catch(e) { console.warn('Makeup video sync failed:', e); }
@@ -3944,31 +3951,12 @@ function renderMakeup() {
     }
   }
 
-  // ── Whole-week make-up class video ──
-  // The Director/Consultant pastes ONE YouTube link per week here; every
-  // student marked Absent that week sees it in their Student app and must
-  // watch it fully (no fast-forwarding) before they can mark it done.
-  const videoEl = document.getElementById('makeup-week-video');
-  if (videoEl) {
-    if (week === "0") {
-      videoEl.innerHTML = '';
-    } else {
-      const vid = APP.makeupVideos[String(week)] || { title: '', url: '' };
-      videoEl.innerHTML = `
-        <div class="card" style="padding:12px 16px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">🎬 Week ${week} Make-up Class Video</div>
-          <input type="text" id="makeup-video-title" placeholder="Video title (optional)" value="${(vid.title || '').replace(/"/g,'&quot;')}"
-            style="width:100%;box-sizing:border-box;font-size:12.5px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px">
-          <input type="text" id="makeup-video-url" placeholder="Paste YouTube link (e.g. https://youtu.be/...)" value="${(vid.url || '').replace(/"/g,'&quot;')}"
-            style="width:100%;box-sizing:border-box;font-size:12.5px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px">
-          <button onclick="doSaveMakeupVideo(${week})"
-            style="font-size:12px;padding:8px 14px;border:none;border-radius:8px;background:var(--green);color:#fff;font-weight:700;cursor:pointer">
-            ${vid.url ? '✅ Update Video' : 'Save Video'}
-          </button>
-          ${vid.url ? `<span style="font-size:11px;color:var(--text3);margin-left:8px">Currently set — students absent Week ${week} will see this.</span>` : ''}
-        </div>`;
-    }
-  }
+  // ── Whole-week make-up class video(s) ──
+  // The Director/Consultant pastes one OR MORE YouTube links per week
+  // here; every student marked Absent that week sees all of them in
+  // their Student app and must watch each one fully (no fast-forwarding)
+  // before they can mark the week done.
+  renderMakeupVideoEditor(week, APP.makeupVideos[String(week)] || []);
 
   if (!absences.length) {
     el.innerHTML = '<p style="padding:16px;color:var(--gray)">No absences found.</p>';
@@ -4019,16 +4007,74 @@ async function doUpdateMakeupWeekAssignee(weekNo, assignedTo) {
   showToast(assignedTo ? `✅ Week ${weekNo} make-up class assigned to ${assignedTo}` : `✅ Week ${weekNo} make-up class unassigned`);
 }
 
+// Renders the editable list of video rows for a week (1 blank row if the
+// week has no videos saved yet). Rows are plain inputs — nothing is sent
+// to the backend until "Save Video(s)" is pressed — so typing never
+// triggers a network call, only re-renders of this one block on
+// add/remove-row.
+function renderMakeupVideoEditor(week, videos) {
+  const videoEl = document.getElementById('makeup-week-video');
+  if (!videoEl) return;
+  if (week === "0") { videoEl.innerHTML = ''; return; }
+
+  const rows = videos.length ? videos : [{ title: '', url: '' }];
+  const rowsHtml = rows.map((v, i) => `
+    <div class="mkv-row" style="margin-bottom:8px;${i > 0 ? 'border-top:1px solid var(--border);padding-top:8px' : ''}">
+      <input type="text" class="mkv-title" placeholder="Video title (e.g. Lesson ${i + 1})" value="${(v.title || '').replace(/"/g,'&quot;')}"
+        style="width:100%;box-sizing:border-box;font-size:12.5px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:6px">
+      <div style="display:flex;gap:6px">
+        <input type="text" class="mkv-url" placeholder="Paste YouTube link (e.g. https://youtu.be/...)" value="${(v.url || '').replace(/"/g,'&quot;')}"
+          style="flex:1;box-sizing:border-box;font-size:12.5px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px">
+        ${rows.length > 1 ? `<button type="button" onclick="doRemoveMakeupVideoRow(${week}, ${i})" title="Remove this video"
+          style="font-size:13px;padding:8px 12px;border:none;border-radius:8px;background:#fdecea;color:#e53935;font-weight:700;cursor:pointer">✕</button>` : ''}
+      </div>
+    </div>`).join('');
+
+  videoEl.innerHTML = `
+    <div class="card" style="padding:12px 16px">
+      <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">🎬 Week ${week} Make-up Class Video${rows.length > 1 ? 's' : ''}</div>
+      ${rowsHtml}
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px">
+        <button type="button" onclick="doAddMakeupVideoRow(${week})"
+          style="font-size:11.5px;padding:7px 10px;border:1.5px dashed var(--border);border-radius:8px;background:#fff;color:var(--text2);font-weight:600;cursor:pointer">+ Add another video</button>
+        <button type="button" onclick="doSaveMakeupVideo(${week})"
+          style="font-size:12px;padding:8px 14px;border:none;border-radius:8px;background:var(--green);color:#fff;font-weight:700;cursor:pointer">
+          ${videos.length ? '✅ Update Video' + (videos.length > 1 ? 's' : '') : 'Save Video'}
+        </button>
+      </div>
+      ${videos.length ? `<span style="font-size:11px;color:var(--text3);display:block;margin-top:6px">Currently set — students absent Week ${week} will see ${videos.length > 1 ? `all ${videos.length} of these` : 'this'}.</span>` : ''}
+    </div>`;
+}
+
+// Reads whatever is currently typed into the row inputs — used so
+// add-row/remove-row never discards text the Director/Consultant already
+// entered in the other rows.
+function readMakeupVideoRowsFromDom() {
+  return Array.from(document.querySelectorAll('#makeup-week-video .mkv-row')).map(row => ({
+    title: (row.querySelector('.mkv-title')?.value || '').trim(),
+    url: (row.querySelector('.mkv-url')?.value || '').trim()
+  }));
+}
+
+function doAddMakeupVideoRow(weekNo) {
+  const rows = readMakeupVideoRowsFromDom();
+  rows.push({ title: '', url: '' });
+  renderMakeupVideoEditor(weekNo, rows);
+}
+
+function doRemoveMakeupVideoRow(weekNo, idx) {
+  const rows = readMakeupVideoRowsFromDom();
+  rows.splice(idx, 1);
+  renderMakeupVideoEditor(weekNo, rows);
+}
+
 async function doSaveMakeupVideo(weekNo) {
-  const titleEl = document.getElementById('makeup-video-title');
-  const urlEl   = document.getElementById('makeup-video-url');
-  const title   = (titleEl?.value || '').trim();
-  const url     = (urlEl?.value || '').trim();
-  if (!url) { showToast('⚠️ Paste a YouTube link first.'); return; }
-  showToast('⏳ Saving make-up class video...');
-  await saveMakeupVideoForWeek(weekNo, title, url);
+  const videos = readMakeupVideoRowsFromDom().filter(v => v.url);
+  if (!videos.length) { showToast('⚠️ Paste at least one YouTube link first.'); return; }
+  showToast('⏳ Saving make-up class video(s)...');
+  await saveMakeupVideosForWeek(weekNo, videos);
   renderMakeup();
-  showToast(`✅ Week ${weekNo} make-up class video saved`);
+  showToast(`✅ Week ${weekNo} make-up class video${videos.length > 1 ? 's' : ''} saved`);
 }
 
 
