@@ -56,6 +56,9 @@ let APP = {
   redemptions: [],      // this student's REDEMPTIONS rows (points already spent)
   levelQuests: {},      // Director/Consultant-customized tasks: levelNo -> [{icon,type,title}]
                         // (LEVEL_QUESTS sheet). A level with no rows falls back to QUESTS below.
+  attendance: [],        // this student's own STUDENT_ATTENDANCE rows (server-side filtered)
+  makeupStatus: {},      // attendanceId -> { status, notes } (this student's own MAKEUP_STATUS rows)
+  makeupVideos: {},      // weekNo -> { title, url } (Director/Consultant-assigned make-up class video)
   currentStudent: null,
   currentScreen: 's-login',
   currentWeek: 1        // from SYSTEM_SETTINGS "Current Week" — Level N stays locked until this reaches N
@@ -217,6 +220,11 @@ function go(id) {
     const sid = APP.currentStudent && APP.currentStudent['Student ID'];
     if (sid) loadPointsData(sid).then(renderRedeemScreen).catch(() => {});
   }
+  if (id === 's-makeup') {
+    renderMakeupScreen(); // render immediately with cached data, then refresh silently
+    const sid = APP.currentStudent && APP.currentStudent['Student ID'];
+    if (sid) loadMakeupData(sid).then(renderMakeupScreen).catch(() => {});
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -260,6 +268,7 @@ async function doStudentLogin() {
     await loadVideoSubmissions(student['Student ID']);
     await loadPhotoSubmissions(student['Student ID']);
     await loadPointsData(student['Student ID']);
+    await loadMakeupData(student['Student ID']);
     go('s-home');
   } catch (e) {
     showLoginError('Could not connect. Check your internet connection and try again.');
@@ -435,6 +444,225 @@ function renderHome() {
   const redEl = document.getElementById('stu-home-redeem-pts');
   if (curEl) curEl.textContent = getCurrentPoints(s['Student ID']).toLocaleString();
   if (redEl) redEl.textContent = getAvailablePoints(s['Student ID']).toLocaleString();
+
+  updateMakeupBadge();
+}
+
+// ═══════════════════════════════════════════
+// MAKE-UP CLASS
+// Director/Consultant rule: a student marked Absent for a week must watch
+// that week's assigned YouTube video start-to-finish (no dragging the seek
+// bar ahead, no completing early) before the make-up class can be marked
+// done — enforced exactly the same way as a Level Challenge "watch" quest
+// (see the WATCH-QUEST VIDEO GATING block above; the same ytPlayers /
+// watchProgress / onWatchPlayerReady / onWatchPlayerStateChange /
+// startWatchPolling / pollWatchProgress / unlockWatchCompleteButton /
+// destroyWatchPlayers machinery is reused here, just keyed by
+// "mk-<attendanceId>" instead of "<level>-<quest>" so both screens can
+// share one player pool without colliding).
+// ═══════════════════════════════════════════
+
+// Fetches this student's own attendance history, make-up status, and the
+// Director/Consultant-assigned weekly make-up videos. Attendance and
+// make-up status are server-side filtered by studentId (the backend does
+// this the same way it already does for credits/lessonPoints/etc.) so one
+// student's device never receives another student's attendance record.
+async function loadMakeupData(studentId) {
+  try {
+    const [attRes, mkRes, mkVidRes] = await Promise.all([
+      apiGet('studentAttendance', `&studentId=${encodeURIComponent(studentId)}`),
+      apiGet('makeupStatus', `&studentId=${encodeURIComponent(studentId)}`),
+      apiGet('makeupVideos')
+    ]);
+    APP.attendance = attRes?.data || [];
+
+    APP.makeupStatus = {};
+    (mkRes?.data || []).forEach(r => {
+      const attId = String(r['Attendance ID'] || '');
+      if (attId) APP.makeupStatus[attId] = { status: r['Status'] || 'Pending', notes: r['Notes'] || '' };
+    });
+
+    APP.makeupVideos = {};
+    (mkVidRes?.data || []).forEach(r => {
+      const wk = r['Week No'];
+      if (wk === '' || wk === undefined || wk === null) return;
+      APP.makeupVideos[String(wk)] = { title: r['Video Title'] || '', url: String(r['Video URL'] || '').trim() };
+    });
+  } catch (e) {
+    console.warn('Failed to load make-up class data:', e);
+  }
+}
+
+// One item per week this student was marked Absent, joined with its
+// make-up status (defaults to "Pending" if no MAKEUP_STATUS row exists
+// yet — same default the Faculty app's Admin Makeup screen uses) and the
+// week's assigned video, if any. Handles both "Attendance Status" and the
+// older "Status" header name, same fallback the Faculty app already uses.
+function getMakeupItems() {
+  const s = APP.currentStudent;
+  if (!s) return [];
+  const sid = s['Student ID'];
+  return (APP.attendance || [])
+    .filter(a => String(a['Student ID']) === String(sid) &&
+      String(a['Attendance Status'] || a['Status'] || '').toLowerCase() === 'absent')
+    .map(a => {
+      const attendanceId = String(a['Attendance ID'] || '');
+      const weekNo = Number(a['Week No'] || 0);
+      const status = (APP.makeupStatus[attendanceId] && APP.makeupStatus[attendanceId].status) || 'Pending';
+      const video = APP.makeupVideos[String(weekNo)] || { title: '', url: '' };
+      return { attendanceId, weekNo, status, video, tableNo: a['Table No'] || '' };
+    })
+    .sort((x, y) => x.weekNo - y.weekNo);
+}
+
+function pendingMakeupCount() {
+  return getMakeupItems().filter(it => it.status !== 'Done').length;
+}
+
+// Keeps the Home card and the Make-up Class screen's badge in sync.
+function updateMakeupBadge() {
+  const count = pendingMakeupCount();
+  const badge = document.getElementById('stu-makeup-badge');
+  if (badge) {
+    if (count > 0) { badge.textContent = String(count); badge.style.display = ''; }
+    else badge.style.display = 'none';
+  }
+  const sub = document.getElementById('stu-makeup-sub');
+  if (sub) {
+    sub.textContent = count > 0
+      ? `⚠️ You have ${count} make-up class${count === 1 ? '' : 'es'} to watch.`
+      : (getMakeupItems().length ? "You're all caught up — nice work!" : "No make-up classes — great attendance!");
+  }
+}
+
+function renderMakeupScreen() {
+  const list = document.getElementById('stu-makeup-list');
+  if (!list) return;
+
+  // Tear down any live YouTube players/timers before wiping the DOM —
+  // otherwise their poll intervals keep firing against detached iframes.
+  destroyWatchPlayers();
+
+  const items = getMakeupItems();
+  if (!items.length) {
+    list.innerHTML = '<div class="tg-note">🎉 No make-up classes — you haven\'t missed a week!</div>';
+    updateMakeupBadge();
+    return;
+  }
+
+  list.innerHTML = items.map(renderMakeupCard).join('');
+  updateMakeupBadge();
+  initMakeupPlayers(items);
+}
+
+function renderMakeupCard(item) {
+  const key = 'mk-' + item.attendanceId;
+  const done = item.status === 'Done';
+  const noVideo = !item.video.url;
+  const ytId = extractYouTubeId(item.video.url);
+  const alreadyEnded = !!(watchProgress[key] && watchProgress[key].ended);
+  // Gate the complete button (no fast-forward past what's actually been
+  // watched, no completing before the video ends) only when we have real
+  // playback control — i.e. a YouTube-hosted video that isn't already done.
+  const gated = !done && !!ytId;
+
+  let player;
+  if (noVideo) {
+    player = `<div class="qv-watch-link qv-disabled">📹 Your Table Guide/Director hasn't uploaded this week's make-up class video yet — check back soon</div>`;
+  } else if (gated) {
+    player = `
+      <div class="qv-video-frame" id="qv-yt-${key}"></div>
+      <div class="qv-controls-row">
+        <button type="button" class="qv-playpause-btn" id="qv-playpause-${key}" onclick="toggleYtPlayback('${key}')">▶ Play</button>
+        <div class="qv-progress-track"><div class="qv-progress-fill" id="qv-fill-${key}"></div></div>
+        <span class="qv-time-label" id="qv-time-${key}">0:00 / 0:00</span>
+      </div>
+      <div class="qv-note">Watch the full video without skipping ahead — the button below unlocks once it's finished.</div>`;
+  } else if (ytId) {
+    // Already marked done — no need to enforce anything, just let them rewatch normally.
+    player = `<div class="qv-video-frame"><iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" loading="lazy"></iframe></div>`;
+  } else {
+    player = `<a class="qv-watch-link" href="${item.video.url}" target="_blank" rel="noopener">▶️ Watch Video${item.video.title ? ' — ' + escapeHtml(item.video.title) : ''}</a>`;
+  }
+
+  const locked = gated && !alreadyEnded;
+  const btnLabel = done
+    ? '✓ Make-up Class Completed'
+    : (noVideo ? '🔒 Waiting for video' : (locked ? '🔒 Watch the full video to unlock' : 'Mark as Completed'));
+
+  return `
+    <div class="quest-card qc-video${done ? ' qc-done' : ''}">
+      <div class="qv-header">
+        <div class="quest-icon">🎬</div>
+        <div class="quest-text">
+          <div class="quest-title">Week ${item.weekNo} Make-up Class${item.video.title ? ' — ' + escapeHtml(item.video.title) : ''}</div>
+          <div class="quest-hint">You were marked Absent for Week ${item.weekNo}</div>
+        </div>
+      </div>
+      ${player}
+      <button class="qv-complete-btn${done ? ' qv-done' : ''}${(locked || noVideo) ? ' qv-locked' : ''}" id="qv-btn-${key}"
+        ${(done || locked || noVideo) ? 'disabled' : ''} onclick="toggleMakeupComplete('${item.attendanceId}')">
+        ${btnLabel}
+      </button>
+    </div>`;
+}
+
+// Same YouTube IFrame Player lifecycle as initWatchPlayers, just iterating
+// make-up items instead of Level Challenge quests. onWatchPlayerReady /
+// onWatchPlayerStateChange are fully generic on "key" already, so they're
+// reused as-is — no separate copies needed.
+function initMakeupPlayers(items) {
+  items.forEach((item) => {
+    const key = 'mk-' + item.attendanceId;
+    const done = item.status === 'Done';
+    const ytId = extractYouTubeId(item.video.url);
+    if (done || !ytId) return; // nothing to gate — either finished already, or not a policeable video
+
+    if (!watchProgress[key]) watchProgress[key] = { furthest: 0, duration: 0, ended: false };
+    ensureYouTubeApi().then(() => {
+      const container = document.getElementById(`qv-yt-${key}`);
+      if (!container) return; // list was re-rendered again before the API loaded
+      ytPlayers[key] = new YT.Player(`qv-yt-${key}`, {
+        videoId: ytId,
+        playerVars: {
+          controls: 0, disablekb: 1, rel: 0, modestbranding: 1,
+          iv_load_policy: 3, playsinline: 1, origin: location.origin
+        },
+        events: {
+          onReady: () => onWatchPlayerReady(key),
+          onStateChange: (e) => onWatchPlayerStateChange(key, e)
+        }
+      });
+    });
+  });
+}
+
+async function toggleMakeupComplete(attendanceId) {
+  const s = APP.currentStudent;
+  if (!s) return;
+  const item = getMakeupItems().find(it => it.attendanceId === attendanceId);
+  if (!item || item.status === 'Done') return; // one-way — already done, or not found
+
+  // optimistic local update so it feels instant
+  APP.makeupStatus[attendanceId] = { status: 'Done', notes: 'Watched via Student App' };
+  renderMakeupScreen();
+
+  try {
+    await apiPost({
+      action: 'updateMakeupStatus',
+      attendanceId,
+      studentId: s['Student ID'],
+      studentName: s['Full Name'] || '',
+      weekNo: item.weekNo,
+      tableNo: s['Table No'] || '',
+      status: 'Done',
+      updatedBy: s['Full Name'] || '', // self-reported
+      notes: 'Watched via Student App'
+    });
+    showSentToast('✅ Make-up class marked complete!');
+  } catch (e) {
+    console.warn('toggleMakeupComplete failed:', e);
+  }
 }
 
 // ═══════════════════════════════════════════
