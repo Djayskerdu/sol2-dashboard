@@ -1,3446 +1,4277 @@
-<!DOCTYPE html>
-<!-- v8 2026-06-08 -->
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#1e3a8a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SOL2">
-<meta name="description" content="SOL2 Leadership Equipping App">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
-<title>School of Leaders 2</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
-<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
-<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js" defer></script>
-</head>
-<body>
-
-<div id="toast"></div>
-<button id="global-refresh-btn" class="is-hidden" onclick="refreshApp()" title="Refresh data" aria-label="Refresh data">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="23 4 23 10 17 10"></polyline>
-    <polyline points="1 20 1 14 7 14"></polyline>
-    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-  </svg>
-</button>
-<div id="app">
-
-<!-- DESKTOP SIDEBAR (hidden on mobile via CSS) -->
-<div id="desktop-sidebar">
-  <div class="sidebar-logo">
-    <div class="sidebar-logo-dot">
-      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-    </div>
-    <div class="sidebar-logo-name">SOL2</div>
-    <div class="sidebar-logo-sub">Leadership Equipping Class</div>
-  </div>
-
-  <!-- Portal nav (shown when not logged in) -->
-  <div id="sidebar-portal-nav" class="sidebar-nav">
-    <div class="sidebar-section-label">Portals</div>
-    <button class="sidebar-btn" onclick="go('s-faculty-login')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Faculty & Staff
-    </button>
-    <button class="sidebar-btn" onclick="go('s-admin-login')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Admin
-    </button>
-    <button class="sidebar-btn" onclick="go('s-record-login')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Record Keeper
-    </button>
-  </div>
-
-  <!-- Faculty nav -->
-  <div id="sidebar-faculty-nav" class="sidebar-nav" style="display:none">
-    <div class="sidebar-section-label">Faculty</div>
-    <button class="sidebar-btn" onclick="go('s-faculty-home')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Home
-    </button>
-    <button class="sidebar-btn" id="sidebar-back-to-admin-btn" onclick="go('s-admin-home')" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6" transform="rotate(180 12 12)"/></svg>
-      Back to Admin
-    </button>
-    <button class="sidebar-btn" onclick="go('s-f-lessons')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-      Lessons
-    </button>
-    <button class="sidebar-btn" onclick="go('s-f-students')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      Attendance
-    </button>
-    <button class="sidebar-btn" onclick="go('s-f-payment')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      Payment
-    </button>
-    <button class="sidebar-btn" onclick="go('s-f-credits')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      Points
-    </button>
-    <button class="sidebar-btn" onclick="go('s-add-credit')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      Add Points
-    </button>
-    <button class="sidebar-btn" onclick="go('s-f-devotional')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      Devotional
-    </button>
-    <button class="sidebar-btn" onclick="go('s-f-modcomp')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>
-      Module Completion
-    </button>
-  </div>
-
-  <!-- Admin nav -->
-  <div id="sidebar-admin-nav" class="sidebar-nav" style="display:none">
-    <div class="sidebar-section-label">Admin</div>
-    <button class="sidebar-btn" onclick="go('s-admin-home')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Home
-    </button>
-    <button class="sidebar-btn" id="sidebar-my-table-btn" onclick="go('s-faculty-home')" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      My Table
-    </button>
-    <button class="sidebar-btn" onclick="go('s-a-student-att')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      Attendance
-    </button>
-    <button class="sidebar-btn" onclick="go('s-a-tables')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-      Tables
-    </button>
-    <button class="sidebar-btn" onclick="go('s-a-leaderboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/></svg>
-      Leaderboard
-    </button>
-    <button class="sidebar-btn" onclick="go('s-a-makeup')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      Make-up
-    </button>
-    <button class="sidebar-btn" onclick="go('s-a-dropped')" id="sb-dropped-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
-      Dropped
-      <span id="sb-dropped-badge" class="sb-badge" style="display:none"></span>
-    </button>
-    <button class="sidebar-btn" onclick="go('s-a-devotional')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      Devotional
-    </button>
-    <button class="sidebar-btn" onclick="go('s-a-modcomp')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>
-      Module Completion
-    </button>
-  </div>
-
-  <!-- Record nav -->
-  <div id="sidebar-record-nav" class="sidebar-nav" style="display:none">
-    <div class="sidebar-section-label">Record</div>
-    <button class="sidebar-btn" onclick="go('s-record-home')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Home
-    </button>
-    <button class="sidebar-btn" onclick="go('s-r-qr')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      QR Scan
-    </button>
-    <button class="sidebar-btn" onclick="switchAttTab('students');go('s-r-attendance')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      Attendance
-    </button>
-    <button class="sidebar-btn" onclick="go('s-r-payment')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      Payment
-    </button>
-    <button class="sidebar-btn" onclick="go('s-r-balances')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      Balances
-    </button>
-  </div>
-
-  <div class="sidebar-bottom" id="sidebar-bottom" style="display:none">
-    <div class="sidebar-user">
-      <div class="sidebar-user-av" id="sidebar-user-av">–</div>
-      <div>
-        <div class="sidebar-user-name" id="sidebar-user-name">–</div>
-        <div class="sidebar-user-role" id="sidebar-user-role">–</div>
-      </div>
-    </div>
-    <button class="sidebar-logout-btn" onclick="logout()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-      Logout
-    </button>
-  </div>
-</div>
-<!-- /DESKTOP SIDEBAR -->
-
-<!-- DESKTOP MAIN CONTENT WRAPPER -->
-<div id="desktop-main">
-
-<!-- INSTALL BANNER -->
-<div id="install-banner">
-  <div class="ib-inner">
-    <p><strong>Install SOL2</strong> — add to home screen for quick access</p>
-    <button id="btn-install">Install</button>
-    <button id="btn-dismiss">×</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     PORTAL SELECT
-══════════════════════════════════════════ -->
-<div class="screen active" id="s-portal">
-  <button id="portal-view-table-btn" class="portal-fab" title="View Tables" onclick="openViewTables()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg></button>
-  <div class="portal-hero">
-    <div class="portal-logo">
-      <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.14 8 11.35C16.5 22.14 20 17.25 20 12V6l-8-4z"/></svg>
-    </div>
-    <div class="portal-name">SOL2</div>
-    <div class="portal-sub">Leadership Equipping Class</div>
-  </div>
-  <div class="portal-cards">
-    <button class="portal-btn pb-f" onclick="go('s-faculty-login')">
-      <div class="pb-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <div class="pb-text"><div class="pb-title">Faculty &amp; Staff</div><div class="pb-sub">Lessons · Table · Points</div></div>
-      <svg class="arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="portal-btn pb-a" onclick="go('s-admin-login')">
-      <div class="pb-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-      <div class="pb-text"><div class="pb-title">Admin — Director &amp; Consultant</div><div class="pb-sub">Dashboard · Attendance · Records</div></div>
-      <svg class="arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="portal-btn pb-r" onclick="go('s-record-login')">
-      <div class="pb-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
-      <div class="pb-text"><div class="pb-title">Record — QR Scan</div><div class="pb-sub">Scan Attendance · Payment</div></div>
-      <svg class="arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="portal-btn pb-gs" onclick="window.location='gameshow.html'">
-      <div class="pb-icon" style="background:rgba(255,215,0,0.15);color:#FFD700">🚨</div>
-      <div class="pb-text"><div class="pb-title">Amen Alert! Game Show</div><div class="pb-sub">Buzzers · Quizzes · Table Scoring</div></div>
-      <svg class="arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-  </div>
-  <div style="padding:0 20px 20px;text-align:center">
-    <div style="font-size:11px;color:var(--text3)"><span class="sync-dot" id="sync-dot-portal"></span><span id="sync-label-portal">Loading...</span></div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     VIEW TABLES — public, no login required.
-     Shows every table with a member count; tap a
-     table to expand and see the names + facilitator.
-══════════════════════════════════════════ -->
-<div class="screen" id="s-view-tables">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-portal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">View Tables</span>
-    <button id="vt-add-student-btn" class="topbar-back" title="Add Student" onclick="openAddStudentGate()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-  </div>
-  <div class="body">
-    <div id="vt-list"></div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY LOGIN
-══════════════════════════════════════════ -->
-<div class="screen" id="s-faculty-login">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-portal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Faculty &amp; Staff</span>
-  </div>
-  <div class="login-wrap">
-    <div class="login-box">
-      <div class="login-head">
-        <div class="login-avatar" style="background:var(--navy)"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <div class="login-title">Faculty &amp; Staff Login</div>
-        <div class="login-sub">Enter your credentials to continue</div>
-      </div>
-      <div class="field"><label>Username</label><input type="text" id="f-login-user" placeholder="e.g. teacher.maria" style="--accent:var(--navy)" onkeydown="if(event.key==='Enter')doFacultyLogin()"></div>
-      <div class="field"><label>Password</label><input type="password" id="f-login-pass" placeholder="••••••••" style="--accent:var(--navy)" onkeydown="if(event.key==='Enter')doFacultyLogin()"></div>
-      <div id="f-login-err" style="display:none;color:#c0392b;font-size:12px;margin-bottom:8px;text-align:center"></div>
-      <button class="btn-primary" style="background:var(--navy)" onclick="doFacultyLogin()">Sign in</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY HOME
-══════════════════════════════════════════ -->
-<div class="screen" id="s-faculty-home">
-  <div class="topbar" style="background:var(--navy)">
-    <svg style="width:20px;height:32.5px;stroke:#fff;stroke-width:1;fill:none;flex-shrink:0" viewBox="0 0 20 20"></svg>
-    <span class="topbar-title">TABLE GUIDE</span>
-    <span class="topbar-icon" style="position:relative" onclick="go('s-f-notifications')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;display:block"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span id="f-home-notif-badge" class="notif-badge" style="display:none;position:absolute;top:-6px;right:-8px">0</span>
-    </span>
-  </div>
-  <div class="body">
-    <div class="card-hero" style="background:linear-gradient(135deg,var(--navy),var(--navy-light))">
-      <div style="color:rgba(255,255,255,0.65);font-size:11px;font-weight:500">Welcome back,</div>
-      <div style="color:#fff;font-family:var(--font-head);font-size:20px;font-weight:700;margin-top:2px" id="f-home-name">—</div>
-      <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:4px" id="f-home-role">—</div>
-    </div>
-    <div id="f-back-to-admin-wrap" style="display:none">
-      <div class="slabel">Director / Consultant</div>
-      <button class="menu-item" onclick="go('s-admin-home')">
-        <div class="mi-icon" style="background:#e8f5ee"><svg viewBox="0 0 24 24" stroke="#46586e" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-        <div class="mi-text"><div class="mi-title">Back to Admin View</div><div class="mi-sub">All tables, leaderboard &amp; reports</div></div>
-        <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>
-    <div class="slabel">Lessons</div>
-    <button class="menu-item" onclick="go('s-f-lessons')">
-      <div class="mi-icon" style="background:#e8f0fb"><svg viewBox="0 0 24 24" stroke="#1e3a8a"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
-      <div class="mi-text"><div class="mi-title">SOL2 Lesson Weeks</div><div class="mi-sub">View weekly lesson content</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <div class="slabel">My Table</div>
-    <button class="menu-item" onclick="go('s-f-students')">
-      <div class="mi-icon" style="background:#f0ebff"><svg viewBox="0 0 24 24" stroke="#7c3aed" fill="none"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Attendance</div><div class="mi-sub">Present / Late / Absent by week</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-f-payment')">
-      <div class="mi-icon" style="background:#e8fbf0"><svg viewBox="0 0 24 24" stroke="#46586e" fill="none"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Payment</div><div class="mi-sub">Track ₱500 class fee status</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-f-credits')">
-      <div class="mi-icon" style="background:#fef9e0"><svg viewBox="0 0 24 24" stroke="#c9960c" fill="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Points</div><div class="mi-sub">Add &amp; view student points</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-f-devotional')">
-      <div class="mi-icon" style="background:#e8f5ee"><svg viewBox="0 0 24 24" stroke="#46586e" fill="none"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Devotional</div><div class="mi-sub">Daily check — 140 days · 20 weeks</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-f-modcomp')">
-      <div class="mi-icon" style="background:#e8f0fb"><svg viewBox="0 0 24 24" stroke="#1e3a8a" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Module Completion</div><div class="mi-sub">2 Modules × 10 Lessons — certificate tracker</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <div class="slabel">Updates</div>
-    <button class="menu-item" onclick="go('s-f-notifications')">
-      <div class="mi-icon" style="background:#fde8ea"><svg viewBox="0 0 24 24" stroke="#d0304a" fill="none" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Notifications<span id="f-notif-badge" class="notif-badge" style="display:none">0</span></div><div class="mi-sub">Level Challenge quests your students complete</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni active" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
-    <button class="ni" onclick="go('s-f-students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni" onclick="go('s-f-devotional')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Devot.</button>
-    <button class="ni" id="f-bnav-admin" onclick="go('s-admin-home')" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Admin</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY LESSONS
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-lessons">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Lesson Weeks</span>
-  </div>
-  <div class="body">
-    <div class="card">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Tap a week to view lesson details</div>
-      <div class="week-grid" id="week-grid-f"></div>
-      <div style="font-size:11px;color:var(--text3);margin-top:10px;text-align:center">Weeks are added by admin as the batch progresses</div>
-    </div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
-    <button class="ni" onclick="go('s-f-students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Table</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY LESSON DETAIL
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-lesson-detail">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="lesson-detail-title">Lesson Detail</span>
-  </div>
-  <div class="body" id="lesson-detail-body"></div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
-    <button class="ni" onclick="go('s-f-students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Table</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY STUDENTS
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-students">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="f-students-topbar">Attendance</span>
-  </div>
-  <div class="body">
-    <div class="filter-bar">
-      <select id="f-week-filter" onchange="renderFStudents()"></select>
-    </div>
-    <div class="card" style="padding:0 16px" id="f-students-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Table</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY PAYMENT
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-payment">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="f-payment-topbar">Payment</span>
-  </div>
-  <div class="body">
-    <div class="card" style="padding:0 16px" id="f-payment-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Table</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY POINTS
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-credits">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="f-credits-topbar">Points</span>
-  </div>
-  <div class="body">
-    <button class="btn-primary" style="background:var(--navy);border-radius:var(--radius);margin-bottom:14px" onclick="go('s-add-credit')">+ Add Points to a Student</button>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-align:right">Sorted by highest points</div>
-    <div class="card" style="padding:0 16px" id="f-credits-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Points</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- POINTS GRID — STUDENT LIST (replaces old manual Add Points form) -->
-<div class="screen" id="s-add-credit">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-f-credits')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Add Points</span>
-  </div>
-  <div class="body">
-    <div style="background:linear-gradient(135deg,#1e3a8a,#3b5fc9);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
-      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">2 Modules · 10 Lessons each</div>
-      <div style="font-size:15px;font-weight:700">Tap a student, then check off boxes per lesson</div>
-    </div>
-    <div class="card" style="padding:0 16px" id="f-points-grid-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-f-lessons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lessons</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Points</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- POINTS GRID — STUDENT DETAIL (Module/Lesson checkbox grid) -->
-<div class="screen" id="s-f-points-grid-detail">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-add-credit')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="f-points-grid-detail-name">Add Points</span>
-    <span id="f-points-grid-counter" style="font-size:11px;color:rgba(255,255,255,0.8);white-space:nowrap">0 pts total</span>
-  </div>
-  <div class="body">
-    <div style="background:#e8f0fb;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#1e3a8a;line-height:1.5">
-      ✅ Tap a box to award points for that lesson (you'll be asked how many). Tap a checked box again to remove those points.
-    </div>
-    <div id="f-points-grid-checklist"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active" onclick="go('s-add-credit')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Back</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN LOGIN
-══════════════════════════════════════════ -->
-<div class="screen" id="s-admin-login">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-portal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Admin Portal</span>
-  </div>
-  <div class="login-wrap">
-    <div class="login-box">
-      <div class="login-head">
-        <div class="login-avatar" style="background:var(--green)"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-        <div class="login-title">Admin Login</div>
-        <div class="login-sub">Director &amp; Consultant access</div>
-      </div>
-      <div class="field"><label>Username</label><input type="text" id="a-login-user" placeholder="admin username" style="--accent:var(--green)" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
-      <div class="field"><label>Password</label><input type="password" id="a-login-pass" placeholder="••••••••" style="--accent:var(--green)" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
-      <div id="a-login-err" style="display:none;color:#c0392b;font-size:12px;margin-bottom:8px;text-align:center"></div>
-      <button class="btn-primary" style="background:var(--green)" onclick="doAdminLogin()">Sign in</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN HOME
-══════════════════════════════════════════ -->
-<div class="screen" id="s-admin-home">
-  <div class="topbar" style="background:var(--green)">
-    <svg style="width:20px;height:32.5px;stroke:#fff;stroke-width:1;fill:none;flex-shrink:0" viewBox="0 0 20 20"></svg>
-    <span class="topbar-title">DIRECTOR & CONSULTANT</span>
-  </div>
-  <div class="body">
-    <div class="card-hero" style="background:linear-gradient(135deg,var(--green),var(--green-light))">
-      <div style="color:rgba(255,255,255,0.65);font-size:11px;font-weight:500;margin-bottom:8px">BATCH OVERVIEW</div>
-      <div class="stat-grid" style="margin-bottom:0;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <div style="font-family:var(--font-head);font-size:32px;font-weight:700;color:#fff;line-height:1" id="a-total-paid">₱—</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:6px">Total Payments</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <div style="font-family:var(--font-head);font-size:32px;font-weight:700;color:#fff;line-height:1" id="a-total-students">—</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:6px">Total Students</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <div style="font-family:var(--font-head);font-size:32px;font-weight:700;color:#fff;line-height:1" id="a-total-faculty">—</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:6px">Faculty &amp; Staff</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <div style="font-family:var(--font-head);font-size:32px;font-weight:700;color:rgba(255,180,180,1);line-height:1" id="a-total-dropped">—</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:6px">Total Dropped</div>
-        </div>
-      </div>
-    </div>
-    <div id="a-my-table-wrap" style="display:none">
-      <div class="slabel">My Table</div>
-      <button class="menu-item" onclick="go('s-faculty-home')">
-        <div class="mi-icon" style="background:#e8f0fb"><svg viewBox="0 0 24 24" stroke="#1e3a8a" fill="none"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-        <div class="mi-text"><div class="mi-title" id="a-my-table-title">Table Guide View</div><div class="mi-sub">Manage attendance, payments &amp; points for your own table</div></div>
-        <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>
-    <div class="slabel">Manage</div>
-    <button class="menu-item" onclick="go('s-a-student-att')">
-      <div class="mi-icon" style="background:#e8f5ee"><svg viewBox="0 0 24 24" stroke="#46586e"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Student Attendance</div><div class="mi-sub">By lesson week, sorted by time</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-faculty-att')">
-      <div class="mi-icon" style="background:#e8f5ee"><svg viewBox="0 0 24 24" stroke="#46586e"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Faculty &amp; Staff Attendance</div><div class="mi-sub">Track with scan time</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-makeup')">
-      <div class="mi-icon" style="background:#fff5e0"><svg viewBox="0 0 24 24" stroke="#c9960c"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Make-up Lessons</div><div class="mi-sub">Filter by week</div></div>
-      <span class="badge ba mi-badge" id="a-makeup-badge" style="display:none"></span>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-dropped')">
-      <div class="mi-icon" style="background:#fdecea"><svg viewBox="0 0 24 24" stroke="#e53935"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Dropped Students</div><div class="mi-sub">Inactive &amp; dropped records</div></div>
-      <span class="badge" id="a-dropped-badge" style="display:none;background:#e53935;color:#fff;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700"></span>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-tables')">
-      <div class="mi-icon" style="background:#e8f5ee"><svg viewBox="0 0 24 24" stroke="#46586e"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Table Guides &amp; Records</div><div class="mi-sub">Tables 1–6 full records</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-notify')">
-      <div class="mi-icon" style="background:#e8f0fb"><svg viewBox="0 0 24 24" stroke="#1e3a8a" fill="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Notify Table Guide</div><div class="mi-sub">Remind a guide about a student's remaining quests</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-staff-sms')">
-      <div class="mi-icon" style="background:#e8f0fb"><svg viewBox="0 0 24 24" stroke="#1e3a8a" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Message Faculty &amp; Staff</div><div class="mi-sub">Send an SMS to one or more staff members</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-leaderboard')">
-      <div class="mi-icon" style="background:#fff5e0"><svg viewBox="0 0 24 24" stroke="#c9960c" fill="none"><polyline points="18 15 12 9 6 15"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Points Leaderboard</div><div class="mi-sub">Highest points across all tables</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-devotional')">
-      <div class="mi-icon" style="background:#e8f5ee"><svg viewBox="0 0 24 24" stroke="#46586e" fill="none"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Devotional Record</div><div class="mi-sub">View all tables daily completion</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-modcomp')">
-      <div class="mi-icon" style="background:#e8f0fb"><svg viewBox="0 0 24 24" stroke="#1e3a8a" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Completion of Module</div><div class="mi-sub">2 Modules × 10 Lessons — certificate eligibility</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-a-quests')">
-      <div class="mi-icon" style="background:#fff5e0"><svg viewBox="0 0 24 24" stroke="#c9960c" fill="none"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Level Challenge Tasks</div><div class="mi-sub">Customize each level's quests/tasks</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni active" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-a-student-att')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN STUDENT ATTENDANCE
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-student-att">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Student Attendance</span>
-    <button onclick="printAttendance()" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer">🖨 Print</button>
-  </div>
-  <div class="body">
-    <div class="filter-bar"><select id="a-att-week" onchange="renderAStudentAtt()"></select></div>
-    <div class="card" style="padding:0 16px" id="a-att-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-
-<!-- ══════════════════════════════════════════
-     ADMIN FACULTY ATTENDANCE
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-faculty-att">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Faculty &amp; Staff Attendance</span>
-  </div>
-  <div class="body">
-    <div class="filter-bar"><select id="a-fac-att-week" onchange="renderAFacultyAtt()"></select></div>
-    <div class="card" style="padding:0 16px" id="a-fac-att-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN MAKEUP
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-makeup">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Make-up Lessons</span>
-  </div>
-  <div class="body">
-    <div class="filter-bar"><select id="makeup-week" onchange="renderMakeup()"></select></div>
-    <div id="makeup-week-assign" style="margin-bottom:10px"></div>
-    <div id="makeup-week-video" style="margin-bottom:10px"></div>
-    <div class="card" style="padding:0 16px" id="makeup-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-
-
-<!-- ══════════════════════════════════════════
-     ADMIN DROPPED STUDENTS
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-dropped">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Dropped Students</span>
-  </div>
-  <div class="body">
-    <button class="btn-primary" style="background:#e53935;border-radius:var(--radius);margin-bottom:14px" onclick="openDropStudentModal()">+ Drop a Student</button>
-    <div class="slabel">Dropped — By Table</div>
-    <div class="card" style="padding:0 16px" id="a-dropped-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-a-student-att')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- DROP STUDENT MODAL -->
-<div id="modal-drop-student" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:flex-end;justify-content:center">
-  <div style="background:#fff;border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:480px;max-height:75vh;display:flex;flex-direction:column;box-shadow:0 -4px 30px rgba(0,0,0,0.2)">
-    <!-- Step 1: Pick Table -->
-    <div id="drop-step-table">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div style="font-size:15px;font-weight:700;color:var(--text1)">Drop a Student</div>
-        <button onclick="closeDropStudentModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
-      </div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Select a table first</div>
-      <div id="drop-table-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
-    </div>
-    <!-- Step 2: Pick Student -->
-    <div id="drop-step-students" style="display:none;flex:1;min-height:0;display:none;flex-direction:column">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <button onclick="document.getElementById('drop-step-table').style.display='';document.getElementById('drop-step-students').style.display='none'" style="background:none;border:none;cursor:pointer;padding:4px">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text1)" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <div id="drop-step-table-label" style="font-size:15px;font-weight:700;color:var(--text1)"></div>
-        <button onclick="closeDropStudentModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);margin-left:auto">✕</button>
-      </div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Tap a name to drop them</div>
-      <div id="drop-student-list" style="overflow-y:auto;border-radius:12px;border:1px solid var(--border)"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN TABLES
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-tables">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Table Guides &amp; Records</span>
-  </div>
-  <div class="body">
-    <div class="filter-bar"><select id="a-table-week" onchange="renderATables()"></select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="a-table-grid"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-a-student-att')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ADMIN TABLE DETAIL -->
-<div class="screen" id="s-a-table-detail">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="a-td-title">Table Record</span>
-  </div>
-  <div class="body">
-    <!-- Present Wk banner lives OUTSIDE the table detail card -->
-    <div id="a-td-present-stat"></div>
-    <div class="stat-grid" id="a-td-stats"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="slabel" style="margin-bottom:0">Students — sorted by highest points</div>
-      <button onclick="openTableAddCredit()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Points
-      </button>
-    </div>
-    <div class="card" style="padding:0 16px" id="a-td-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-a-student-att')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN — NOTIFY TABLE GUIDE
-     Lets a Director/Consultant remind a Table Guide about a specific
-     student's remaining Level Challenge quests, or send a free-text note.
-     Shows up right in the Table Guide's existing notification bell.
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-notify">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Notify Table Guide</span>
-  </div>
-  <div class="body">
-    <div class="slabel">Send to</div>
-    <div class="notify-aud-toggle">
-      <button id="a-notify-aud-guide" class="notify-aud-btn active" onclick="setNotifyAudience('guide')">🧑‍🏫 Table Guide</button>
-      <button id="a-notify-aud-student" class="notify-aud-btn" onclick="setNotifyAudience('student')">🎓 Student</button>
-    </div>
-    <div id="a-notify-aud-hint" style="font-size:11.5px;color:var(--text3);margin:-6px 0 12px">Lands in the Table Guide's own bell — the student won't see this.</div>
-
-    <div class="filter-bar"><select id="a-notify-table-sel" onchange="onANotifyTableChange()"><option value="">Select a table…</option></select></div>
-    <div id="a-notify-guide-info" style="font-size:12.5px;color:var(--text2);margin:2px 0 12px"></div>
-
-    <div class="slabel">Students with quests remaining</div>
-    <div class="card" style="padding:0 16px" id="a-notify-students">
-      <p style="padding:16px 0;color:var(--gray)">Select a table above to see who still has quests left.</p>
-    </div>
-
-    <div id="a-notify-general-wrap">
-      <div class="slabel">Send a general reminder</div>
-      <div class="card">
-        <div class="field">
-          <textarea id="a-notify-message" rows="3" placeholder="e.g. Please follow up with your table on their remaining Level Challenge quests this week." style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;color:var(--text);background:var(--bg);outline:none;resize:vertical;font-family:var(--font)"></textarea>
-        </div>
-        <button class="btn-primary" style="background:var(--green)" onclick="sendGeneralTableNote()">Send to Table Guide</button>
-      </div>
-    </div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-a-student-att')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN — MESSAGE FACULTY & STAFF (SMS)
-     Lets a Director/Consultant pick one or more Faculty/Staff and open
-     her phone's own Messages app pre-filled with their number(s) and a
-     note — sending uses her regular carrier SMS, no paid gateway needed.
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-staff-sms">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Message Faculty &amp; Staff</span>
-  </div>
-  <div class="body">
-    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Select recipients below, write your message, then tap <strong>Send SMS Now</strong> — it sends a real text straight from the dashboard through your phone's SMS Gateway app.</div>
-
-    <div class="slabel">Recipients</div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button type="button" onclick="setAllStaffSmsChecked(true)" style="flex:1;padding:8px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--card);color:var(--text2);font-size:12.5px;font-weight:600;cursor:pointer">Select All</button>
-      <button type="button" onclick="setAllStaffSmsChecked(false)" style="flex:1;padding:8px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--card);color:var(--text2);font-size:12.5px;font-weight:600;cursor:pointer">Clear</button>
-    </div>
-    <div class="card" style="padding:0 16px" id="a-staff-sms-list">
-      <p style="padding:16px 0;color:var(--gray)">Loading faculty &amp; staff…</p>
-    </div>
-
-    <div class="slabel">Message</div>
-    <div class="card">
-      <div class="field">
-        <textarea id="a-staff-sms-message" rows="4" placeholder="e.g. Reminder: Faculty meeting this Saturday, 8:00 AM at the main hall. See you there!" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;color:var(--text);background:var(--bg);outline:none;resize:vertical;font-family:var(--font)"></textarea>
-      </div>
-      <div id="a-staff-sms-count" style="font-size:11px;color:var(--text3);margin:2px 0 12px">0 recipient(s) selected</div>
-      <button class="btn-primary" id="a-staff-sms-send-btn" style="background:var(--green)" onclick="sendStaffSms()">📩 Send SMS Now</button>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button type="button" onclick="copyStaffSmsNumbers()" style="flex:1;padding:9px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--card);color:var(--text2);font-size:12.5px;font-weight:600;cursor:pointer">📋 Copy Numbers</button>
-        <button type="button" onclick="copyStaffSmsMessage()" style="flex:1;padding:9px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--card);color:var(--text2);font-size:12.5px;font-weight:600;cursor:pointer">📋 Copy Message</button>
-      </div>
-    </div>
-
-    <div class="slabel">Recently Sent</div>
-    <div class="card" style="padding:0 16px" id="a-staff-sms-log">
-      <p style="padding:16px 0;color:var(--gray)">Nothing sent yet.</p>
-    </div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-a-student-att')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<div id="modal-table-credit" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:flex-end;justify-content:center">
-  <div style="background:#fff;border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:480px;box-shadow:0 -4px 30px rgba(0,0,0,0.2)">
-    <div id="modal-table-credit-title" style="font-size:15px;font-weight:700;color:var(--text1);margin-bottom:4px">Add Points — </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Points are awarded to the whole table group</div>
-    <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px">Reason</div>
-<div class="reason-grid">
-  <button class="reason-btn selected" onclick="selectReason(this,'Attendance')">📋 Attendance</button>
-  <button class="reason-btn" onclick="selectReason(this,'Participation')">🙋 Participation</button>
-  <button class="reason-btn" onclick="selectReason(this,'Homework')">📝 Homework</button>
-  <button class="reason-btn" onclick="selectReason(this,'Memory Verse')">✝️ Memory Verse</button>
-  <button class="reason-btn" onclick="selectReason(this,'__other__')" style="grid-column:1/-1">✏️ Other (optional — type below)</button>
-</div>
-<div id="modal-other-wrap" style="display:none;margin-bottom:12px">
-  <input type="text" id="modal-other-text" placeholder="Describe reason..." style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font)">
-</div>
-    <div class="field"><label>Points to Add</label><input type="number" id="modal-credit-amount" value="5" min="1" max="500"></div>
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button onclick="closeTableCreditModal()" style="flex:1;padding:11px;border:1.5px solid #ddd;border-radius:10px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2)">Cancel</button>
-      <button id="modal-add-credit-btn" onclick="doTableAddCredit()" style="flex:2;padding:11px;border:none;border-radius:10px;background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer">Add Points to Table</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADD STUDENT — LOGIN GATE
-     Shown when the portal + button is tapped. Must sign in with a
-     Director/Consultant or Record account before the Add Student
-     form appears.
-══════════════════════════════════════════ -->
-<div id="modal-add-student-gate" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9100;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:380px;box-shadow:0 4px 30px rgba(0,0,0,0.25)">
-    <div style="display:flex;align-items:center;margin-bottom:4px">
-      <div style="font-size:15px;font-weight:700;color:var(--text1)">Sign In to Add a Student</div>
-      <button onclick="closeAddStudentGate()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);margin-left:auto">✕</button>
-    </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Director, Consultant, or Record accounts only</div>
-    <div class="field"><label>Username</label><input type="text" id="asg-user" placeholder="Username" onkeydown="if(event.key==='Enter')doAddStudentGateLogin()"></div>
-    <div class="field"><label>Password</label><input type="password" id="asg-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAddStudentGateLogin()"></div>
-    <div id="asg-err" style="display:none;color:#c0392b;font-size:12px;margin-bottom:8px;text-align:center"></div>
-    <button class="btn-primary" id="asg-login-btn" style="background:var(--green)" onclick="doAddStudentGateLogin()">Sign In &amp; Continue</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADD STUDENT (Director / Consultant / Record only —
-     gated behind login since this screen only exists inside
-     the admin and record portals)
-══════════════════════════════════════════ -->
-<div id="modal-add-student" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:flex-end;justify-content:center">
-  <div style="background:#fff;border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 -4px 30px rgba(0,0,0,0.2)">
-    <div style="display:flex;align-items:center;margin-bottom:4px">
-      <div style="font-size:15px;font-weight:700;color:var(--text1)">Add Student</div>
-      <button onclick="closeAddStudentModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);margin-left:auto">✕</button>
-    </div>
-    <div style="font-size:11.5px;color:var(--text3);margin-bottom:14px;line-height:1.6">
-      Student ID <strong id="as-preview-id" style="color:var(--text2)">—</strong> · Status <strong style="color:var(--text2)">Active</strong> · Registered <strong id="as-preview-date" style="color:var(--text2)">—</strong>
-      <br>These are filled in automatically when you save.
-    </div>
-
-    <div class="field"><label>Full Name</label><input type="text" id="as-fullname" placeholder="Juan Dela Cruz"></div>
-    <div style="display:flex;gap:10px">
-      <div class="field" style="flex:1"><label>Age</label><input type="number" id="as-age" placeholder="18" min="1" max="120"></div>
-      <div class="field" style="flex:1">
-        <label>Gender</label>
-        <select id="as-gender">
-          <option value="">Select…</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-        </select>
-      </div>
-    </div>
-    <div class="field"><label>LG Leader</label><input type="text" id="as-lgleader" placeholder="LG Leader's name"></div>
-    <div class="field"><label>Network Leader</label><input type="text" id="as-networkleader" placeholder="Network Leader's name"></div>
-    <div style="display:flex;gap:10px">
-      <div class="field" style="flex:1">
-        <label>Table No</label>
-        <select id="as-tableno" onchange="onAddStudentTableChange()">
-          <option value="">Select…</option>
-        </select>
-      </div>
-      <div class="field" style="flex:1"><label>Facilitator</label><input type="text" id="as-facilitator" placeholder="Auto-filled" readonly style="background:#f3f4f6;color:var(--text3)"></div>
-    </div>
-    <div class="field"><label>Contact No</label><input type="text" id="as-contact" placeholder="09XXXXXXXXX"></div>
-    <div id="as-err" style="display:none;color:#c0392b;font-size:12px;margin-bottom:8px"></div>
-
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button onclick="closeAddStudentModal()" style="flex:1;padding:11px;border:1.5px solid #ddd;border-radius:10px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2)">Cancel</button>
-      <button id="modal-add-student-btn" onclick="doAddStudent()" style="flex:2;padding:11px;border:none;border-radius:10px;background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer">Add Student</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN LEADERBOARD
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-leaderboard">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Points Leaderboard</span>
-  </div>
-  <div class="body">
-    <div class="card-hero" style="background:linear-gradient(135deg,#c9960c,#e8b820);text-align:center">
-      <div style="font-size:32px;margin-bottom:4px">🏆</div>
-      <div style="font-family:var(--font-head);font-size:16px;font-weight:700;color:#fff">Points Rankings</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:3px">Who's leading the pack?</div>
-    </div>
-    <!-- Tab bar -->
-    <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;margin:12px 0;border:1.5px solid #c9960c">
-      <button id="lb-tab-students" onclick="switchLeaderboardTab('students')" style="flex:1;padding:9px;font-size:13px;font-weight:600;background:#c9960c;color:#fff;border:none;cursor:pointer">🎓 Students</button>
-      <button id="lb-tab-tables" onclick="switchLeaderboardTab('tables')" style="flex:1;padding:9px;font-size:13px;font-weight:600;background:#fff;color:#c9960c;border:none;cursor:pointer">📋 By Table</button>
-    </div>
-    <div class="card" style="padding:0 16px" id="a-leaderboard-list"></div>
-    <div class="card" style="padding:0 16px;display:none" id="a-table-leaderboard-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-a-student-att')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="18 15 12 9 6 15"/></svg>Leaders</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     RECORD LOGIN
-══════════════════════════════════════════ -->
-<div class="screen" id="s-record-login">
-  <div class="topbar" style="background:var(--purple)">
-    <button class="topbar-back" onclick="go('s-portal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Record Portal</span>
-  </div>
-  <div class="login-wrap">
-    <div class="login-box">
-      <div class="login-head">
-        <div class="login-avatar" style="background:var(--purple)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
-        <div class="login-title">Record Login</div>
-        <div class="login-sub">QR Scan &amp; Attendance Entry</div>
-      </div>
-      <div class="field"><label>Username</label><input type="text" id="r-login-user" placeholder="recorder01" style="--accent:var(--purple)" onkeydown="if(event.key==='Enter')doRecordLogin()"></div>
-      <div class="field"><label>Password</label><input type="password" id="r-login-pass" placeholder="••••••••" style="--accent:var(--purple)" onkeydown="if(event.key==='Enter')doRecordLogin()"></div>
-      <div id="r-login-err" style="display:none;color:#c0392b;font-size:12px;margin-bottom:8px;text-align:center"></div>
-      <button class="btn-primary" style="background:var(--purple)" onclick="doRecordLogin()">Sign in</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     RECORD HOME
-══════════════════════════════════════════ -->
-<div class="screen" id="s-record-home">
-  <div class="topbar" style="background:var(--purple)">
-    <svg style="width:20px;height:20px;stroke:#fff;stroke-width:1.8;fill:none;flex-shrink:0" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-    <span class="topbar-title">Record Dashboard</span>
-  </div>
-  <div class="body">
-    <div class="stat-grid" id="r-stats"></div>
-    <div class="slabel">Actions</div>
-    <button class="menu-item" onclick="go('s-r-qr')">
-      <div class="mi-icon" style="background:#f0e8f8"><svg viewBox="0 0 24 24" stroke="#3a4250"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-      <div class="mi-text"><div class="mi-title">QR Scan Attendance</div><div class="mi-sub">Auto-detects Present / Late / Absent</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-r-attendance')">
-      <div class="mi-icon" style="background:#f0ebff"><svg viewBox="0 0 24 24" stroke="#7c3aed"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Attendance List</div><div class="mi-sub">Students &amp; Faculty · by week</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-
-    <button class="menu-item" onclick="go('s-r-payment')">
-      <div class="mi-icon" style="background:#f0e8f8"><svg viewBox="0 0 24 24" stroke="#3a4250"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Record Payment</div><div class="mi-sub">₱500 class fee per student</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="menu-item" onclick="go('s-r-balances')">
-      <div class="mi-icon" style="background:#f0e8f8"><svg viewBox="0 0 24 24" stroke="#3a4250"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-      <div class="mi-text"><div class="mi-title">Total Student Balances</div><div class="mi-sub">Paid / Partial / Unpaid overview</div></div>
-      <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-  </div>
-  <div class="bnav" style="--active-color:var(--purple)">
-    <button class="ni active" onclick="go('s-record-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-r-qr')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Scan</button>
-    <button class="ni" onclick="go('s-r-attendance')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/></svg>List</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     RECORD QR SCAN
-══════════════════════════════════════════ -->
-<div class="screen" id="s-r-qr">
-  <div class="topbar" style="background:var(--purple)">
-    <button class="topbar-back" onclick="go('s-record-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">QR Scanner</span>
-    <span id="qr-live-clock" style="font-size:12px;color:rgba(255,255,255,0.8)"></span>
-  </div>
-  <div class="body">
-    <!-- Tab bar -->
-    <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;margin-bottom:14px;border:1.5px solid var(--purple)">
-      <button id="qr-tab-scan" onclick="switchQRTab('scan')" style="flex:1;padding:9px;font-size:13px;font-weight:600;background:var(--purple);color:#fff;border:none;cursor:pointer">📷 Scan QR</button>
-      <button id="qr-tab-gen" onclick="switchQRTab('gen')" style="flex:1;padding:9px;font-size:13px;font-weight:600;background:#fff;color:var(--purple);border:none;cursor:pointer">🔲 QR Generator</button>
-    </div>
-
-    <!-- SCAN TAB -->
-    <div id="qr-panel-scan">
-      <div class="qr-scan-box" style="background:linear-gradient(135deg,var(--purple),var(--purple-light));padding:16px;border-radius:14px;text-align:center;margin-bottom:12px">
-        <div style="color:rgba(255,255,255,0.85);font-size:12px;margin-bottom:10px;font-weight:500">Point camera at student or faculty QR code</div>
-        <div id="qr-reader" style="width:100%;max-width:300px;margin:0 auto;border-radius:10px;overflow:hidden;background:#000"></div>
-        <div id="qr-reader-placeholder" style="width:100%;max-width:300px;margin:0 auto;border-radius:10px;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;min-height:200px">
-          <div style="text-align:center">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            <div style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:6px">Camera not started</div>
-          </div>
-        </div>
-        <button onclick="startQRCamera()" id="qr-start-btn" style="margin-top:12px;background:rgba(255,255,255,0.2);color:#fff;border:1.5px solid rgba(255,255,255,0.5);border-radius:8px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer">▶ Start Camera</button>
-        <button onclick="stopQRCamera()" id="qr-stop-btn" style="display:none;margin-top:12px;background:rgba(255,0,0,0.3);color:#fff;border:1.5px solid rgba(255,255,255,0.4);border-radius:8px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer">⏹ Stop Camera</button>
-        <div id="qr-time-rule" style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:10px"></div>
-      </div>
-      <!-- Live status bar -->
-      <div id="qr-status-bar" style="display:none;margin:10px 0;padding:10px 14px;border-radius:10px;color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;transition:background 0.3s"></div>
-      <div id="qr-result"></div>
-    </div>
-
-      <!-- Time rules reminder -->
-      <div style="background:#f8f4ff;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:11px;color:#3a4250;line-height:1.6;border-left:3px solid var(--purple)">
-        <strong>⏱ Attendance Time Rules:</strong><br>
-        ✅ <strong>1:00 PM – 1:44 PM</strong> = Present<br>
-        ⏰ <strong>1:45 PM – 2:29 PM</strong> = Late<br>
-        ❌ <strong>2:30 PM onwards</strong> = Absent<br>
-        <span style="color:#888;font-size:10px">3 unexcused late = 1 Absent · 3 absences = Drop</span>
-      </div>
-      <!-- Mark all unscanned as absent -->
-      <button id="mark-absent-btn" onclick="markUnscannedAbsent()" style="width:100%;padding:12px;background:#fdecea;color:#e53935;border:1.5px solid #e53935;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:4px">
-        📋 Mark Unscanned as Absent (Students & Faculty)
-      </button>
-    <div id="qr-panel-gen" style="display:none">
-      <div class="card" style="padding:16px">
-        <div style="font-size:13px;font-weight:600;color:var(--text1);margin-bottom:12px">Generate QR Code</div>
-        <div class="field" style="margin-bottom:10px">
-          <label>Type</label>
-          <select id="qrgen-type" onchange="renderQRGenList()" class="fi">
-            <option value="student">Student</option>
-            <option value="faculty">Faculty &amp; Staff</option>
-          </select>
-        </div>
-        <div class="field" style="margin-bottom:12px">
-          <label>Search</label>
-          <input type="text" id="qrgen-search" placeholder="Name or ID..." oninput="renderQRGenList()" style="width:100%;box-sizing:border-box">
-        </div>
-        <div id="qrgen-list" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto"></div>
-      </div>
-      <!-- QR Modal -->
-      <div id="qrgen-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;flex-direction:column" onclick="closeQRModal()">
-        <div style="background:#fff;border-radius:16px;padding:24px;text-align:center;max-width:280px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.4)" onclick="event.stopPropagation()">
-          <div style="font-size:14px;font-weight:700;color:var(--text1);margin-bottom:4px" id="qrgen-modal-name"></div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:14px" id="qrgen-modal-id"></div>
-          <!-- QR image renders here -->
-          <div id="qrgen-img-wrap" style="min-height:240px;display:flex;align-items:center;justify-content:center">
-            <div style="color:#999;font-size:13px">Tap a person to generate their QR</div>
-          </div>
-          <!-- Hidden canvas used for download -->
-          <canvas id="qrgen-canvas" style="display:none"></canvas>
-          <div id="qrgen-payload" style="font-size:9px;color:#bbb;margin-top:6px;word-break:break-all;text-align:center"></div>
-          <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
-            <button onclick="downloadQRCode()" style="background:var(--purple);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer">⬇ Save PNG</button>
-            <button onclick="closeQRModal()" style="background:#f0f0f0;color:var(--text2);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="bnav" style="--active-color:var(--purple)">
-    <button class="ni" onclick="go('s-record-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Scan</button>
-    <button class="ni" onclick="go('s-r-attendance')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/></svg>List</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     RECORD ATTENDANCE
-══════════════════════════════════════════ -->
-<div class="screen" id="s-r-attendance">
-  <div class="topbar" style="background:var(--purple)">
-    <button class="topbar-back" onclick="go('s-record-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Attendance List</span>
-  </div>
-  <div class="body">
-    <!-- Tab switch -->
-    <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;margin-bottom:12px;border:1.5px solid var(--purple)">
-      <button id="att-tab-students" onclick="switchAttTab('students')" style="flex:1;padding:9px;font-size:13px;font-weight:600;background:var(--purple);color:#fff;border:none;cursor:pointer">🎓 Students</button>
-      <button id="att-tab-faculty" onclick="switchAttTab('faculty')" style="flex:1;padding:9px;font-size:13px;font-weight:600;background:#fff;color:var(--purple);border:none;cursor:pointer">👔 Faculty &amp; Staff</button>
-    </div>
-    <!-- Student Attendance -->
-    <div id="att-panel-students">
-      <div class="filter-bar"><select id="r-att-week" onchange="renderRAttendance()"></select></div>
-      <div class="card" style="padding:0 16px" id="r-att-list"></div>
-    </div>
-    <!-- Faculty Attendance -->
-    <div id="att-panel-faculty" style="display:none">
-      <div class="filter-bar"><select id="r-fac-att-week" onchange="renderRFacultyAtt()"></select></div>
-      <div class="card" style="padding:0 16px" id="r-fac-att-list"></div>
-    </div>
-  </div>
-  <div class="bnav" style="--active-color:var(--purple)">
-    <button class="ni" onclick="go('s-record-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-r-qr')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Scan</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/></svg>List</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     RECORD PAYMENT
-══════════════════════════════════════════ -->
-<div class="screen" id="s-r-payment">
-  <div class="topbar" style="background:var(--purple)">
-    <button class="topbar-back" onclick="go('s-record-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Record Payment</span>
-  </div>
-  <div class="body">
-    <div class="card">
-      <div class="field"><label>Search Student</label><input type="text" id="pay-search" placeholder="Name or Student ID..." oninput="filterPayStudents()"></div>
-      <div class="field"><label>Select Student</label><select id="pay-student-sel" class="fi"></select></div>
-      <div class="field"><label>Amount Received (₱)</label><input type="number" id="pay-amount" placeholder="0.00" step="0.01"></div>
-      <div class="field"><label>Payment Type</label><select id="pay-type"><option value="Full">Full payment</option><option value="Partial">Partial payment</option><option value="Scholarship">Scholarship</option></select></div>
-      <div class="field"><label>Reference / Notes</label><input type="text" id="pay-notes" placeholder="GCash ref, cash, etc."></div>
-      <button class="btn-primary" style="background:var(--purple)" onclick="doAddPayment()">Record Payment</button>
-    </div>
-    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:5px">
-      <span class="sync-dot sync-ok"></span>Connected — records sync to Google Sheets
-    </div>
-  </div>
-  <div class="bnav" style="--active-color:var(--purple)">
-    <button class="ni" onclick="go('s-record-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-r-qr')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Scan</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/></svg>Payment</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     RECORD BALANCES
-══════════════════════════════════════════ -->
-<div class="screen" id="s-r-balances">
-  <div class="topbar" style="background:var(--purple)">
-    <button class="topbar-back" onclick="go('s-record-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Student Balances</span>
-  </div>
-  <div class="body">
-    <div class="card-hero" style="background:linear-gradient(135deg,var(--purple),var(--purple-light))">
-      <div style="color:rgba(255,255,255,0.65);font-size:11px;font-weight:500">Total class fee per student</div>
-      <div style="font-family:var(--font-head);font-size:24px;font-weight:700;color:#fff;margin-top:2px" id="r-total-fee">₱—</div>
-    </div>
-    <div class="stat-grid" id="r-bal-summary"></div>
-    <div class="card" style="padding:0 16px" id="r-bal-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--purple)">
-    <button class="ni" onclick="go('s-record-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-r-qr')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Scan</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Balances</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-
-<!-- ══════════════════════════════════════════
-     FACULTY DEVOTIONAL & ACTIVITIES
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-devotional">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Devotional</span>
-  </div>
-  <div class="body">
-    <div style="background:linear-gradient(135deg,#46586e,#8fa4b8);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
-      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">20-Week Program · 140 Days</div>
-      <div style="font-size:15px;font-weight:700">Click a student to mark their daily devotionals</div>
-    </div>
-    <div class="card" style="padding:0 16px" id="f-devotional-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-f-students')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Devot.</button>
-    <button class="ni" onclick="go('s-f-modcomp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>Module</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY DEVOTIONAL — STUDENT DETAIL
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-devot-detail">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-f-devotional')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="f-devot-detail-name">Devotional</span>
-    <span id="f-devot-counter" style="font-size:11px;color:rgba(255,255,255,0.8);white-space:nowrap">0/140</span>
-  </div>
-  <div class="body">
-    <div style="background:#e8f5ee;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#46586e;line-height:1.5">
-      ✅ Check each day the student completed their devotional. Progress is saved on this device.
-    </div>
-    <div id="f-devot-checklist"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active" onclick="go('s-f-devotional')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Back</button>
-    <button class="ni" onclick="go('s-f-modcomp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>Module</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN DEVOTIONAL RECORDS
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-devotional">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Devotional Record</span>
-  </div>
-  <div class="body">
-    <div style="background:linear-gradient(135deg,#46586e,#8fa4b8);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
-      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">20-Week Program · 140 Days</div>
-      <div style="font-size:15px;font-weight:700">Select a table to view student devotional completion</div>
-    </div>
-    <div id="a-devot-tables"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Devot.</button>
-    <button class="ni" onclick="go('s-a-modcomp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>Module</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN DEVOTIONAL — TABLE DETAIL
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-devot-table">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-a-devotional')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="a-devot-table-title">Table Devotional</span>
-  </div>
-  <div class="body">
-    <div class="card" style="padding:0 16px" id="a-devot-table-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active" onclick="go('s-a-devotional')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Back</button>
-    <button class="ni" onclick="go('s-a-modcomp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>Module</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN — LEVEL CHALLENGE TASKS (customize quests per level)
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-quests">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Level Challenge Tasks</span>
-  </div>
-  <div class="body">
-    <div style="background:linear-gradient(135deg,#1e3a8a,#3b5fc9);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
-      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">10 Levels · Student "SOL2 Level Challenge"</div>
-      <div style="font-size:15px;font-weight:700">Pick a level, edit its tasks, then Save</div>
-    </div>
-    <div id="a-quests-level-tabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
-    <div class="card" style="padding:14px 16px">
-      <div id="a-quests-list"></div>
-      <button class="menu-item" onclick="addQuestsEditorRow()" style="justify-content:center;margin-top:4px">
-        <div class="mi-text" style="text-align:center;width:100%"><div class="mi-title">+ Add Task</div></div>
-      </button>
-    </div>
-    <div id="a-quests-status" style="font-size:12px;color:var(--text2);margin:8px 2px 0"></div>
-    <button class="btn-primary" style="background:var(--green);margin-top:12px" onclick="saveQuestsEditor()">Save Changes</button>
-    <button class="btn-primary" style="background:rgba(0,0,0,0.06);color:var(--text2);margin-top:8px" onclick="resetQuestsEditorToDefault()">Reset This Level to Default</button>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tasks</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY MODULE COMPLETION (Student List)
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-modcomp">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Module Completion</span>
-  </div>
-  <div class="body">
-    <div style="background:linear-gradient(135deg,#1e3a8a,#3b5fc9);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
-      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">2 Modules · 10 Lessons each · 20 total</div>
-      <div style="font-size:15px;font-weight:700">Click a student to check off Module 1 &amp; 2 lessons</div>
-    </div>
-    <div class="card" style="padding:0 16px" id="f-modcomp-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-f-devotional')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Devot.</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>Module</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     FACULTY MODULE COMPLETION — STUDENT DETAIL
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-modcomp-detail">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-f-modcomp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="f-modcomp-detail-name">Module Completion</span>
-    <span id="f-modcomp-counter" style="font-size:11px;color:rgba(255,255,255,0.8);white-space:nowrap">0/20</span>
-  </div>
-  <div class="body">
-    <div style="background:#e8f0fb;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#1e3a8a;line-height:1.5">
-      ✅ Tap ✓ when a lesson is Done, or ✗ if the student needs a Make-up Class. Tap again to clear. A certificate is only earned once all 20 lessons are marked Done.
-    </div>
-    <div id="f-modcomp-checklist"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--navy)">
-    <button class="ni" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active" onclick="go('s-f-modcomp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>Back</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- Hidden anchor used to trigger the generated certificate PDF download -->
-<a id="cert-download-link" style="display:none"></a>
-
-<!-- ══════════════════════════════════════════
-     ADMIN MODULE COMPLETION RECORDS
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-modcomp">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">Completion of Module</span>
-  </div>
-  <div class="body">
-    <div style="background:linear-gradient(135deg,#1e3a8a,#3b5fc9);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
-      <div style="font-size:11px;opacity:0.8;margin-bottom:2px">2 Modules · 10 Lessons each · 20 total</div>
-      <div style="font-size:15px;font-weight:700">Select a table to view student module &amp; lesson completion</div>
-    </div>
-    <div id="a-modcomp-tables"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni" onclick="go('s-a-devotional')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Devot.</button>
-    <button class="ni active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>Module</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ADMIN MODULE COMPLETION — TABLE DETAIL
-══════════════════════════════════════════ -->
-<div class="screen" id="s-a-modcomp-table">
-  <div class="topbar" style="background:var(--green)">
-    <button class="topbar-back" onclick="go('s-a-modcomp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title" id="a-modcomp-table-title">Table Module Completion</span>
-  </div>
-  <div class="body">
-    <div class="card" style="padding:0 16px" id="a-modcomp-table-list"></div>
-  </div>
-  <div class="bnav" style="--active-color:var(--green)">
-    <button class="ni" onclick="go('s-admin-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="ni active" onclick="go('s-a-modcomp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>Back</button>
-    <button class="ni" onclick="go('s-a-tables')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Tables</button>
-    <button class="ni" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</button>
-  </div>
-</div>
-
-
-<!-- ══════════════════════════════════════════
-     NOTIFICATIONS — student Level Challenge completions
-══════════════════════════════════════════ -->
-<div class="screen" id="s-f-notifications">
-  <div class="topbar" style="background:var(--navy)">
-    <button class="topbar-back" onclick="go('s-faculty-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <span class="topbar-title">NOTIFICATIONS</span>
-    <span class="topbar-icon" onclick="markAllNotifsReadForFaculty()" title="Mark all read">✓ All</span>
-  </div>
-  <div class="body">
-    <div class="switch-hint">Quests your students mark complete themselves (in the Student app) show up here.</div>
-    <div id="f-notif-list"></div>
-  </div>
-</div>
-
-
-<!-- ══════════════════════════════════════════
-     AMEN ALERT POPUP OVERLAY
-══════════════════════════════════════════ -->
-<div id="amen-alert-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;flex-direction:column">
-  <div id="amen-alert-inner" style="text-align:center;animation:amen-blink 0.5s infinite alternate">
-    <div style="font-size:80px;margin-bottom:8px">🚨</div>
-    <div id="amen-alert-table" style="font-size:52px;font-weight:900;color:#FFD700;letter-spacing:2px;text-shadow:0 0 30px #FFD700">AMEN ALERT!</div>
-    <div id="amen-alert-sub" style="font-size:22px;font-weight:700;color:#fff;margin-top:8px;opacity:0.9">Table — buzzed in!</div>
-  </div>
-</div>
-<style>
-@keyframes amen-blink {
-  from { opacity:1; transform:scale(1); }
-  to   { opacity:0.6; transform:scale(1.06); }
+// ╔═══════════════════════════════════════════════════════════╗
+// ║  STEP 1 — PASTE YOUR GAS WEB APP URL BELOW               ║
+// ╚═══════════════════════════════════════════════════════════╝
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwdtAmqs7wGa1S-niAn5KfiDsQHR-L-OuJPrJVkbyJf1OfAB1GvXQRIm7VAjwCz4Wvi/exec';
+
+// ─── QR SECURITY TOKEN ───────────────────────────────────────
+const QR_SECRET = 'LC2024-DAVAOCHURCH-8X';
+const QR_PREFIX = `SOL2_APP:${QR_SECRET}:`;
+
+// ═══════════════════════════════════════════
+// API HELPERS
+// ═══════════════════════════════════════════
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal, redirect: 'follow' });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
 }
 
-/* ─── GAMESHOW SCREENS ─── */
-#s-gs-portal, #s-gs-host-login, #s-gs-host-home, #s-gs-create-quiz,
-#s-gs-presentation, #s-gs-final-scores, #s-gs-random-host,
-#s-gs-buzzer-login, #s-gs-buzzer-home, #s-gs-buzzer-game,
-#s-gs-buzzer-choices, #s-gs-random-buzz, #s-gs-award-student {
-  background: #0a0a1a;
-  color: #fff;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-}
-#s-gs-portal,
-#s-gs-host-login,
-#s-gs-buzzer-login {
-  overflow-y: auto;
+async function apiGet(action, params = "") {
+  const url = `${GAS_URL}?action=${action}${params}`;
+  const res = await fetchWithTimeout(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} for action=${action}`);
+  return await res.json();
 }
 
-.gs-hero {
-  background: linear-gradient(135deg, #0d0d2e 0%, #1a0a3a 50%, #0a1a2e 100%);
-  padding: 28px 20px 20px;
-  text-align: center;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.gs-hero .gh-logo { font-size: 40px; margin-bottom: 6px; }
-.gs-hero h1 { font-size: 20px; font-weight: 800; color: #fff; }
-.gs-hero h1 span { color: #FFD700; }
-.gs-hero p { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 4px; }
-
-.gs-cards { padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; }
-.gs-card {
-  border-radius: 14px; padding: 18px; cursor: pointer;
-  border: 1.5px solid rgba(255,255,255,0.1);
-  transition: transform 0.15s;
-  position: relative; overflow: hidden;
-}
-.gs-card:active { transform: scale(0.97); }
-.gs-card .gc-badge {
-  position: absolute; top: 10px; right: 10px;
-  background: rgba(255,255,255,0.12); color: #fff;
-  font-size: 9px; font-weight: 700; padding: 2px 7px;
-  border-radius: 20px; letter-spacing: 0.5px;
-}
-.gs-card .gc-icon { font-size: 28px; margin-bottom: 6px; }
-.gs-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
-.gs-card p { font-size: 11px; opacity: 0.7; }
-.gc-host   { background: linear-gradient(135deg, #1a0538, #3d0d72); }
-.gc-buzzer { background: linear-gradient(135deg, #0d2b0d, #1a5c1a); }
-.gc-back   { background: linear-gradient(135deg, #1a1a2e, #252540); }
-
-.gs-header {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 14px 0;
-}
-.gs-back-btn {
-  background: rgba(255,255,255,0.08); border: none; color: #fff;
-  width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
-  font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.gs-header h2 { font-size: 16px; font-weight: 700; color: #fff; }
-.gs-header .gs-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
-
-.gs-login-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px 20px; }
-.gs-login-box {
-  background: #12122a; border-radius: 14px; padding: 24px 20px;
-  width: 100%; max-width: 340px; border: 1.5px solid rgba(255,255,255,0.08);
-}
-.gs-login-box .gl-icon { font-size: 40px; text-align: center; margin-bottom: 12px; }
-.gs-login-box h2 { font-size: 18px; font-weight: 800; text-align: center; color: #fff; margin-bottom: 3px; }
-.gs-login-box p { font-size: 12px; color: rgba(255,255,255,0.5); text-align: center; margin-bottom: 16px; }
-.gs-field { margin-bottom: 10px; }
-.gs-field label { display: block; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 5px; letter-spacing: 0.5px; }
-.gs-field input {
-  width: 100%; background: rgba(255,255,255,0.06);
-  border: 1.5px solid rgba(255,255,255,0.1); border-radius: 9px;
-  padding: 11px 12px; color: #fff; font-size: 14px; outline: none;
-  transition: border-color 0.2s; box-sizing: border-box;
-}
-.gs-field input:focus { border-color: rgba(255,215,0,0.5); }
-.gs-err { color: #ff6b6b; font-size: 11px; margin: 6px 0; display: none; }
-.gs-btn {
-  width: 100%; padding: 13px; border: none; border-radius: 9px;
-  font-size: 14px; font-weight: 700; cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s; margin-top: 6px;
-}
-.gs-btn:active { transform: scale(0.97); }
-.gs-btn:disabled { opacity: 0.4; }
-.gs-btn-gold   { background: linear-gradient(135deg, #FFD700, #FFA000); color: #000; }
-.gs-btn-green  { background: linear-gradient(135deg, #43a047, #1b5e20); color: #fff; }
-.gs-btn-red    { background: linear-gradient(135deg, #e53935, #b71c1c); color: #fff; }
-.gs-btn-purple { background: linear-gradient(135deg, #8e24aa, #4a148c); color: #fff; }
-.gs-btn-plain  { background: rgba(255,255,255,0.08); color: #fff; }
-
-/* Host home */
-.gs-home-body { flex: 1; padding: 14px; overflow-y: auto; padding-bottom: 80px; }
-.gs-week-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-.gs-week-row label { font-size: 11px; color: rgba(255,255,255,0.5); white-space: nowrap; }
-.gs-week-row select {
-  flex: 1; background: rgba(255,255,255,0.08);
-  border: 1.5px solid rgba(255,255,255,0.12); border-radius: 9px;
-  padding: 9px 10px; color: #fff; font-size: 13px; font-weight: 600;
-}
-.gs-week-row select option { background: #1a1a2e; }
-.gs-section-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
-  color: rgba(255,255,255,0.3); margin: 14px 0 8px;
-}
-.gs-quiz-item {
-  background: #12122a; border-radius: 11px;
-  border: 1.5px solid rgba(255,255,255,0.08); padding: 12px;
-  margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s;
-}
-.gs-quiz-item:hover { border-color: rgba(255,215,0,0.3); }
-.gs-qi-head { display: flex; align-items: center; justify-content: space-between; }
-.gs-qi-title { font-size: 13px; font-weight: 700; color: #fff; }
-.gs-qi-meta  { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 3px; }
-.gs-qi-badge {
-  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
-  background: rgba(255,215,0,0.15); color: #FFD700;
-}
-.gs-fab {
-  position: fixed; bottom: 22px; right: 18px;
-  width: 52px; height: 52px; border-radius: 50%;
-  background: linear-gradient(135deg, #FFD700, #FFA000);
-  border: none; color: #000; font-size: 24px; font-weight: 700;
-  cursor: pointer; box-shadow: 0 4px 18px rgba(255,215,0,0.4);
-  display: flex; align-items: center; justify-content: center;
-  transition: transform 0.15s;
-}
-.gs-fab:active { transform: scale(0.92); }
-.gs-empty {
-  text-align: center; padding: 32px 20px;
-  color: rgba(255,255,255,0.4); font-size: 13px;
-}
-.gs-empty .ge-icon { font-size: 40px; margin-bottom: 10px; }
-.gs-empty h3 { font-size: 14px; color: #fff; margin-bottom: 5px; }
-
-/* Create quiz */
-.gs-create-body { flex: 1; padding: 14px; overflow-y: auto; padding-bottom: 80px; }
-.gs-form-field { margin-bottom: 12px; }
-.gs-form-field label { display: block; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 5px; letter-spacing: 0.5px; }
-.gs-form-field input, .gs-form-field select, .gs-form-field textarea {
-  width: 100%; background: rgba(255,255,255,0.06);
-  border: 1.5px solid rgba(255,255,255,0.1); border-radius: 9px;
-  padding: 10px 12px; color: #fff; font-size: 13px; outline: none;
-  transition: border-color 0.2s; font-family: inherit; box-sizing: border-box;
-}
-.gs-form-field input:focus, .gs-form-field select:focus, .gs-form-field textarea:focus { border-color: rgba(255,215,0,0.5); }
-.gs-form-field select option { background: #1a1a2e; }
-.gs-form-field textarea { min-height: 60px; resize: vertical; }
-.gs-qcard {
-  background: #12122a; border: 1.5px solid rgba(255,255,255,0.08);
-  border-radius: 11px; padding: 12px; margin-bottom: 10px; position: relative;
-}
-.gs-qcard-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.gs-qcard-num { font-size: 10px; font-weight: 700; color: #FFD700; background: rgba(255,215,0,0.1); padding: 2px 7px; border-radius: 20px; }
-.gs-qcard-del { background: rgba(229,57,53,0.15); border: none; color: #e53935; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.gs-choice-row { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
-.gs-choice-ltr { width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.08); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; }
-.gs-choice-row input[type="text"] { flex: 1; }
-.gs-choice-row input[type="radio"] { width: 16px; height: 16px; accent-color: #FFD700; cursor: pointer; flex-shrink: 0; }
-.gs-add-choice { background: rgba(255,255,255,0.04); border: 1.5px dashed rgba(255,255,255,0.12); color: rgba(255,255,255,0.5); border-radius: 7px; padding: 7px; width: 100%; font-size: 11px; cursor: pointer; transition: background 0.2s; box-sizing: border-box; }
-.gs-add-question { width: 100%; border: 2px dashed rgba(255,215,0,0.3); background: rgba(255,215,0,0.03); color: #FFD700; font-size: 13px; font-weight: 700; border-radius: 11px; padding: 14px; cursor: pointer; margin-bottom: 12px; transition: background 0.2s; box-sizing: border-box; }
-.gs-save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10,10,26,0.95); backdrop-filter: blur(12px); padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.07); }
-
-/* Presentation */
-#s-gs-presentation { background: radial-gradient(ellipse at top, #12003a 0%, #0a0a1a 60%); }
-.gp-header { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); }
-.gp-quiz-title { font-size: 12px; font-weight: 700; color: #FFD700; }
-.gp-quiz-sub { font-size: 10px; color: rgba(255,255,255,0.5); }
-.gp-body { flex: 1; display: flex; flex-direction: column; padding: 14px; }
-.gp-q-num { font-size: 10px; font-weight: 700; color: #FFD700; letter-spacing: 1px; text-align: center; margin-bottom: 6px; }
-.gp-q-text { font-size: 17px; font-weight: 700; text-align: center; line-height: 1.4; margin-bottom: 16px; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 16px 14px; border: 1.5px solid rgba(255,255,255,0.07); color: #fff; }
-.gp-choices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-.gp-choice { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.09); border-radius: 11px; padding: 12px 14px; transition: all 0.3s; }
-.gp-choice .gpc-ltr { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.1); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; }
-.gp-choice .gpc-txt { font-size: 13px; font-weight: 600; color: #fff; }
-.gp-choice.correct { background: rgba(46,125,50,0.3); border-color: #4caf50; }
-.gp-choice.wrong { background: rgba(229,57,53,0.1); border-color: rgba(229,57,53,0.3); opacity: 0.5; }
-
-.gp-cd-wrap { display: none; } /* countdown moved into chips */
-.gp-cd-ring { position: relative; width: 66px; height: 66px; }
-.gp-cd-ring svg { transform: rotate(-90deg); }
-.gp-cd-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: #FFD700; }
-
-.gp-tables { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; }
-.gp-chip { display: flex; flex-direction: column; align-items: center; padding: 14px 22px; border-radius: 16px; font-size: 11px; font-weight: 700; border: 2px solid transparent; transition: all 0.3s; min-width: 100px; position: relative; }
-.gp-chip .gcc-num { font-size: 20px; font-weight: 900; }
-.gp-chip .gcc-cd { font-size: 36px; font-weight: 900; color: #FFD700; line-height: 1; margin: 4px 0 2px; }
-.gp-chip .gcc-cd.urgent { color: #e53935; animation: pulse-urgent 0.5s infinite alternate; }
-.gp-chip.idle { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
-.gp-chip.buzzed { animation: blink-buzz 0.5s infinite alternate; }
-.gp-chip.dark { background: rgba(255,255,255,0.01); border-color: rgba(255,255,255,0.03); color: rgba(255,255,255,0.15); }
-.gp-chip.correct { background: rgba(46,125,50,0.25); border-color: #4caf50; color: #81c784; }
-.gp-chip.wrong { background: rgba(229,57,53,0.1); border-color: rgba(229,57,53,0.3); color: #e57373; }
-.gp-chip.timeout { background: rgba(100,100,100,0.15); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); }
-@keyframes blink-buzz { from { box-shadow: 0 0 0 rgba(255,215,0,0); } to { box-shadow: 0 0 20px rgba(255,215,0,0.7); transform: scale(1.04); } }
-@keyframes pulse-urgent { from { transform: scale(1); } to { transform: scale(1.15); } }
-
-.gp-host-actions { display: flex; gap: 6px; }
-.gp-hbtn { flex: 1; padding: 11px 6px; border: none; border-radius: 9px; font-size: 11px; font-weight: 700; cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
-.gp-hbtn:active { transform: scale(0.96); }
-.gp-hbtn:disabled { opacity: 0.4; }
-.gp-correct  { background: #2e7d32; color: #fff; }
-.gp-wrong    { background: #c62828; color: #fff; }
-.gp-next     { background: linear-gradient(135deg, #FFD700, #FFA000); color: #000; }
-.gp-reveal   { background: #6a1b9a; color: #fff; }
-
-.gp-result-banner { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.4s; }
-.gp-result-banner.show { opacity: 1; pointer-events: all; }
-.gp-result-banner.correct-bg { background: rgba(27,94,32,0.95); }
-.gp-result-banner.wrong-bg   { background: rgba(183,28,28,0.95); }
-.gp-rb-icon  { font-size: 64px; margin-bottom: 10px; }
-.gp-rb-title { font-size: 26px; font-weight: 800; color: #fff; }
-.gp-rb-sub   { font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 5px; }
-.gp-rb-close { margin-top: 20px; pointer-events: all; }
-
-/* Final scores */
-.gs-score-row { display: flex; align-items: center; gap: 10px; background: #12122a; border-radius: 11px; padding: 12px; margin-bottom: 8px; border: 1.5px solid rgba(255,255,255,0.07); }
-.gs-rank { font-size: 22px; font-weight: 800; width: 32px; text-align: center; flex-shrink: 0; }
-.gs-score-info { flex: 1; }
-.gs-si-name { font-size: 14px; font-weight: 700; color: #fff; }
-.gs-si-pts  { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
-.gs-score-pts { font-size: 17px; font-weight: 800; color: #FFD700; }
-
-/* Buzzer */
-.gs-buzzer-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
-.gs-big-buzzer { width: 200px; height: 200px; border-radius: 50%; border: 6px solid rgba(255,255,255,0.15); font-size: 54px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-direction: column; position: relative; transition: transform 0.1s; user-select: none; }
-.gs-big-buzzer:active { transform: scale(0.92); }
-.gs-big-buzzer .gbb-label { font-size: 13px; font-weight: 800; margin-top: 5px; letter-spacing: 1px; }
-.gs-big-buzzer.pressed { animation: buzz-press 0.3s ease; }
-@keyframes buzz-press { 0%{transform:scale(1)} 30%{transform:scale(0.88)} 70%{transform:scale(1.06)} 100%{transform:scale(1)} }
-.gs-buzz-status { margin-top: 18px; text-align: center; }
-.gs-buzz-status .gbs-table { font-size: 18px; font-weight: 800; margin-bottom: 3px; color: #fff; }
-.gs-buzz-status .gbs-msg   { font-size: 12px; color: rgba(255,255,255,0.5); }
-
-/* Phone choices */
-.gs-phone-choices { flex: 1; padding: 14px; display: flex; flex-direction: column; }
-.gs-phone-q { font-size: 14px; font-weight: 700; line-height: 1.5; text-align: center; margin: 10px 0 16px; background: rgba(255,255,255,0.04); border-radius: 11px; padding: 12px; color: #fff; }
-#gs-phone-choices-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.gs-pchoice { border: none; border-radius: 11px; font-size: 14px; font-weight: 700; cursor: pointer; padding: 14px 10px; transition: transform 0.1s, opacity 0.2s; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 72px; }
-.gs-pchoice:active { transform: scale(0.97); }
-.gs-pchoice .gpc-l { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
-.gs-pchoice.answered { opacity: 0.6; pointer-events: none; }
-.gs-pchoice.correct-ans { background: #2e7d32 !important; }
-.gs-pchoice.wrong-ans   { background: #c62828 !important; }
-
-/* Random round */
-.gs-random-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-.gs-random-cred { font-size: 16px; font-weight: 800; background: rgba(255,215,0,0.15); color: #FFD700; border-radius: 20px; padding: 7px 18px; margin-bottom: 22px; border: 1.5px solid rgba(255,215,0,0.3); }
-
-/* Random host */
-.gs-rhost-body { flex: 1; padding: 14px; overflow-y: auto; }
-.gs-buzz-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
-.gs-tbl-row { display: flex; align-items: center; justify-content: space-between; background: #12122a; border-radius: 9px; padding: 11px 12px; border: 1.5px solid rgba(255,255,255,0.07); }
-.gs-tbl-row .gtr-name { font-size: 13px; font-weight: 700; color: #fff; }
-.gs-tbl-row .gtr-time { font-size: 10px; color: rgba(255,255,255,0.4); }
-.gs-tbl-row.tbl-first { border-color: #FFD700; background: rgba(255,215,0,0.08); }
-
-/* Award student picker */
-.gs-student-list { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
-.gs-stu-btn { background: #12122a; border: 1.5px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 13px 14px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; transition: border-color 0.2s; }
-.gs-stu-btn:hover { border-color: rgba(255,215,0,0.4); }
-
-/* GS toast */
-#gs-toast { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%) translateY(60px); background: #1e1e3a; border: 1.5px solid rgba(255,255,255,0.1); color: #fff; padding: 11px 18px; border-radius: 22px; font-size: 12px; font-weight: 600; transition: transform 0.3s, opacity 0.3s; opacity: 0; z-index: 9999; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
-#gs-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-</style>
-
-<div id="gs-toast"></div>
-
-<!-- ── GS PORTAL ── -->
-<div class="screen" id="s-gs-portal">
-  <div class="gs-hero">
-    <div class="gh-logo">🚨</div>
-    <h1>Lifeclass: <span>Amen Alert!</span></h1>
-    <p>Interactive Game Show System</p>
-  </div>
-  <div class="gs-cards">
-    <div class="gs-card gc-host" onclick="gsGo('s-gs-host-login')">
-      <div class="gc-badge">DIRECTOR / CONSULTANT</div>
-      <div class="gc-icon">🎮</div>
-      <h3>Game Show Host</h3>
-      <p>Create quizzes, run presentations &amp; manage scores</p>
-    </div>
-    <div class="gs-card gc-buzzer" onclick="gsGo('s-gs-buzzer-login')">
-      <div class="gc-badge">FACULTY &amp; STAFF</div>
-      <div class="gc-icon">🔴</div>
-      <h3>Table Buzzer</h3>
-      <p>Students press to answer — buzz in before other tables!</p>
-    </div>
-    <div class="gs-card gc-back" onclick="go('s-portal')">
-      <div class="gc-icon">↩️</div>
-      <h3>Back to Main App</h3>
-      <p>Return to the Lifeclass Dashboard</p>
-    </div>
-  </div>
-</div>
-
-<!-- ── GS HOST LOGIN ── -->
-<div class="screen" id="s-gs-host-login">
-  <div class="gs-header">
-    <button class="gs-back-btn" onclick="gsGo('s-gs-portal')">←</button>
-    <div><div class="gs-sub">Game Show Host</div></div>
-  </div>
-  <div class="gs-login-wrap">
-    <div class="gs-login-box">
-      <div class="gl-icon">🎯</div>
-      <h2>Host Login</h2>
-      <p>Director &amp; Consultant access only</p>
-      <div class="gs-field"><label>USERNAME</label><input type="text" id="gsh-user" placeholder="Username" autocomplete="off"></div>
-      <div class="gs-field"><label>PASSWORD</label><input type="password" id="gsh-pass" placeholder="Password"></div>
-      <div class="gs-err" id="gsh-err"></div>
-      <button class="gs-btn gs-btn-gold" onclick="gsHostLogin()">Sign in</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── GS HOST HOME ── -->
-<div class="screen" id="s-gs-host-home">
-  <div class="gs-header">
-    <button class="gs-back-btn" onclick="gsHostLogout()">←</button>
-    <div><h2>🎮 Game Show Host</h2><div class="gs-sub" id="gs-host-name">—</div></div>
-  </div>
-  <div class="gs-home-body">
-    <div class="gs-week-row">
-      <label>LESSON / WEEK</label>
-      <select id="gs-week-sel" onchange="gsRenderQuizList()">
-        <option value="">— All Weeks —</option>
-      </select>
-    </div>
-    <div class="gs-section-label">GAME SHOW QUIZZES</div>
-    <div id="gs-quiz-list"></div>
-
-    <div class="gs-section-label">RANDOM QUESTION ROUND</div>
-    <div style="background:#12122a;border-radius:11px;padding:12px;border:1.5px solid rgba(255,215,0,0.18);">
-      <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:10px">Ask a question out loud — fastest table to buzz in wins credits. No typing needed!</p>
-      <button class="gs-btn gs-btn-gold" onclick="gsGo('s-gs-random-host')" style="margin-top:0">Start Random Round 🎲</button>
-    </div>
-  </div>
-  <button class="gs-fab" onclick="gsCreateQuiz()">＋</button>
-</div>
-
-<!-- ── GS CREATE QUIZ ── -->
-<div class="screen" id="s-gs-create-quiz">
-  <div class="gs-header">
-    <button class="gs-back-btn" onclick="gsGo('s-gs-host-home')">←</button>
-    <div><h2>Create Quiz</h2><div class="gs-sub">Amen Alert Game Show</div></div>
-  </div>
-  <div class="gs-create-body">
-    <div class="gs-form-field"><label>QUIZ TITLE</label><input type="text" id="gscq-title" placeholder="e.g. Week 1 Lesson Quiz"></div>
-    <div class="gs-form-field"><label>LESSON / WEEK</label><select id="gscq-week"></select></div>
-    <div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0 10px"></div>
-    <div class="gs-section-label" style="padding:0;margin-bottom:10px">QUESTIONS (max 10)</div>
-    <div id="gs-questions-container"></div>
-    <button class="gs-add-question" id="gs-add-q-btn" onclick="gsAddQuestion()">＋ Add Question</button>
-  </div>
-  <div class="gs-save-bar">
-    <button class="gs-btn gs-btn-gold" onclick="gsSaveQuiz()">💾 Save Quiz</button>
-  </div>
-</div>
-
-<!-- ── GS PRESENTATION ── -->
-<div class="screen" id="s-gs-presentation">
-  <div class="gp-header">
-    <button class="gs-back-btn" onclick="gsExitPresentation()">✕</button>
-    <div style="flex:1">
-      <div class="gp-quiz-title" id="gp-quiz-title">—</div>
-      <div class="gp-quiz-sub" id="gp-quiz-sub">—</div>
-    </div>
-    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5)">Q <span id="gp-q-num">1</span>/<span id="gp-q-total">10</span></div>
-  </div>
-  <div class="gp-body">
-    <div class="gp-cd-wrap" id="gp-cd-wrap">
-      <div class="gp-cd-ring">
-        <svg width="66" height="66" viewBox="0 0 66 66">
-          <circle cx="33" cy="33" r="27" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6"/>
-          <circle id="gp-cd-circle" cx="33" cy="33" r="27" fill="none" stroke="#FFD700" stroke-width="6"
-            stroke-dasharray="169.6" stroke-dashoffset="0" stroke-linecap="round"/>
-        </svg>
-        <div class="gp-cd-num" id="gp-cd-num">5</div>
-      </div>
-    </div>
-    <div class="gp-tables" id="gp-tables"></div>
-    <div class="gp-q-num" id="gp-q-label">QUESTION 1</div>
-    <div class="gp-q-text" id="gp-q-text">—</div>
-    <div class="gp-choices" id="gp-choices"></div>
-    <div class="gp-host-actions" id="gp-host-actions">
-      <button class="gp-hbtn gp-correct" id="gpbtn-correct" onclick="gsJudge(true)" disabled>✓ Correct</button>
-      <button class="gp-hbtn gp-wrong"   id="gpbtn-wrong"   onclick="gsJudge(false)" disabled>✗ Wrong</button>
-      <button class="gp-hbtn gp-reveal"  id="gpbtn-reveal"  onclick="gsReveal()">👁 Reveal</button>
-      <button class="gp-hbtn gp-next"    id="gpbtn-next"    onclick="gsNextQ()">Next ▶</button>
-    </div>
-  </div>
-  <div class="gp-result-banner" id="gp-result">
-    <div class="gp-rb-icon" id="gp-rb-icon">✅</div>
-    <div class="gp-rb-title" id="gp-rb-title">Correct!</div>
-    <div class="gp-rb-sub" id="gp-rb-sub">+100 Points</div>
-    <button class="gs-btn gs-btn-gold gp-rb-close" style="width:160px;margin-top:18px" onclick="gsDismissResult()">Continue</button>
-  </div>
-  <canvas id="gs-firework" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:200"></canvas>
-
-  <!-- ── GAME INTRO OVERLAY ── -->
-  <div id="gs-intro-overlay" style="display:none;position:fixed;inset:0;background:radial-gradient(ellipse at center,#1a0050 0%,#050010 100%);z-index:300;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px">
-    <div id="gs-intro-msg" style="font-size:clamp(22px,5vw,42px);font-weight:900;color:#fff;line-height:1.3;max-width:700px;transition:opacity 0.4s,transform 0.4s;opacity:0;transform:scale(0.85)"></div>
-    <div id="gs-intro-countdown" style="font-size:clamp(80px,20vw,160px);font-weight:900;color:#FFD700;line-height:1;margin-top:16px;display:none;text-shadow:0 0 60px #FFD70088;transition:opacity 0.3s,transform 0.3s;opacity:0;transform:scale(0.5)"></div>
-  </div>
-
-  <!-- ── ITS YOUR CHANCE OVERLAY ── -->
-  <div id="gs-chance-overlay" style="display:none;position:fixed;inset:0;background:radial-gradient(ellipse at center,#002244 0%,#050010 100%);z-index:300;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px">
-    <div style="font-size:56px;margin-bottom:16px">🎯</div>
-    <div id="gs-chance-msg" style="font-size:clamp(22px,5vw,38px);font-weight:900;color:#fff;line-height:1.35;max-width:680px;transition:opacity 0.4s;opacity:0"></div>
-    <div id="gs-chance-countdown" style="font-size:clamp(80px,20vw,160px);font-weight:900;color:#FFD700;line-height:1;margin-top:12px;display:none;text-shadow:0 0 60px #FFD70088;transition:opacity 0.3s,transform 0.3s;opacity:0;transform:scale(0.5)"></div>
-  </div>
-</div>
-
-<!-- ── GS FINAL SCORES ── -->
-<div class="screen" id="s-gs-final-scores">
-  <div class="gs-header">
-    <button class="gs-back-btn" onclick="gsGo('s-gs-host-home')">←</button>
-    <div><h2>🏆 Final Scores</h2><div class="gs-sub" id="gs-final-label">—</div></div>
-  </div>
-  <div style="padding:14px" id="gs-final-scoreboard"></div>
-</div>
-
-<!-- ── GS RANDOM HOST ── -->
-<div class="screen" id="s-gs-random-host">
-  <div class="gs-header">
-    <button class="gs-back-btn" onclick="gsGo('s-gs-host-home')">←</button>
-    <div><h2>🎲 Random Question Round</h2><div class="gs-sub">Ask out loud — fastest buzz wins</div></div>
-  </div>
-  <div class="gs-rhost-body">
-    <div style="background:#12122a;border-radius:11px;padding:14px;border:1.5px solid rgba(255,215,0,0.18);margin-bottom:14px">
-      <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:10px">Points to award when a table buzzes in first:</p>
-      <div style="display:flex;gap:8px;align-items:flex-end">
-        <div style="flex:1">
-          <label style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:0.5px;display:block;margin-bottom:5px">POINTS</label>
-          <input type="number" id="gsrq-credits" value="100" min="50" step="50" style="width:100%;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px;outline:none;box-sizing:border-box">
-        </div>
-        <button class="gs-btn gs-btn-gold" style="width:auto;padding:10px 16px;margin-top:0;flex-shrink:0" onclick="gsStartRandom()">GO 🚀</button>
-      </div>
-    </div>
-    <div class="gs-section-label" style="padding:0;margin-bottom:8px">BUZZ ORDER</div>
-    <div id="gs-random-buzz-list">
-      <div class="gs-empty" style="padding:16px 0"><div class="ge-icon">⏳</div><p>Start a round to see who buzzes first</p></div>
-    </div>
-    <div id="gs-random-winner-actions" style="display:none">
-      <button class="gs-btn gs-btn-green" style="margin-top:10px" onclick="gsAwardRandomTable()">✅ Award Table Points</button>
-      <button class="gs-btn gs-btn-plain" style="margin-top:8px" onclick="gsClearRandom()">🔄 New Round</button>
-    </div>
-  </div>
-</div>
-
-
-
-<!-- ── GS AWARD STUDENT (random round — pick individual who answered) ── -->
-<div class="screen" id="s-gs-award-student">
-  <div class="gs-header">
-    <button class="gs-back-btn" onclick="gsGo('s-gs-random-host')">←</button>
-    <div><h2>Who Answered?</h2><div class="gs-sub" id="gs-award-table-label">Table — select student</div></div>
-  </div>
-  <p style="padding:12px 14px 4px;font-size:12px;color:rgba(255,255,255,0.5)">Table credits already awarded. Pick the student who answered to give them personal Points too:</p>
-  <div id="gs-student-list" class="gs-student-list"></div>
-</div>
-
-<!-- ── GS BUZZER LOGIN ── -->
-<div class="screen" id="s-gs-buzzer-login">
-  <div class="gs-header">
-    <button class="gs-back-btn" onclick="gsGo('s-gs-portal')">←</button>
-    <div><div class="gs-sub">Faculty &amp; Staff</div></div>
-  </div>
-  <div class="gs-login-wrap">
-    <div class="gs-login-box">
-      <div class="gl-icon">🔴</div>
-      <h2>Table Buzzer</h2>
-      <p>Sign in with your faculty account</p>
-      <div class="gs-field"><label>USERNAME</label><input type="text" id="gsb-user" placeholder="Username" autocomplete="off"></div>
-      <div class="gs-field"><label>PASSWORD</label><input type="password" id="gsb-pass" placeholder="Password"></div>
-      <div class="gs-err" id="gsb-err"></div>
-      <button class="gs-btn gs-btn-green" onclick="gsBuzzerLogin()">Sign in</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── GS BUZZER HOME ── -->
-<div class="screen" id="s-gs-buzzer-home">
-  <div class="gs-header">
-    <button class="gs-back-btn" onclick="gsBuzzerLogout()">←</button>
-    <div><h2 id="gs-buz-table">Table —</h2><div class="gs-sub" id="gs-buz-name">—</div></div>
-  </div>
-  <div style="padding:10px 14px">
-    <div style="background:#12122a;border-radius:11px;padding:11px 12px;border:1.5px solid rgba(255,255,255,0.07);font-size:12px;color:rgba(255,255,255,0.5)">
-      <strong style="color:#fff">📡 Status:</strong> <span id="gs-buz-status">Waiting for host to start…</span>
-    </div>
-  </div>
-  <div class="gs-buzzer-center">
-    <div class="gs-empty"><div class="ge-icon">⏳</div><h3>No Active Game</h3><p>Wait for the Director or Consultant to start a Game Show or Random Round.</p></div>
-  </div>
-</div>
-
-<!-- ── GS BUZZER IN-GAME ── -->
-<div class="screen" id="s-gs-buzzer-game">
-  <div class="gs-header" style="justify-content:space-between">
-    <div><h2 id="gsbg-table">Table —</h2><div class="gs-sub" id="gsbg-q-label">Question 1 of 10</div></div>
-    <div style="text-align:right"><div style="font-size:10px;color:rgba(255,255,255,0.5)">SCORE</div><div style="font-size:18px;font-weight:800;color:#FFD700" id="gsbg-score">0</div></div>
-  </div>
-  <div class="gs-buzzer-center">
-    <button class="gs-big-buzzer" id="gs-big-buzzer" onclick="gsPressbuzzer()">
-      🔔<span class="gbb-label">BUZZ!</span>
-    </button>
-    <div class="gs-buzz-status">
-      <div class="gbs-table" id="gsbg-state">Press when ready</div>
-      <div class="gbs-msg" id="gsbg-sub">Wait for the question to appear</div>
-    </div>
-  </div>
-</div>
-
-<!-- ── GS PHONE CHOICES ── -->
-<div class="screen" id="s-gs-buzzer-choices">
-  <div class="gs-header" style="justify-content:space-between">
-    <div><h2 id="gsbc-table">Table —</h2><div class="gs-sub">Choose your answer!</div></div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <!-- Countdown ring -->
-      <div style="position:relative;width:52px;height:52px;flex-shrink:0">
-        <svg width="52" height="52" viewBox="0 0 52 52" style="transform:rotate(-90deg)">
-          <circle cx="26" cy="26" r="20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="5"/>
-          <circle id="gsbc-cd-circle" cx="26" cy="26" r="20" fill="none" stroke="#FFD700" stroke-width="5"
-            stroke-dasharray="125.7" stroke-dashoffset="0" stroke-linecap="round"/>
-        </svg>
-        <div id="gsbc-cd-num" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#FFD700">5</div>
-      </div>
-      <div style="text-align:right"><div style="font-size:10px;color:rgba(255,255,255,0.5)">SCORE</div><div style="font-size:18px;font-weight:800;color:#FFD700" id="gsbc-score">0</div></div>
-    </div>
-  </div>
-  <div class="gs-phone-choices">
-    <div class="gs-phone-q" id="gs-phone-q">—</div>
-    <div id="gs-phone-choices-list"></div>
-  </div>
-  <!-- Time's Up overlay — shown only on the buzzed table's phone -->
-  <div id="gsbc-timeup-overlay" style="display:none;position:absolute;inset:0;background:rgba(183,28,28,0.96);z-index:50;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px">
-    <div style="font-size:64px;margin-bottom:12px">⏰</div>
-    <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:8px">Time's Up!</div>
-    <div style="font-size:15px;color:rgba(255,255,255,0.8)">You ran out of time to answer.</div>
-  </div>
-</div>
-
-<!-- ── GS RANDOM BUZZ (Phone) ── -->
-<div class="screen" id="s-gs-random-buzz">
-  <div class="gs-header">
-    <div><h2 id="gsrb-table">Table —</h2><div class="gs-sub">Random Question Round</div></div>
-  </div>
-  <div class="gs-random-body">
-    <div class="gs-random-cred" id="gsrb-cred">+100 Points</div>
-    <button class="gs-big-buzzer" id="gs-random-buzzer" onclick="gsPressRandomBuzzer()"
-      style="background:linear-gradient(135deg,#f9a825,#e65100);border-color:#f9a825;color:#fff">
-      🙋<span class="gbb-label">I KNOW!</span>
-    </button>
-    <div class="gs-buzz-status">
-      <div class="gbs-table" id="gsrb-state">Ready to buzz!</div>
-      <div class="gbs-msg" id="gsrb-sub">Press when teacher asks the question</div>
-    </div>
-  </div>
-</div>
-
-<script>
-// ════════════════════════════════════════
-// GAME SHOW STATE & CONFIG
-// ════════════════════════════════════════
-const GS_LS_QUIZZES = 'gs_quizzes_v2';
-const GS_LS_BROADCAST = 'gs_bc_v2';
-
-const GS_TABLE_COLORS = [
-  {bg:'#c62828',border:'#ef5350',label:'#ffcdd2'},
-  {bg:'#1565c0',border:'#42a5f5',label:'#bbdefb'},
-  {bg:'#2e7d32',border:'#66bb6a',label:'#c8e6c9'},
-  {bg:'#f57f17',border:'#ffca28',label:'#fff9c4'},
-  {bg:'#6a1b9a',border:'#ce93d8',label:'#f3e5f5'},
-  {bg:'#00695c',border:'#4db6ac',label:'#b2dfdb'},
-  {bg:'#ad1457',border:'#f48fb1',label:'#fce4ec'},
-  {bg:'#e65100',border:'#ffb74d',label:'#ffe0b2'},
-];
-function gsTableColor(t) {
-  const idx = (parseInt(t)-1) % GS_TABLE_COLORS.length;
-  return GS_TABLE_COLORS[Math.max(0,idx)] || GS_TABLE_COLORS[0];
+async function apiPost(payload) {
+  // text/plain avoids CORS preflight that Google Apps Script rejects
+  const res = await fetchWithTimeout(GAS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
 }
 
-const GS = {
-  faculty:[],
-  currentHost:null,
-  currentBuzzer:null,
-  quizzes:[],
-  // Presentation
-  activeQuiz:null, currentQIdx:0,
-  tableScores:{}, buzzOrder:[], buzzWinner:null,
-  questionOpen:false, answerRevealed:false,
-  cdInterval:null, cdSec:5,
-  phoneCdInterval:null, phoneCdSec:5,
-  _pendingResume: false,
-  // Random
-  randomPoints:100, randomBuzzOrder:[], randomWinner:null,
-  // Edit
-  editQuizIdx:-1, questionCount:0,
+// ═══════════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════════
+let APP = {
+  students: [],
+  faculty: [],
+  lessons: [],
+  payments: [],
+  attendance: [],
+  facultyAttendance: [],
+  credits: [],
+  qrScans: [],
+  tableGuides: [],
+  staffMessages: [],
+  settings: {},
+  currentScreen: 's-portal',
+  selectedReason: 'Attendance',
+  currentWeek: 1,
+  totalFee: 500,
+  devotionals: {},   // studentId -> Set of completed day numbers (1-140)
+  makeupStatus: {},  // attendanceId -> { status, notes }
+  makeupWeekAssignments: {},  // weekNo -> assigned facilitator name (whole-week make-up assignment)
+  makeupVideos: {},  // weekNo -> { title, url } (whole-week make-up class YouTube link)
+  lessonCompletion: {},  // studentId -> { "moduleNo-lessonNo": "Done" | "Makeup" }
+  lessonPoints: {},  // studentId -> { "moduleNo-lessonNo": { attendance, participation, homework, memoryVerse } }
+  questProgress: {},  // studentId -> { "levelNo-questNo": true }  (Level Challenge game)
+  levelQuests: {},    // Director/Consultant-customized tasks: levelNo -> [{icon,type,title}]
+                      // (LEVEL_QUESTS sheet). A level with no rows falls back to QUESTS below.
+  notifications: [],  // rows from the NOTIFICATIONS sheet (student quest completions)
+  _notifyAudience: 'guide'  // Admin "Notify Table Guide" screen: 'guide' or 'student' (see setNotifyAudience)
 };
 
-// ── NAV ──
-function gsGo(id) {
-  if (typeof go === 'function') { go(id); } else {
-    const main = document.getElementById('desktop-main');
-    const scope = main || document;
-    scope.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.classList.remove('screen-animated'); });
-    const el = document.getElementById(id);
-    if (el) { el.classList.add('screen-animated'); el.classList.add('active'); }
-    window.scrollTo(0,0);
-  }
-}
+// Point-box categories shown per lesson in the Points grid. Each box's
+// value is set by the facilitator when they check it (no fixed amount).
+const POINT_CATEGORIES = [
+  { key: 'attendance',    label: 'Attendance',    icon: '📋' },
+  { key: 'participation', label: 'Participation', icon: '🙋' },
+  { key: 'homework',      label: 'Homework',      icon: '📝' },
+  { key: 'memoryVerse',   label: 'Memory Verse',  icon: '✝️' }
+];
 
-// ── TOAST ──
-let gsToastTimer;
-function gsToast(msg) {
-  const t = document.getElementById('gs-toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(gsToastTimer);
-  gsToastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-}
+// ═══════════════════════════════════════════
+// MODULE / LESSON COMPLETION — constants
+// SOL2 = 2 Modules, 10 Lessons each (20 total). Used to determine
+// Certificate of Completion eligibility.
+// ═══════════════════════════════════════════
+const TOTAL_MODULES = 2;
+const LESSONS_PER_MODULE = 10;
+const TOTAL_LESSONS = TOTAL_MODULES * LESSONS_PER_MODULE;
 
-// ── BELL SOUND ──
-function gsPlayBell() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5);
-    gain.gain.setValueAtTime(0.8, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.8);
-  } catch(e) {}
-}
-
-// ── AMEN ALERT POPUP ──
-function gsAmenAlert(tableNo) {
-  const overlay = document.getElementById('amen-alert-overlay');
-  const subEl = document.getElementById('amen-alert-sub');
-  subEl.textContent = `${gsGetTableLabel(tableNo)} buzzed in!`;
-  overlay.style.display = 'flex';
-  gsPlayBell();
-  setTimeout(() => { overlay.style.display = 'none'; }, 3000);
-}
-
-// ── BROADCAST (cross-device via GAS + localStorage fallback for same-device) ──
-
-// Event queue — keeps last 20 events so no phone misses anything
-let _gsEventQueue = [];
-
-function gsBroadcast(event, data) {
-  const msg = {event, data, ts: Date.now()};
-  // 1. Same-device tabs via localStorage
-  localStorage.setItem(GS_LS_BROADCAST, JSON.stringify(msg));
-  // 2. Cross-device: push to GAS event queue
-  if (typeof GAS_URL !== 'undefined') {
-    _gsEventQueue.push(msg);
-    if (_gsEventQueue.length > 20) _gsEventQueue = _gsEventQueue.slice(-20);
-    fetch(GAS_URL, {
-      method: 'POST',
-      headers: {'Content-Type':'text/plain'},
-      body: JSON.stringify({action:'setGameState', state:{events: _gsEventQueue}})
-    }).catch(()=>{});
-  }
-}
-
-// Cross-device polling — phones poll for host events, host polls for phone events
-// Uses a queue in GAS so no events are missed
-let _gsPollInterval = null;
-let _gsLastSeenTs = 0;
-
-function gsStartPolling() {
-  if (_gsPollInterval) return;
-  if (typeof GAS_URL === 'undefined') return;
-  _gsPollInterval = setInterval(async () => {
-    if (!GS.currentBuzzer && !GS.currentHost) { gsStopPolling(); return; }
-    try {
-      const r = await fetch(`${GAS_URL}?action=gameState&_=${Date.now()}`);
-      const j = await r.json();
-      if (!j?.state?.events) return;
-      // Process any events newer than last seen
-      const events = j.state.events;
-      for (const ev of events) {
-        if (ev.ts <= _gsLastSeenTs) continue;
-        _gsLastSeenTs = ev.ts;
-        // Route: phones only handle host→phone events, host only handles phone→host events
-        const hostToPhone = ['GAME_START','QUESTION_OPEN','QUESTION_CLOSED','BUZZ_WINNER','SHOW_CHOICES','ANSWER_RESULT','GAME_END','RANDOM_START','RANDOM_WINNER'];
-        const phoneToHost = ['TABLE_BUZZ','RANDOM_BUZZ','PHONE_ANSWER'];
-        if (GS.currentBuzzer && hostToPhone.includes(ev.event)) gsHandleBroadcast(ev);
-        if (GS.currentHost  && phoneToHost.includes(ev.event))  gsHandleBroadcast(ev);
-      }
-    } catch {}
-  }, 1000);
-}
-function gsStopPolling() {
-  clearInterval(_gsPollInterval);
-  _gsPollInterval = null;
-}
-
-window.addEventListener('storage', e => {
-  if (e.key !== GS_LS_BROADCAST) return;
-  try { gsHandleBroadcast(JSON.parse(e.newValue)); } catch {}
-});
-function gsHandleBroadcast(msg) {
-  if (!msg?.event) return;
-  const {event, data} = msg;
-  if (event === 'GAME_START'       && GS.currentBuzzer) gsActivateGame(data);
-  if (event === 'QUESTION_OPEN'    && GS.currentBuzzer) gsOnQOpen(data);
-  if (event === 'QUESTION_CLOSED'  && GS.currentBuzzer) gsOnQClosed();
-  if (event === 'BUZZ_WINNER'      && GS.currentBuzzer) gsOnBuzzWinner(data);
-  if (event === 'SHOW_CHOICES'     && GS.currentBuzzer) gsShowChoices(data);
-  if (event === 'ANSWER_RESULT'    && GS.currentBuzzer) gsOnAnswerResult(data);
-  if (event === 'GAME_END'         && GS.currentBuzzer) gsOnGameEnd();
-  if (event === 'RANDOM_START'     && GS.currentBuzzer) gsOnRandomStart(data);
-  if (event === 'RANDOM_WINNER'    && GS.currentBuzzer) gsOnRandomWinner(data);
-  if (event === 'TABLE_BUZZ'       && GS.currentHost)   gsOnTableBuzz(data);
-  if (event === 'RANDOM_BUZZ'      && GS.currentHost)   gsOnRandomBuzz(data);
-  if (event === 'PHONE_ANSWER'     && GS.currentHost)   gsOnPhoneAnswer(data);
-}
-
-// ── STORAGE ──
-function gsLoadQuizzes() {
-  try { GS.quizzes = JSON.parse(localStorage.getItem(GS_LS_QUIZZES)||'[]'); } catch { GS.quizzes=[]; }
-}
-function gsSaveQuizzes() { localStorage.setItem(GS_LS_QUIZZES, JSON.stringify(GS.quizzes)); }
-
-// ── DATA LOAD ──
-async function gsLoadFaculty() {
-  if (GS.faculty.length) return;
-  if (typeof GAS_URL === 'undefined') { console.warn('GS faculty load: GAS_URL is not defined'); return; }
-  try {
-    const r = await fetch(`${GAS_URL}?action=faculty`);
-    const j = await r.json();
-    GS.faculty = j.data || [];
-    gsPopulateWeeks();
-  } catch(e) { console.warn('GS faculty load:', e); }
-}
-
-function gsPopulateWeeks() {
-  // Use lessons already loaded by main script if available
-  const lessons = (typeof window.appLessons !== 'undefined') ? window.appLessons : (window._gsLessons || []);
-  ['gs-week-sel','gscq-week'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const cur = sel.value;
-    sel.innerHTML = id === 'gs-week-sel' ? '<option value="">— All Weeks —</option>' : '<option value="">— Select Week —</option>';
-    lessons.forEach(w => {
-      const o = document.createElement('option');
-      o.value = w['Week No'];
-      o.textContent = `Week ${w['Week No']} — ${w['Lesson Title']||''}`;
-      sel.appendChild(o);
-    });
-    if (cur) sel.value = cur;
-  });
-}
-
-async function gsLoadLessons() {
-  if (typeof GAS_URL === 'undefined') return;
-  try {
-    const r = await fetch(`${GAS_URL}?action=lessonWeeks`);
-    const j = await r.json();
-    window._gsLessons = j.data || [];
-    gsPopulateWeeks();
-  } catch {}
-}
-
-// ── HOST LOGIN ──
-function gsHostLogin() {
-  const user = document.getElementById('gsh-user').value.trim();
-  const pass = document.getElementById('gsh-pass').value.trim();
-  const err  = document.getElementById('gsh-err');
-  const btn  = document.querySelector('#s-gs-host-login .gs-btn');
-  err.style.display='none';
-  if (!user||!pass) { err.textContent='Enter username and password.'; err.style.display='block'; return; }
-  if (!GS.faculty.length) { gsLoadFaculty().then(gsHostLogin); return; }
-  btn.disabled=true; btn.textContent='Signing in…';
-  setTimeout(() => {
-    const p = GS.faculty.find(f =>
-      String(f['Username']||'').trim().toLowerCase()===user.toLowerCase() &&
-      String(f['Password']||'').trim()===pass
-    );
-    btn.disabled=false; btn.textContent='Sign in';
-    if (!p) { err.textContent='Incorrect username or password.'; err.style.display='block'; document.getElementById('gsh-pass').value=''; return; }
-    const role = (p['Role']||'').toLowerCase();
-    if (!role.includes('director') && !role.includes('consultant')) {
-      err.textContent='Director or Consultant access required.'; err.style.display='block'; return;
-    }
-    GS.currentHost = p;
-    document.getElementById('gs-host-name').textContent = p['Full Name']||'Host';
-    gsLoadQuizzes(); gsRenderQuizList();
-    gsGo('s-gs-host-home');
-    gsStartPolling(); // host also polls for phone buzzes
-  }, 100);
-}
-function gsHostLogout() { GS.currentHost=null; gsStopPolling(); _gsEventQueue=[]; gsGo('s-gs-portal'); }
-
-// ── QUIZ LIST ──
-function gsRenderQuizList() {
-  const wf = document.getElementById('gs-week-sel')?.value||'';
-  const qs = GS.quizzes.filter(q => !wf||String(q.week)===String(wf));
-  const el = document.getElementById('gs-quiz-list');
-  if (!el) return;
-  if (!qs.length) {
-    el.innerHTML = '<div class="gs-empty"><div class="ge-icon">📝</div><h3>No Quizzes Yet</h3><p>Tap ＋ to create your first quiz.</p></div>';
-    return;
-  }
-  el.innerHTML = qs.map((q,i) => `
-    <div class="gs-quiz-item">
-      <div class="gs-qi-head"><div class="gs-qi-title">${q.title||'Untitled'}</div><div class="gs-qi-badge">${q.questions?.length||0} Qs</div></div>
-      <div class="gs-qi-meta">Week ${q.week||'—'} · ${q.created?new Date(q.created).toLocaleDateString():'—'}</div>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button onclick="gsStartPresentation(${i})" style="flex:1;background:linear-gradient(135deg,#FFD700,#FFA000);border:none;border-radius:7px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;color:#000">▶ Present</button>
-        <button onclick="gsEditQuiz(${i})"          style="flex:1;background:rgba(255,255,255,0.08);border:none;border-radius:7px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;color:#fff">✏️ Edit</button>
-        <button onclick="gsDeleteQuiz(${i})"        style="background:rgba(229,57,53,0.15);border:none;border-radius:7px;padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer;color:#e53935">🗑</button>
-      </div>
-    </div>
-  `).join('');
-}
-function gsDeleteQuiz(idx) {
-  if (!confirm('Delete this quiz?')) return;
-  GS.quizzes.splice(idx,1); gsSaveQuizzes(); gsRenderQuizList(); gsToast('Quiz deleted');
-}
-
-// ── CREATE / EDIT ──
-function gsCreateQuiz() {
-  GS.editQuizIdx=-1; GS.questionCount=0;
-  document.getElementById('gscq-title').value='';
-  document.getElementById('gscq-week').value='';
-  document.getElementById('gs-questions-container').innerHTML='';
-  gsUpdateAddQBtn();
-  gsGo('s-gs-create-quiz'); gsAddQuestion();
-}
-function gsEditQuiz(idx) {
-  const q = GS.quizzes[idx]; if(!q) return;
-  GS.editQuizIdx=idx; GS.questionCount=0;
-  document.getElementById('gs-questions-container').innerHTML='';
-  document.getElementById('gscq-title').value=q.title||'';
-  document.getElementById('gscq-week').value=q.week||'';
-  q.questions.forEach(qq => {
-    gsAddQuestion();
-    const n=GS.questionCount;
-    document.getElementById(`gsq-text-${n}`).value=qq.text||'';
-    document.getElementById(`gsq-pts-${n}`).value=qq.points||100;
-    qq.choices.forEach((ch,ci) => {
-      let r=document.getElementById(`gscr-${n}-${ci}`);
-      if(!r){gsAddChoiceRow(n);r=document.getElementById(`gscr-${n}-${ci}`);}
-      const inp=document.getElementById(`gsc-text-${n}-${ci}`);
-      if(inp) inp.value=ch;
-    });
-    const radios=document.querySelectorAll(`input[name="gscorrect-${n}"]`);
-    if(radios[qq.correctIdx]) radios[qq.correctIdx].checked=true;
-  });
-  gsGo('s-gs-create-quiz');
-}
-function gsAddQuestion() {
-  if (GS.questionCount>=10) { gsToast('Max 10 questions'); return; }
-  GS.questionCount++;
-  const n=GS.questionCount;
-  const div=document.createElement('div');
-  div.className='gs-qcard'; div.id=`gsqcard-${n}`;
-  div.innerHTML=`
-    <div class="gs-qcard-head">
-      <div class="gs-qcard-num">Q${n}</div>
-      <button class="gs-qcard-del" onclick="gsRemoveQ(${n})">✕</button>
-    </div>
-    <div class="gs-form-field"><label>QUESTION TEXT</label><textarea id="gsq-text-${n}" rows="2" placeholder="Type your question…"></textarea></div>
-    <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px">Mark correct answer →</div>
-    <div id="gschoices-${n}">${['A','B','C','D'].map((l,ci)=>gsChoiceRowHTML(n,ci,l)).join('')}</div>
-    <button class="gs-add-choice" onclick="gsAddChoiceRow(${n})">＋ Add Choice</button>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-      <label style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;white-space:nowrap">POINTS:</label>
-      <input type="number" id="gsq-pts-${n}" value="100" min="50" step="50" style="width:80px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:7px 9px;color:#fff;font-size:13px;outline:none">
-    </div>`;
-  document.getElementById('gs-questions-container').appendChild(div);
-  gsUpdateAddQBtn();
-}
-function gsChoiceRowHTML(n,ci,l) {
-  return `<div class="gs-choice-row" id="gscr-${n}-${ci}">
-    <div class="gs-choice-ltr">${l}</div>
-    <input type="text" id="gsc-text-${n}-${ci}" placeholder="Choice ${l}" class="gs-choice-input" style="flex:1;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#fff;font-size:13px;outline:none">
-    <input type="radio" name="gscorrect-${n}" value="${ci}" title="Correct">
-  </div>`;
-}
-function gsAddChoiceRow(n) {
-  const cont=document.getElementById(`gschoices-${n}`);
-  const rows=cont.querySelectorAll('.gs-choice-row').length;
-  if(rows>=6){gsToast('Max 6 choices');return;}
-  const tmp=document.createElement('div');
-  tmp.innerHTML=gsChoiceRowHTML(n,rows,'ABCDEFG'[rows]);
-  cont.appendChild(tmp.firstElementChild);
-}
-function gsRemoveQ(n) {
-  const el=document.getElementById(`gsqcard-${n}`); if(el) el.remove();
-  GS.questionCount=document.querySelectorAll('.gs-qcard').length;
-  gsUpdateAddQBtn();
-}
-function gsUpdateAddQBtn() {
-  const b=document.getElementById('gs-add-q-btn');
-  if(b) b.style.display=GS.questionCount>=10?'none':'block';
-}
-function gsSaveQuiz() {
-  const title=document.getElementById('gscq-title').value.trim();
-  const week=document.getElementById('gscq-week').value;
-  if(!title){gsToast('Enter a quiz title');return;}
-  const questions=[];
-  document.querySelectorAll('.gs-qcard').forEach(card => {
-    const id=card.id.replace('gsqcard-','');
-    const text=document.getElementById(`gsq-text-${id}`)?.value?.trim();
-    if(!text) return;
-    const choices=[];
-    card.querySelectorAll('.gs-choice-row').forEach((row,ci) => {
-      const v=document.getElementById(`gsc-text-${id}-${ci}`)?.value?.trim();
-      if(v) choices.push(v);
-    });
-    const r=card.querySelector(`input[name="gscorrect-${id}"]:checked`);
-    const correctIdx=r?parseInt(r.value):0;
-    const pts=parseInt(document.getElementById(`gsq-pts-${id}`)?.value||100);
-    if(choices.length<2){gsToast(`Q${id} needs 2+ choices`);return;}
-    questions.push({text,choices,correctIdx,pts});
-  });
-  if(!questions.length){gsToast('Add at least 1 question');return;}
-  const quiz={title,week,questions,created:Date.now()};
-  if(GS.editQuizIdx>=0) GS.quizzes[GS.editQuizIdx]=quiz;
-  else GS.quizzes.unshift(quiz);
-  gsSaveQuizzes();
-  gsToast(GS.editQuizIdx>=0?'Quiz updated!':'Quiz saved!');
-  gsGo('s-gs-host-home'); gsRenderQuizList();
-}
-
-// ── PRESENTATION ENGINE ──
-// Cache for table names loaded from TABLE_GUIDES
-let gsTableNamesCache = {}; // tableNo -> name string
-
-async function gsLoadTableNames() {
-  try {
-    const r = await fetch(`${GAS_URL}?action=tableGuides`);
-    const j = await r.json();
-    (j.data || []).forEach(g => {
-      const tno = String(g['Table No']);
-      const name = String(g['Table Name'] || '').trim();
-      if (tno && name) gsTableNamesCache[tno] = name;
-    });
-  } catch(e) { /* silent — fallback to "Table X" */ }
-}
-
-function gsGetTableLabel(tableNo) {
+// ═══════════════════════════════════════════
+// TABLE NAME HELPERS
+// Returns the custom Table Name for a given table number.
+// Falls back to "Table X" if no custom name is set.
+// ═══════════════════════════════════════════
+function getTableName(tableNo) {
   if (!tableNo && tableNo !== 0) return '—';
-  // Use script1.js helper if available (same page), else use local cache
-  if (typeof getTableLabel === 'function') return getTableLabel(tableNo);
-  const name = gsTableNamesCache[String(tableNo)];
+  const guide = APP.tableGuides.find(g => String(g['Table No']) === String(tableNo));
+  return (guide && guide['Table Name'] && String(guide['Table Name']).trim())
+    ? String(guide['Table Name']).trim()
+    : null;
+}
+
+// Returns "Name | Table X" if a custom name exists, otherwise "Table X"
+function getTableLabel(tableNo) {
+  if (!tableNo && tableNo !== 0) return '—';
+  const name = getTableName(tableNo);
   return name ? `${name} | Table ${tableNo}` : `Table ${tableNo}`;
 }
 
-async function gsGetTables() {
-  try {
-    const stored=localStorage.getItem('gs_tables_v2');
-    if(stored) return JSON.parse(stored);
-    const r=await fetch(`${GAS_URL}?action=students`);
-    const j=await r.json();
-    const tables=[...new Set((j.data||[]).map(s=>String(s['Table No'])).filter(Boolean))];
-    localStorage.setItem('gs_tables_v2',JSON.stringify(tables));
-    return tables;
-  } catch { return ['1','2','3','4','5']; }
-}
-async function gsGetTableStudents(tableNo) {
-  try {
-    const r=await fetch(`${GAS_URL}?action=students`);
-    const j=await r.json();
-    return (j.data||[]).filter(s=>String(s['Table No'])===String(tableNo)&&(s['Status']||'Active').toLowerCase()!=='dropped');
-  } catch { return []; }
+// ═══════════════════════════════════════════
+// ATTENDANCE TIME RULES
+// 1:00 PM - 1:44 PM = Present
+// 1:45 PM - 2:29 PM = Late
+// 2:30 PM onwards   = Absent
+// ═══════════════════════════════════════════
+function getAttendanceStatusByTime() {
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const totalMin = h * 60 + m;
+  const t_100 = 13 * 60 + 0;   // 1:00 PM
+  const t_144 = 13 * 60 + 44;  // 1:44 PM
+  const t_145 = 13 * 60 + 45;  // 1:45 PM
+  const t_229 = 14 * 60 + 29;  // 2:29 PM
+  const t_230 = 14 * 60 + 30;  // 2:30 PM
+
+  if (totalMin >= t_100 && totalMin <= t_144) return 'Present';
+  if (totalMin >= t_145 && totalMin <= t_229) return 'Late';
+  if (totalMin >= t_230) return 'Absent';
+  // Before 1:00 PM, treat as Present (early) 
+  return 'Present';
 }
 
-async function gsStartPresentation(idx) {
-  const quiz=GS.quizzes[idx];
-  if(!quiz?.questions?.length){gsToast('No questions in quiz');return;}
-  GS.activeQuiz=quiz; GS.currentQIdx=0; GS.tableScores={}; GS.buzzOrder=[];
-  GS.buzzWinner=null; GS.questionOpen=false; GS.answerRevealed=false;
-  _gsEventQueue=[]; // clear event queue for new game
-  const tables=await gsGetTables();
-  tables.forEach(t=>{GS.tableScores[String(t)]=0;});
-  document.getElementById('gp-quiz-title').textContent=quiz.title;
-  document.getElementById('gp-quiz-sub').textContent=`Week ${quiz.week||'—'}`;
-  document.getElementById('gp-q-total').textContent=quiz.questions.length;
-  gsBroadcast('GAME_START',{quizTitle:quiz.title,quizWeek:quiz.week,totalQs:quiz.questions.length});
-  gsGo('s-gs-presentation');
-  gsPlayIntro(() => { gsRenderPresentationQ(); });
+function getAttendanceAlertMessage(status) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  if (status === 'Present') return `✅ PRESENT — Scanned at ${timeStr}\n(1:00 PM – 1:44 PM window)`;
+  if (status === 'Late')    return `⏰ LATE — Scanned at ${timeStr}\n(1:45 PM – 2:29 PM window)\n⚠️ 3 unexcused tardiness = 1 Absent`;
+  if (status === 'Absent')  return `❌ ABSENT — Scanned at ${timeStr}\n(After 2:30 PM)\n⚠️ 3 unexcused absences = Drop`;
+  return '';
 }
-function gsRenderPresentationQ() {
-  const q=GS.activeQuiz.questions[GS.currentQIdx];
-  GS.buzzOrder=[]; GS.buzzWinner=null; GS.answerRevealed=false;
-  document.getElementById('gp-q-num').textContent=GS.currentQIdx+1;
-  document.getElementById('gp-q-label').textContent=`QUESTION ${GS.currentQIdx+1}`;
-  document.getElementById('gp-q-text').textContent=q.text;
-  document.getElementById('gp-choices').innerHTML=q.choices.map((c,i)=>`
-    <div class="gp-choice" id="gpc-${i}">
-      <div class="gpc-ltr">${'ABCDEFG'[i]}</div>
-      <div class="gpc-txt">${c}</div>
-    </div>`).join('');
-  gsRenderTables();
-  document.getElementById('gpbtn-correct').disabled=true;
-  document.getElementById('gpbtn-wrong').disabled=true;
-  document.getElementById('gpbtn-reveal').disabled=false;
-  document.getElementById('gpbtn-next').textContent=GS.currentQIdx>=GS.activeQuiz.questions.length-1?'Finish 🏁':'Next ▶';
-  // Open buzzer window — countdown starts only when a table buzzes in
-  GS.questionOpen=true; GS.cdSec=120; gsUpdateCD(120);
-  gsBroadcast('QUESTION_OPEN',{qIdx:GS.currentQIdx,qText:q.text,choices:q.choices,pts:q.pts});
+
+// ═══════════════════════════════════════════
+// DEVOTIONAL HELPERS — stored locally
+// SOL2 devotional program = 20 weeks (140 days), grouped into 2 modules
+// of 10 weeks each: Module 1 = Weeks 1-10, Module 2 = Weeks 11-20.
+// ═══════════════════════════════════════════
+const DEVOTIONAL_KEY_PREFIX = 'lc_devot_';
+const TOTAL_DEVOTIONAL_DAYS = 140;
+const DEVOTIONAL_WEEKS_PER_MODULE = 10;
+const TOTAL_DEVOTIONAL_WEEKS = 20;
+const DEVOTIONAL_DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+// Given a day number (1-140), return { week, module, dayName }
+function getDevotionalDayInfo(day) {
+  const week = Math.ceil(day / 7);
+  const module = Math.ceil(week / DEVOTIONAL_WEEKS_PER_MODULE);
+  const dayName = DEVOTIONAL_DAY_NAMES[(day - 1) % 7];
+  return { week, module, dayName };
 }
-function gsRenderTables() {
-  document.getElementById('gp-tables').innerHTML=Object.keys(GS.tableScores).sort((a,b)=>parseInt(a)-parseInt(b)).map(t=>{
-    const c=gsTableColor(t);
-    return `<div class="gp-chip idle" id="gpc-t${t}" style="background:${c.bg}22;border-color:${c.border}44;color:${c.label}">
-      <div class="gcc-num">T${t}</div>
-      <div id="gpc-lc-${t}">${GS.tableScores[t]||0} pts</div></div>`;
-  }).join('');
-}
-function gsUpdateChip(t,state) {
-  const chip=document.getElementById(`gpc-t${t}`); if(!chip) return;
-  const c=gsTableColor(t);
-  chip.className='gp-chip '+state;
-  if(state==='buzzed'){chip.style.background=c.bg;chip.style.borderColor=c.border;chip.style.color=c.label;}
-  else if(state==='idle'){chip.style.background=c.bg+'22';chip.style.borderColor=c.border+'44';chip.style.color=c.label;}
-  else if(state==='dark'){chip.style.background='rgba(255,255,255,0.01)';chip.style.borderColor='rgba(255,255,255,0.03)';chip.style.color='rgba(255,255,255,0.15)';}
-  else if(state==='correct'){chip.style.background='rgba(46,125,50,0.25)';chip.style.borderColor='#4caf50';chip.style.color='#81c784';}
-  else if(state==='wrong'){chip.style.background='rgba(229,57,53,0.1)';chip.style.borderColor='rgba(229,57,53,0.3)';chip.style.color='#e57373';}
-  else if(state==='timeout'){chip.style.background='rgba(80,80,80,0.15)';chip.style.borderColor='rgba(255,255,255,0.08)';chip.style.color='rgba(255,255,255,0.25)';}
-  const lc=document.getElementById(`gpc-lc-${t}`); if(lc) lc.textContent=(GS.tableScores[t]||0)+' LC';
-}
-function gsStartCountdown() {
-  // NOTE: GS.questionOpen is managed by the caller — don't override it here
-  GS.cdSec=120; gsUpdateCD(120);
-  clearInterval(GS.cdInterval);
-  GS.cdInterval=setInterval(()=>{
-    GS.cdSec--;
-    gsUpdateCD(GS.cdSec);
-    if(GS.cdSec<=0){
-      clearInterval(GS.cdInterval); GS.questionOpen=false;
-      // Mark all tables that haven't buzzed as timeout
-      Object.keys(GS.tableScores).forEach(t=>{
-        if(!GS.buzzOrder.includes(String(t))) gsUpdateChip(t,'timeout');
-      });
-      gsShowTimeUp();
-      gsBroadcast('QUESTION_CLOSED',{});
+
+// ── Devotionals (synced to Google Sheets) ───────────────────
+function loadDevotionalsFromSheet(sheetRows) {
+  APP.students.forEach(s => { APP.devotionals[s['Student ID']] = new Set(); });
+  (sheetRows || []).forEach(row => {
+    const sid = String(row['Student ID'] || '');
+    const day = Number(row['Day No']);
+    if (sid && day && (row['Completed'] === 'Yes' || row['Completed'] === true)) {
+      if (!APP.devotionals[sid]) APP.devotionals[sid] = new Set();
+      APP.devotionals[sid].add(day);
     }
-  },1000);
-}
-function gsUpdateCD(s) {
-  // Keep hidden element in sync
-  const n=document.getElementById('gp-cd-num'); if(n) n.textContent=s;
-  // Sync phone choices countdown ring
-  const pNum=document.getElementById('gsbc-cd-num');
-  const pCirc=document.getElementById('gsbc-cd-circle');
-  if(pNum) { pNum.textContent=s; pNum.style.color=s<=2?'#e53935':'#FFD700'; }
-  if(pCirc) { const d=125.7; pCirc.style.strokeDashoffset=d*(1-s/5); pCirc.style.stroke=s<=2?'#e53935':'#FFD700'; }
-}
-// ── GAME INTRO OVERLAY ──
-function gsPlayIntro(onDone) {
-  const overlay = document.getElementById('gs-intro-overlay');
-  const msgEl   = document.getElementById('gs-intro-msg');
-  const cdEl    = document.getElementById('gs-intro-countdown');
-  if (!overlay) { onDone(); return; }
-
-  const messages = [
-    "Are you ready, mga ka LC? 🎉",
-    "Did you review your lessons?",
-    "Let's see if you truly did — it's time to answer!"
-  ];
-
-  overlay.style.display = 'flex';
-  cdEl.style.display = 'none';
-  let step = 0;
-
-  function showMsg(text, duration, next) {
-    msgEl.style.opacity = '0';
-    msgEl.style.transform = 'scale(0.85)';
-    msgEl.textContent = text;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      msgEl.style.opacity = '1';
-      msgEl.style.transform = 'scale(1)';
-    }));
-    setTimeout(() => {
-      msgEl.style.opacity = '0';
-      msgEl.style.transform = 'scale(0.85)';
-      setTimeout(next, 400);
-    }, duration);
-  }
-
-  function runMessages() {
-    if (step < messages.length) {
-      showMsg(messages[step], step === messages.length - 1 ? 1800 : 1500, () => { step++; runMessages(); });
-    } else {
-      runCountdown();
-    }
-  }
-
-  function runCountdown() {
-    msgEl.style.opacity = '0';
-    cdEl.style.display = 'block';
-    const nums = [3, 2, 1, '🚀 GO!'];
-    let i = 0;
-    function tick() {
-      if (i >= nums.length) {
-        cdEl.style.opacity = '0';
-        cdEl.style.transform = 'scale(0.5)';
-        setTimeout(() => { overlay.style.display = 'none'; onDone(); }, 350);
-        return;
-      }
-      cdEl.style.opacity = '0';
-      cdEl.style.transform = 'scale(0.5)';
-      cdEl.textContent = nums[i];
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        cdEl.style.opacity = '1';
-        cdEl.style.transform = 'scale(1)';
-      }));
-      i++;
-      setTimeout(tick, i <= 3 ? 900 : 700);
-    }
-    tick();
-  }
-
-  runMessages();
-}
-
-// ── IT'S YOUR CHANCE OVERLAY ──
-function gsPlayChanceOverlay(onDone) {
-  const overlay = document.getElementById('gs-chance-overlay');
-  const msgEl   = document.getElementById('gs-chance-msg');
-  const cdEl    = document.getElementById('gs-chance-countdown');
-  if (!overlay) { onDone(); return; }
-
-  overlay.style.display = 'flex';
-  cdEl.style.display = 'none';
-  msgEl.style.opacity = '0';
-  msgEl.textContent = "It's your chance, everyone! 💪\nPress that buzzer if you know the answer!";
-
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    msgEl.style.opacity = '1';
-  }));
-
-  setTimeout(() => {
-    cdEl.style.display = 'block';
-    const nums = [3, 2, 1, '🔔 GO!'];
-    let i = 0;
-    function tick() {
-      if (i >= nums.length) {
-        cdEl.style.opacity = '0';
-        cdEl.style.transform = 'scale(0.5)';
-        setTimeout(() => { overlay.style.display = 'none'; onDone(); }, 350);
-        return;
-      }
-      cdEl.style.opacity = '0';
-      cdEl.style.transform = 'scale(0.5)';
-      cdEl.textContent = nums[i];
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        cdEl.style.opacity = '1';
-        cdEl.style.transform = 'scale(1)';
-      }));
-      i++;
-      setTimeout(tick, i <= 3 ? 900 : 700);
-    }
-    tick();
-  }, 1800);
-}
-
-function gsShowTimeUp() {
-  const b=document.getElementById('gp-result');
-  b.className='gp-result-banner show wrong-bg';
-  document.getElementById('gp-rb-icon').textContent='⏰';
-  document.getElementById('gp-rb-title').textContent="Time's Up!";
-  document.getElementById('gp-rb-sub').textContent='No table buzzed in time. Revealing answer…';
-  setTimeout(()=>{ gsDismissResult(); gsReveal(); }, 2000);
-}
-function gsOnTableBuzz(data) {
-  const {tableNo}=data;
-  if(!GS.questionOpen) return;
-  if(GS.buzzOrder.includes(String(tableNo))) return;
-  GS.buzzOrder.push(String(tableNo));
-  if(!GS.buzzWinner) {
-    GS.buzzWinner=String(tableNo);
-    clearInterval(GS.cdInterval); GS.questionOpen=false;
-    gsStartCountdown(); // NOW start the 5-second answer countdown
-    Object.keys(GS.tableScores).forEach(t=>gsUpdateChip(t,t===String(tableNo)?'buzzed':'dark'));
-    document.getElementById('gpbtn-correct').disabled=false;
-    document.getElementById('gpbtn-wrong').disabled=false;
-    const q=GS.activeQuiz.questions[GS.currentQIdx];
-    gsBroadcast('SHOW_CHOICES',{tableNo:String(tableNo),qText:q.text,choices:q.choices,correctIdx:q.correctIdx,pts:q.pts||100,secs:GS.cdSec||5});
-    gsBroadcast('BUZZ_WINNER',{tableNo:String(tableNo)});
-    // Show AMEN ALERT
-    gsAmenAlert(tableNo);
-  }
-}
-function gsOnPhoneAnswer(data) {
-  // Auto-judge when the winning table submits their answer from phone
-  if(!GS.buzzWinner || String(data.tableNo) !== String(GS.buzzWinner)) return;
-  gsJudge(data.correct);
-}
-function gsReveal() {
-  const q=GS.activeQuiz.questions[GS.currentQIdx];
-  clearInterval(GS.cdInterval); GS.questionOpen=false; GS.answerRevealed=true;
-  document.querySelectorAll('.gp-choice').forEach((el,i)=>{el.className='gp-choice '+(i===q.correctIdx?'correct':'wrong');});
-  document.getElementById('gpbtn-reveal').disabled=true;
-  gsBroadcast('QUESTION_CLOSED',{});
-}
-function gsJudge(correct) {
-  if(!GS.buzzWinner) return;
-  const q=GS.activeQuiz.questions[GS.currentQIdx];
-  const t=GS.buzzWinner;
-  const pts=q.pts||100;
-  gsBroadcast('ANSWER_RESULT',{tableNo:t,correct,correctIdx:q.correctIdx,pts});
-  if(correct) {
-    GS.tableScores[t]=(GS.tableScores[t]||0)+pts;
-    gsUpdateChip(t,'correct');
-    Object.keys(GS.tableScores).forEach(tt=>{if(tt!==t)gsUpdateChip(tt,'idle');});
-    gsShowResult(true,t,pts);
-    document.querySelectorAll('.gp-choice').forEach((el,i)=>{el.className='gp-choice '+(i===q.correctIdx?'correct':'');});
-    gsAwardTablePoints(t,pts,`Game Show — ${GS.activeQuiz.title} Q${GS.currentQIdx+1}`);
-  } else {
-    gsUpdateChip(t,'wrong');
-    const remaining=Object.keys(GS.tableScores).filter(tt=>tt!==t&&!GS.buzzOrder.includes(tt));
-    if(remaining.length>0){
-      remaining.forEach(tt=>gsUpdateChip(tt,'idle'));
-      GS.buzzWinner=null;
-      // Store pending resume so countdown starts only after banner is dismissed
-      GS._pendingResume = true;
-    } else { gsReveal(); GS._pendingResume = false; }
-    document.getElementById('gpbtn-correct').disabled=true;
-    document.getElementById('gpbtn-wrong').disabled=true;
-    gsShowResult(false,t,0);
-  }
-}
-function gsShowResult(correct,t,pts) {
-  const b=document.getElementById('gp-result');
-  b.className='gp-result-banner show '+(correct?'correct-bg':'wrong-bg');
-  document.getElementById('gp-rb-icon').textContent=correct?'✅':'❌';
-  document.getElementById('gp-rb-title').textContent=correct?`${gsGetTableLabel(t)} — CORRECT!`:`${gsGetTableLabel(t)} — WRONG!`;
-  document.getElementById('gp-rb-sub').textContent=correct?`+${pts} Points awarded! 🎉`:'Other tables can buzz in…';
-  if(correct) gsFireworks();
-}
-function gsDismissResult() {
-  document.getElementById('gp-result').className='gp-result-banner';
-  if(GS._pendingResume) {
-    GS._pendingResume = false;
-    gsPlayChanceOverlay(() => {
-      GS.questionOpen=true;
-      GS.cdSec=5; gsUpdateCD(5); // reset ring, but don't tick yet
-      const qd=GS.activeQuiz.questions[GS.currentQIdx];
-      gsBroadcast('QUESTION_OPEN',{qIdx:GS.currentQIdx,qText:qd.text,choices:qd.choices,pts:qd.pts,resume:true,wrongTables:[...GS.buzzOrder]});
-    });
-  }
-}
-function gsNextQ() {
-  if(!GS.activeQuiz) return;
-  gsDismissResult(); clearInterval(GS.cdInterval);
-  GS.currentQIdx++;
-  if(GS.currentQIdx>=GS.activeQuiz.questions.length){gsEndGame();return;}
-  gsRenderPresentationQ();
-}
-function gsEndGame() {
-  gsBroadcast('GAME_END',{scores:GS.tableScores});
-  const scores=Object.entries(GS.tableScores).sort((a,b)=>b[1]-a[1]);
-  document.getElementById('gs-final-label').textContent=GS.activeQuiz?.title||'Game Over';
-  const medals=['🥇','🥈','🥉'];
-  document.getElementById('gs-final-scoreboard').innerHTML=scores.map(([t,pts],i)=>{
-    const c=gsTableColor(t);
-    return `<div class="gs-score-row" style="border-color:${i===0?'#FFD700':'rgba(255,255,255,0.07)'}">
-      <div class="gs-rank">${medals[i]||'#'+(i+1)}</div>
-      <div class="gs-score-info"><div class="gs-si-name" style="color:${c.label}">${gsGetTableLabel(t)}</div><div class="gs-si-pts">${pts} Points earned</div></div>
-      <div class="gs-score-pts">${pts}</div>
-    </div>`;
-  }).join('');
-  gsGo('s-gs-final-scores'); gsFireworks();
-}
-function gsExitPresentation() { clearInterval(GS.cdInterval); GS.activeQuiz=null; GS.questionOpen=false; gsGo('s-gs-host-home'); }
-
-async function gsAwardTablePoints(tableNo,pts,reason) {
-  try {
-    // ONE record per table — not per individual student
-    await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'addCredit',studentId:`TABLE-${tableNo}`,studentName:`${gsGetTableLabel(tableNo)}`,
-        tableNo,weekNo:GS.activeQuiz?.week||1,reason,creditsAdded:pts,addedBy:GS.currentHost?.['Full Name']||'Game Show'})});
-    gsToast(`✅ ${pts} LC awarded to ${gsGetTableLabel(tableNo)}`);
-  } catch(e) { gsToast('⚠️ Points failed: '+e.message); }
-}
-
-// ── RANDOM ROUND ──
-function gsStartRandom() {
-  const cred=parseInt(document.getElementById('gsrq-credits').value)||100;
-  GS.randomPoints=cred; GS.randomBuzzOrder=[]; GS.randomWinner=null;
-  document.getElementById('gs-random-winner-actions').style.display='none';
-  document.getElementById('gs-random-buzz-list').innerHTML='<div class="gs-empty" style="padding:14px 0"><div class="ge-icon">⏳</div><p>Waiting for tables to buzz in…</p></div>';
-  gsBroadcast('RANDOM_START',{credits:cred});
-  gsToast('🎲 Random round started!');
-}
-function gsOnRandomBuzz(data) {
-  const {tableNo,ts}=data;
-  if(GS.randomBuzzOrder.some(b=>String(b.tableNo)===String(tableNo))) return;
-  GS.randomBuzzOrder.push({tableNo:String(tableNo),ts});
-  if(GS.randomBuzzOrder.length===1) {
-    GS.randomWinner=String(tableNo);
-    gsBroadcast('RANDOM_WINNER',{tableNo:String(tableNo)});
-    gsAmenAlert(tableNo);
-  }
-  const list=document.getElementById('gs-random-buzz-list');
-  list.innerHTML=GS.randomBuzzOrder.map((b,i)=>`
-    <div class="gs-tbl-row ${i===0?'tbl-first':''}">
-      <div class="gtr-name">${i===0?'🏆 ':''}${gsGetTableLabel(b.tableNo)}</div>
-      <div class="gtr-time">${i===0?'FIRST!':''}</div>
-    </div>`).join('');
-  document.getElementById('gs-random-winner-actions').style.display='block';
-}
-async function gsAwardRandomTable() {
-  if(!GS.randomWinner) return;
-  const tableNo = GS.randomWinner;
-  const pts = GS.randomPoints;
-  // Step 1: Award table as ONE record
-  await gsAwardTablePoints(tableNo, pts, `Random Q (Game Show) — ${gsGetTableLabel(tableNo)}`);
-  // Step 2: Show student picker so director can also credit the individual who answered
-  const students = await gsGetTableStudents(tableNo);
-  document.getElementById('gs-award-table-label').textContent = `${gsGetTableLabel(tableNo)} — who answered?`;
-  const listEl = document.getElementById('gs-student-list');
-  if (!students.length) {
-    listEl.innerHTML = '<p style="color:rgba(255,255,255,0.5);text-align:center;padding:20px">No students found for this table.</p>';
-  } else {
-    GS._awardStudents = students;
-    listEl.innerHTML = students.map((s, i) => `
-      <button class="gs-stu-btn" onclick="gsAwardIndividual(${i})">
-        <div style="font-size:14px;font-weight:700">${s['Full Name'] || '—'}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">${s['Student ID'] || ''}</div>
-      </button>`).join('');
-  }
-  gsGo('s-gs-award-student');
-}
-
-async function gsAwardIndividual(idx) {
-  const s = GS._awardStudents ? GS._awardStudents[idx] : null;
-  if (!s) { gsToast('❌ Student not found'); return; }
-  const pts = GS.randomPoints;
-  const tableNo = GS.randomWinner;
-  try {
-    await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({
-        action: 'addCredit',
-        studentId: s['Student ID'],
-        studentName: s['Full Name'],
-        tableNo,
-        weekNo: 1,
-        reason: `Random Q (Game Show) — answered by ${s['Full Name']}`,
-        creditsAdded: pts,
-        addedBy: GS.currentHost?.['Full Name'] || 'Game Show'
-      })});
-    gsToast(`✅ +${pts} LC also credited to ${s['Full Name']}!`);
-  } catch(e) {
-    gsToast('⚠️ Individual credit failed: ' + e.message);
-  }
-  gsClearRandom();
-  gsGo('s-gs-host-home');
-}
-function gsClearRandom() {
-  GS.randomBuzzOrder=[]; GS.randomWinner=null;
-  document.getElementById('gs-random-buzz-list').innerHTML='<div class="gs-empty" style="padding:14px 0"><div class="ge-icon">⏳</div><p>Start a round to see who buzzes first</p></div>';
-  document.getElementById('gs-random-winner-actions').style.display='none';
-}
-
-// ── BUZZER AUTH ──
-function gsBuzzerLogin() {
-  const user=document.getElementById('gsb-user').value.trim();
-  const pass=document.getElementById('gsb-pass').value.trim();
-  const err=document.getElementById('gsb-err');
-  const btn=document.querySelector('#s-gs-buzzer-login .gs-btn');
-  err.style.display='none';
-  if(!user||!pass){err.textContent='Enter username and password.';err.style.display='block';return;}
-  if(!GS.faculty.length){gsLoadFaculty().then(gsBuzzerLogin);return;}
-  btn.disabled=true; btn.textContent='Signing in…';
-  setTimeout(()=>{
-    const p=GS.faculty.find(f=>String(f['Username']||'').trim().toLowerCase()===user.toLowerCase()&&String(f['Password']||'').trim()===pass);
-    btn.disabled=false; btn.textContent='Sign in';
-    if(!p){err.textContent='Incorrect username or password.';err.style.display='block';document.getElementById('gsb-pass').value='';return;}
-    GS.currentBuzzer=p;
-    const t=p['Table Assigned']||'—';
-    document.getElementById('gs-buz-table').textContent=gsGetTableLabel(t);
-    document.getElementById('gs-buz-name').textContent=p['Full Name']||'';
-    gsGo('s-gs-buzzer-home');
-    gsStartPolling(); // start cross-device sync
-    gsCheckExistingGame(); // immediately check if a game is already active
-  },100);
-}
-function gsBuzzerLogout(){GS.currentBuzzer=null;gsStopPolling();gsGo('s-gs-portal');}
-
-// Check if a game is already running when the phone logs in late
-async function gsCheckExistingGame() {
-  if (typeof GAS_URL === 'undefined') return;
-  try {
-    const r = await fetch(`${GAS_URL}?action=gameState&_=${Date.now()}`);
-    const j = await r.json();
-    if (!j?.state?.events?.length) return;
-    const events = j.state.events;
-    // Replay events in order so the phone catches up to the current state
-    _gsLastSeenTs = 0;
-    for (const ev of events) {
-      if (ev.ts <= _gsLastSeenTs) continue;
-      _gsLastSeenTs = ev.ts;
-      const hostToPhone = ['GAME_START','QUESTION_OPEN','QUESTION_CLOSED','BUZZ_WINNER','SHOW_CHOICES','ANSWER_RESULT','GAME_END','RANDOM_START','RANDOM_WINNER'];
-      if (hostToPhone.includes(ev.event)) gsHandleBroadcast(ev);
-    }
-  } catch(e) { console.warn('gsCheckExistingGame error:', e); }
-}
-
-// ── BUZZER GAME EVENTS ──
-function gsActivateGame(data) {
-  const t=GS.currentBuzzer?.['Table Assigned']||'—';
-  const c=gsTableColor(t);
-  document.getElementById('gsbg-table').textContent=gsGetTableLabel(t);
-  document.getElementById('gsbg-q-label').textContent=`Game: ${data.quizTitle}`;
-  document.getElementById('gsbg-score').textContent='0';
-  document.getElementById('gsbc-score').textContent='0';
-  const btn=document.getElementById('gs-big-buzzer');
-  if(btn){btn.style.background=`linear-gradient(135deg,${c.bg},${c.bg}cc)`;btn.style.borderColor=c.border;btn.style.color=c.label;btn.style.boxShadow=`0 0 35px ${c.bg}88`;}
-  gsSetBuzzState('Press to Buzz In!','Wait for the question…');
-  gsGo('s-gs-buzzer-game');
-}
-function gsOnQOpen(data) {
-  const t=String(GS.currentBuzzer?.['Table Assigned']||'');
-  if(data.resume && data.wrongTables && Array.isArray(data.wrongTables)) {
-    GS.buzzOrder=[...data.wrongTables]; // sync eliminated tables from host
-  } else if(!data.resume) {
-    GS.buzzOrder=[]; // fresh question — clear eliminations
-    const btn=document.getElementById('gs-big-buzzer'); if(btn){btn.disabled=false;}
-  }
-  if(GS.buzzOrder.includes(t)) return;
-  gsSetBuzzState(`Question ${data.qIdx+1} — buzz in!`,'Be the first!');
-  const btn=document.getElementById('gs-big-buzzer'); if(btn){btn.style.opacity='1';btn.disabled=false;}
-  if(document.getElementById('s-gs-buzzer-choices').classList.contains('active')) gsGo('s-gs-buzzer-game');
-}
-function gsOnQClosed(){
-  // If this phone is currently on the choices screen, it buzzed but ran out of time
-  if(document.getElementById('s-gs-buzzer-choices').classList.contains('active')) {
-    gsPhoneShowTimeUp();
-  } else {
-    gsSetBuzzState('Round Closed','Wait for next question…');
-  }
-}
-function gsOnBuzzWinner(data) {
-  const my=String(GS.currentBuzzer?.['Table Assigned']||'');
-  if(data.tableNo===my){gsSetBuzzState('🔔 YOU BUZZED!','Choose your answer!');}
-  else{gsSetBuzzState(`${gsGetTableLabel(data.tableNo)} buzzed first!`,'Wait…');const btn=document.getElementById('gs-big-buzzer');if(btn)btn.style.opacity='0.3';}
-}
-function gsShowChoices(data) {
-  const my=String(GS.currentBuzzer?.['Table Assigned']||'');
-  if(data.tableNo!==my) return;
-  document.getElementById('gsbc-table').textContent=gsGetTableLabel(my);
-  document.getElementById('gs-phone-q').textContent=data.qText;
-  const colors=['#c62828','#1565c0','#2e7d32','#f57f17','#6a1b9a','#00695c'];
-  document.getElementById('gs-phone-choices-list').innerHTML=data.choices.map((c,i)=>`
-    <button class="gs-pchoice" style="background:${colors[i%colors.length]};color:#fff" onclick="gsPhoneAnswer(${i},${data.correctIdx},${data.pts||100})">
-      <div class="gpc-l">${'ABCDEFG'[i]}</div>${c}
-    </button>`).join('');
-  gsGo('s-gs-buzzer-choices');
-  // Start local countdown on the phone
-  gsPhoneStartCD(data.secs||120);
-}
-function gsPhoneStartCD(secs) {
-  clearInterval(GS.phoneCdInterval);
-  GS.phoneCdSec = secs;
-  gsPhoneUpdateCD(secs);
-  // Hide any previous time's up overlay
-  const overlay = document.getElementById('gsbc-timeup-overlay');
-  if (overlay) { overlay.style.display = 'none'; }
-  GS.phoneCdInterval = setInterval(()=>{
-    GS.phoneCdSec--;
-    gsPhoneUpdateCD(GS.phoneCdSec);
-    if(GS.phoneCdSec <= 0) {
-      clearInterval(GS.phoneCdInterval);
-      // Show Time's Up on this phone (it buzzed but didn't answer in time)
-      gsPhoneShowTimeUp();
-    }
-  }, 1000);
-}
-function gsPhoneShowTimeUp() {
-  clearInterval(GS.phoneCdInterval);
-  const overlay = document.getElementById('gsbc-timeup-overlay');
-  if (overlay) { overlay.style.display = 'flex'; }
-  // Disable all choice buttons so they can't answer after time
-  document.querySelectorAll('.gs-pchoice').forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
-  // Auto-dismiss after 2.5s and go back to buzzer screen
-  setTimeout(() => {
-    if (overlay) overlay.style.display = 'none';
-    if (document.getElementById('s-gs-buzzer-choices').classList.contains('active')) gsGo('s-gs-buzzer-game');
-  }, 2500);
-}
-function gsPhoneUpdateCD(s) {
-  const num = document.getElementById('gsbc-cd-num');
-  const circ = document.getElementById('gsbc-cd-circle');
-  if(num) { num.textContent = s < 0 ? 0 : s; num.style.color = s<=2 ? '#e53935' : '#FFD700'; }
-  if(circ) { const d=125.7; circ.style.strokeDashoffset=d*(1-Math.max(s,0)/5); circ.style.stroke=s<=2?'#e53935':'#FFD700'; }
-}
-function gsPhoneAnswer(chosen,correct,pts) {
-  clearInterval(GS.phoneCdInterval);
-  document.querySelectorAll('.gs-pchoice').forEach(b=>b.classList.add('answered'));
-  const isOk=chosen===correct;
-  document.querySelectorAll('.gs-pchoice').forEach((b,i)=>{
-    if(i===correct)b.classList.add('correct-ans');
-    else if(i===chosen&&!isOk)b.classList.add('wrong-ans');
   });
-  gsBroadcast('PHONE_ANSWER',{tableNo:String(GS.currentBuzzer?.['Table Assigned']||''),chosen,correct:isOk});
-  gsToast(isOk?'✅ That looks correct!':'❌ Hmm…');
 }
-function gsOnAnswerResult(data) {
-  const my=String(GS.currentBuzzer?.['Table Assigned']||'');
-  if(data.tableNo===my) {
-    if(data.correct) {
-      const s=parseInt(document.getElementById('gsbg-score')?.textContent||0)+(data.pts||0);
-      document.getElementById('gsbg-score').textContent=s;
-      document.getElementById('gsbc-score').textContent=s;
-      gsToast(`✅ Correct! +${data.pts} LC`);
-    } else {
-      gsToast('❌ Wrong — other tables can try.');
-      // Lock this table's buzzer for the rest of this question
-      const btn=document.getElementById('gs-big-buzzer');
-      if(btn){btn.style.opacity='0.3';btn.disabled=true;}
-      gsSetBuzzState('❌ Eliminated','Your table answered wrong for this question.');
+
+// Fallback: load from localStorage (legacy / offline)
+function loadDevotionalsLocal() {
+  APP.students.forEach(s => {
+    if (APP.devotionals[s['Student ID']] && APP.devotionals[s['Student ID']].size > 0) return;
+    const key = DEVOTIONAL_KEY_PREFIX + s['Student ID'];
+    try {
+      const saved = localStorage.getItem(key);
+      APP.devotionals[s['Student ID']] = saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch(e) { APP.devotionals[s['Student ID']] = new Set(); }
+  });
+}
+
+async function saveDevotional(studentId, day, checked) {
+  if (!APP.devotionals[studentId]) APP.devotionals[studentId] = new Set();
+  if (checked) APP.devotionals[studentId].add(day);
+  else APP.devotionals[studentId].delete(day);
+  // local backup
+  try { localStorage.setItem(DEVOTIONAL_KEY_PREFIX + studentId, JSON.stringify([...APP.devotionals[studentId]])); } catch(e) {}
+  // sync to sheet
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  try {
+    await apiPost({ action: 'toggleDevotional', studentId, studentName: student?.['Full Name'] || '', tableNo: student?.['Table No'] || '', dayNo: day, completed: checked, markedBy: APP.currentFaculty?.['Full Name'] || '' });
+  } catch(e) { console.warn('Devotional sync failed:', e); }
+}
+
+function getDevotionalCount(studentId) {
+  return APP.devotionals[studentId] ? APP.devotionals[studentId].size : 0;
+}
+
+// ═══════════════════════════════════════════
+// TEAM GAMES — LEVEL CHALLENGE
+// 10 levels of real-life quests, 3 quests per level. A table guide
+// checks a quest off after a student actually completes it; finishing
+// all 3 quests in a level unlocks the next one. Level 10 is the grand
+// finale — the "prize" is handed out in person at the closing program,
+// there is no in-app reward.
+// ═══════════════════════════════════════════
+const QUEST_KEY_PREFIX = 'lc_quest_';
+const TOTAL_LEVELS = 10;
+const LEVEL_NAMES = {
+  1: 'Getting Started',
+  2: 'Daily Growth',
+  3: 'Building Community',
+  4: 'Serving Others',
+  5: 'Sharing Faith',
+  6: 'Growing Deeper',
+  7: 'Discipleship',
+  8: 'Leadership',
+  9: 'Kingdom Impact',
+  10: 'Mission Complete',
+};
+const QUESTS = {
+  // NOTE: kept in sync with the Student app's QUESTS (student/js/student.js).
+  // Level 1 was changed to 2 quests (video testimony + watch video) — if this
+  // list ever drifts from the Student app's again, the Faculty app will show
+  // the wrong "Level X/10" and wrong total quest counts for every student.
+  1: [
+    { icon:'🎥', type:'upload', title:'Create or upload a video testimony (at least 2 minutes long) sharing how God has worked in your life.' },
+    { icon:'▶️', type:'watch',  title:'Watch the assigned video to prepare for the upcoming lessons in Module 1 (Lessons 1 and 2).' },
+  ],
+  2: [
+    { icon:'▶️', type:'watch',       title:'Watch the assigned video for Level 2.' },
+    { icon:'📸', type:'photoUpload', title:'Submit a photo of your LifeGroup (or a photo with your LifeGroup).' },
+  ],
+  // Levels 3–10: placeholder only, on purpose — the Director/Consultant
+  // hasn't decided these tasks yet. Kept to exactly one lightweight task
+  // per level (rather than zero) because a level with zero quests would
+  // auto-count as "complete" for every student the instant they reach it,
+  // silently unlocking the rest of the path. Replace these anytime via
+  // Admin Home → Level Challenge Tasks — no code changes needed.
+  3:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  4:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  5:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  6:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  7:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  8:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  9:  [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+  10: [ { icon:'📝', title:'Task coming soon — check back soon!' } ],
+};
+function questsForLevel(lvl) {
+  const custom = APP.levelQuests[lvl];
+  if (custom && custom.length) return custom;
+  return QUESTS[lvl] || QUESTS[TOTAL_LEVELS];
+}
+function questKey(levelNo, questNo) { return levelNo + '-' + questNo; }
+
+// Pulls Director/Consultant-customized Level Challenge tasks from the
+// LEVEL_QUESTS sheet (edited on the "Level Challenge Tasks" admin screen).
+// A level with no rows there is left out of the map, so questsForLevel()
+// falls back to the QUESTS default above for it.
+function loadLevelQuestsFromSheet(rows) {
+  const byLevel = {};
+  (rows || []).forEach(r => {
+    const lvl = Number(r['Level No']), qNo = Number(r['Quest No']);
+    if (!lvl || !qNo) return;
+    if (!byLevel[lvl]) byLevel[lvl] = [];
+    byLevel[lvl][qNo - 1] = {
+      icon: r['Icon'] || '⭐',
+      type: String(r['Type'] || '').trim() || undefined,
+      title: r['Title'] || ''
+    };
+  });
+  Object.keys(byLevel).forEach(lvl => { byLevel[lvl] = byLevel[lvl].filter(Boolean); });
+  APP.levelQuests = byLevel;
+}
+
+// ── Quest progress (synced to Google Sheets, same pattern as devotionals) ──
+function loadQuestProgressFromSheet(sheetRows) {
+  APP.students.forEach(s => { APP.questProgress[s['Student ID']] = {}; });
+  (sheetRows || []).forEach(row => {
+    const sid = String(row['Student ID'] || '');
+    const lvl = Number(row['Level No']);
+    const q   = Number(row['Quest No']);
+    if (sid && lvl && q && (row['Completed'] === 'Yes' || row['Completed'] === true)) {
+      if (!APP.questProgress[sid]) APP.questProgress[sid] = {};
+      APP.questProgress[sid][questKey(lvl, q)] = true;
     }
-  } else {
-    // Not our table — re-enable our buzzer for the next chance
-    const btn=document.getElementById('gs-big-buzzer'); if(btn){btn.style.opacity='1';btn.disabled=false;}
+  });
+}
+
+// Fallback: load from localStorage (legacy / offline) for students with no sheet data yet
+function loadQuestProgressLocal() {
+  APP.students.forEach(s => {
+    const sid = s['Student ID'];
+    if (APP.questProgress[sid] && Object.keys(APP.questProgress[sid]).length > 0) return;
+    const key = QUEST_KEY_PREFIX + sid;
+    try {
+      const saved = localStorage.getItem(key);
+      APP.questProgress[sid] = saved ? JSON.parse(saved) : {};
+    } catch(e) { APP.questProgress[sid] = {}; }
+  });
+}
+
+async function saveQuestToggle(studentId, levelNo, questNo, checked) {
+  if (!APP.questProgress[studentId]) APP.questProgress[studentId] = {};
+  if (checked) APP.questProgress[studentId][questKey(levelNo, questNo)] = true;
+  else delete APP.questProgress[studentId][questKey(levelNo, questNo)];
+  // local backup
+  try { localStorage.setItem(QUEST_KEY_PREFIX + studentId, JSON.stringify(APP.questProgress[studentId])); } catch(e) {}
+  // sync to sheet
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  try {
+    await apiPost({ action: 'toggleQuest', studentId, studentName: student?.['Full Name'] || '', tableNo: student?.['Table No'] || '', levelNo, questNo, completed: checked, markedBy: APP.currentFaculty?.['Full Name'] || '' });
+  } catch(e) { console.warn('Quest sync failed:', e); }
+}
+
+// Is every quest in this level checked off for this student?
+function isLevelDoneFor(studentId, levelNo) {
+  const state = APP.questProgress[studentId] || {};
+  const quests = questsForLevel(levelNo);
+  for (let i = 0; i < quests.length; i++) {
+    if (!state[questKey(levelNo, i + 1)]) return false;
   }
-  setTimeout(()=>{if(document.getElementById('s-gs-buzzer-choices').classList.contains('active'))gsGo('s-gs-buzzer-game');},1500);
-}
-function gsOnGameEnd(){gsGo('s-gs-buzzer-home');document.getElementById('gs-buz-status').textContent='Game over!';gsToast('🏁 Game Over!');}
-function gsPressbuzzer() {
-  const btn=document.getElementById('gs-big-buzzer');
-  btn.classList.add('pressed'); setTimeout(()=>btn.classList.remove('pressed'),400);
-  if(navigator.vibrate)navigator.vibrate(80);
-  const t=String(GS.currentBuzzer?.['Table Assigned']||'');
-  gsBroadcast('TABLE_BUZZ',{tableNo:t,ts:Date.now()});
-  gsSetBuzzState('🔔 Buzzed!','Waiting for host…');
-}
-function gsSetBuzzState(label,sub) {
-  const l=document.getElementById('gsbg-state'); const s=document.getElementById('gsbg-sub');
-  if(l)l.textContent=label; if(s)s.textContent=sub;
+  return true;
 }
 
-// ── RANDOM ON PHONE ──
-function gsOnRandomStart(data) {
-  const t=String(GS.currentBuzzer?.['Table Assigned']||'');
-  const c=gsTableColor(t);
-  document.getElementById('gsrb-table').textContent=gsGetTableLabel(t);
-  document.getElementById('gsrb-cred').textContent=`+${data.credits} Points`;
-  const btn=document.getElementById('gs-random-buzzer');
-  if(btn){btn.style.opacity='1';btn.style.background=`linear-gradient(135deg,${c.bg},${c.bg}cc)`;btn.style.borderColor=c.border;btn.style.boxShadow=`0 0 35px ${c.bg}88`;}
-  document.getElementById('gsrb-state').textContent='Ready to buzz!';
-  document.getElementById('gsrb-sub').textContent='Press when you know the answer!';
-  gsGo('s-gs-random-buzz');
-}
-function gsPressRandomBuzzer() {
-  const btn=document.getElementById('gs-random-buzzer');
-  btn.classList.add('pressed'); setTimeout(()=>btn.classList.remove('pressed'),400);
-  if(navigator.vibrate)navigator.vibrate(80);
-  gsBroadcast('RANDOM_BUZZ',{tableNo:String(GS.currentBuzzer?.['Table Assigned']||''),ts:Date.now()});
-  btn.style.opacity='0.4';
-  document.getElementById('gsrb-state').textContent='🔔 Buzzed!';
-  document.getElementById('gsrb-sub').textContent='Waiting for host…';
-}
-function gsOnRandomWinner(data) {
-  const my=String(GS.currentBuzzer?.['Table Assigned']||'');
-  if(data.tableNo===my){
-    document.getElementById('gsrb-state').textContent="🏆 YOU'RE FIRST!";
-    document.getElementById('gsrb-sub').textContent='Answer out loud!';
-    gsToast('🏆 You buzzed first!');
-    if(navigator.vibrate)navigator.vibrate([100,50,100,50,200]);
-  } else {
-    document.getElementById('gsrb-state').textContent=`${gsGetTableLabel(data.tableNo)} was first`;
-    document.getElementById('gsrb-sub').textContent='Wait for the next round…';
+// Highest fully-completed level for a student (0 = none yet)
+function getHighestLevel(studentId) {
+  let highest = 0;
+  for (let lvl = 1; lvl <= TOTAL_LEVELS; lvl++) {
+    if (isLevelDoneFor(studentId, lvl)) highest = lvl;
+    else break;
   }
+  return highest;
 }
 
-// ── FIREWORKS ──
-function gsFireworks() {
-  const canvas=document.getElementById('gs-firework'); if(!canvas) return;
-  const ctx=canvas.getContext('2d');
-  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
-  const particles=[]; const colors=['#FFD700','#FF6B6B','#4FC3F7','#81C784','#CE93D8'];
-  for(let i=0;i<70;i++) particles.push({x:canvas.width/2+(Math.random()-.5)*180,y:canvas.height/3,vx:(Math.random()-.5)*11,vy:-Math.random()*9-2,life:1,color:colors[i%colors.length],size:Math.random()*3+2});
-  let aid;
-  function anim(){ctx.clearRect(0,0,canvas.width,canvas.height);particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.3;p.life-=0.022;ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;if(particles.some(p=>p.life>0))aid=requestAnimationFrame(anim);else ctx.clearRect(0,0,canvas.width,canvas.height);}
-  anim(); setTimeout(()=>{cancelAnimationFrame(aid);ctx.clearRect(0,0,canvas.width,canvas.height);},3000);
-}
+// NOTE: the interactive "who's playing / map / quest checklist" UI that used
+// to live here (table guides checking quests off for students) has moved to
+// the separate Student app — students self-report their own quests there.
+// This file keeps only the shared data helpers above (QUESTS, LEVEL_NAMES,
+// questsForLevel, isLevelDoneFor, getHighestLevel, saveQuestToggle) plus the
+// NOTIFICATIONS feature below, which is how Faculty/Table Guides now see
+// completions.
 
-// ── INIT ──
-document.addEventListener('DOMContentLoaded',()=>{
-  gsLoadFaculty(); gsLoadLessons(); gsLoadQuizzes();
-  gsLoadTableNames(); // load custom table names
-  // Prefetch tables
-  if (typeof GAS_URL !== 'undefined') {
-    fetch(`${GAS_URL}?action=students`).then(r=>r.json()).then(j=>{
-      if(j.data){const t=[...new Set(j.data.map(s=>String(s['Table No'])).filter(Boolean))];localStorage.setItem('gs_tables_v2',JSON.stringify(t));}
-    }).catch(()=>{});
-  }
-});
-</script>
-
-</div><!-- /desktop-main -->
-</div><!-- /app -->
-
-
-
-<!-- SERVICE WORKER registration -->
-
-
-<script src="js/script1.js"></script>
-<script src="js/script2.js"></script>
-
-<!-- ══════════════════════════════════════════
-     ANDROID INSTALL BANNER (bottom bar)
-══════════════════════════════════════════ -->
-<div id="pwa-install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:99999;padding:14px 16px;background:#1e3a8a;color:#fff;box-shadow:0 -4px 20px rgba(0,0,0,0.3);align-items:center;gap:12px;max-width:480px;margin:0 auto">
-  <img src="icon-192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0">
-  <div style="flex:1;min-width:0">
-    <div style="font-weight:700;font-size:14px">Install SOL2</div>
-    <div style="font-size:12px;opacity:0.75;margin-top:2px">Add to Home Screen for the full app experience</div>
-  </div>
-  <button id="pwa-install-btn" style="background:#46586e;color:#fff;border:none;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">Install</button>
-  <button onclick="document.getElementById('pwa-install-banner').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.6);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0;line-height:1">✕</button>
-</div>
-
-<!-- ══════════════════════════════════════════
-     iOS INSTALL MODAL (step-by-step guide)
-══════════════════════════════════════════ -->
-<div id="ios-install-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);align-items:flex-end;justify-content:center;padding:0">
-  <div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:0 0 32px;box-shadow:0 -8px 40px rgba(0,0,0,0.25);animation:slideUp 0.3s ease">
-    <!-- Handle bar -->
-    <div style="display:flex;justify-content:center;padding:12px 0 4px">
-      <div style="width:40px;height:4px;background:#e0e0e0;border-radius:4px"></div>
-    </div>
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px 16px">
-      <div style="display:flex;align-items:center;gap:12px">
-        <img src="icon-192.png" style="width:48px;height:48px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
-        <div>
-          <div style="font-family:var(--font-head);font-size:16px;font-weight:700;color:#1a1a2e">Install SOL2</div>
-          <div style="font-size:12px;color:#9aa3b0;margin-top:1px">Add to your Home Screen</div>
-        </div>
-      </div>
-      <button onclick="closeIOSModal()" style="background:#f0f2f5;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;color:#9aa3b0;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
-    </div>
-
-    <!-- Divider -->
-    <div style="height:1px;background:#f0f2f5;margin:0 20px"></div>
-
-    <!-- Steps -->
-    <div style="padding:20px 20px 0">
-      <div style="font-size:12px;font-weight:700;color:#9aa3b0;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:14px">Follow these steps</div>
-
-      <!-- Step 1 -->
-      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
-        <div style="width:32px;height:32px;border-radius:50%;background:#1e3a8a;color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-        <div style="flex:1;padding-top:4px">
-          <div style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:2px">Tap the Share button</div>
-          <div style="font-size:12px;color:#9aa3b0">At the bottom of your Safari browser</div>
-          <!-- Share icon illustration -->
-          <div style="margin-top:10px;background:#f0f2f5;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#1e3a8a">Share</div>
-              <div style="font-size:11px;color:#9aa3b0">Looks like this in Safari</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Step 2 -->
-      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
-        <div style="width:32px;height:32px;border-radius:50%;background:#1e3a8a;color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-        <div style="flex:1;padding-top:4px">
-          <div style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:2px">Scroll down and tap</div>
-          <div style="font-size:12px;color:#9aa3b0">Find this option in the share sheet</div>
-          <!-- Add to Home Screen illustration -->
-          <div style="margin-top:10px;background:#f0f2f5;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
-            <div style="width:36px;height:36px;border-radius:8px;background:#fff;border:1.5px solid #dde;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#1e3a8a">Add to Home Screen</div>
-              <div style="font-size:11px;color:#9aa3b0">Tap this in the share menu</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Step 3 -->
-      <div style="display:flex;align-items:flex-start;gap:14px">
-        <div style="width:32px;height:32px;border-radius:50%;background:#46586e;color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-        <div style="flex:1;padding-top:4px">
-          <div style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:2px">Tap <strong style="color:#46586e">Add</strong> to confirm</div>
-          <div style="font-size:12px;color:#9aa3b0">SOL2 will appear on your Home Screen</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Note -->
-    <div style="margin:20px 20px 0;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:10px 14px;display:flex;gap:8px;align-items:flex-start">
-      <span style="font-size:16px;flex-shrink:0">⚠️</span>
-      <div style="font-size:12px;color:#92400e">Make sure you're using <strong>Safari</strong> — this won't work in Chrome or other browsers on iPhone.</div>
-    </div>
-  </div>
-</div>
-
-<style>
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-</style>
-
-<!-- ══════════════════════════════════════════
-     iOS INSTALL BANNER (bottom bar for Safari)
-══════════════════════════════════════════ -->
-<div id="ios-install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:99998;padding:12px 16px;background:#1e3a8a;color:#fff;box-shadow:0 -4px 20px rgba(0,0,0,0.3);align-items:center;gap:12px;max-width:480px;margin:0 auto">
-  <img src="icon-192.png" style="width:38px;height:38px;border-radius:9px;flex-shrink:0">
-  <div style="flex:1;min-width:0">
-    <div style="font-weight:700;font-size:13px">Install SOL2 on iPhone</div>
-    <div style="font-size:11px;opacity:0.7;margin-top:1px">Tap to see how →</div>
-  </div>
-  <button onclick="showIOSModal()" style="background:#46586e;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">How to Install</button>
-  <button onclick="dismissIOSBanner()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;padding:2px;flex-shrink:0;line-height:1">✕</button>
-</div>
-
-<script>
-// ── Android / Chrome install prompt ──────────────────
-let _deferredPrompt = null;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  _deferredPrompt = e;
-  const banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.style.display = 'flex';
-});
-document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
-  if (!_deferredPrompt) return;
-  _deferredPrompt.prompt();
-  const { outcome } = await _deferredPrompt.userChoice;
-  _deferredPrompt = null;
-  document.getElementById('pwa-install-banner').style.display = 'none';
-});
-window.addEventListener('appinstalled', () => {
-  document.getElementById('pwa-install-banner').style.display = 'none';
-  _deferredPrompt = null;
-});
-
-// ── iOS / Safari install guide ────────────────────────
-function isIOSSafari() {
-  const ua = window.navigator.userAgent;
-  const isIOS = /iphone|ipad|ipod/i.test(ua);
-  // Safari on iOS doesn't have 'CriOS' (Chrome) or 'FxiOS' (Firefox)
-  const isSafari = /safari/i.test(ua) && !/crios|fxios|opios|mercury/i.test(ua);
-  // Not already installed as standalone
-  const isStandalone = window.navigator.standalone === true;
-  return isIOS && isSafari && !isStandalone;
-}
-
-function showIOSModal() {
-  const modal = document.getElementById('ios-install-modal');
-  if (modal) modal.style.display = 'flex';
-}
-function closeIOSModal() {
-  const modal = document.getElementById('ios-install-modal');
-  if (modal) modal.style.display = 'none';
-}
-function dismissIOSBanner() {
-  const banner = document.getElementById('ios-install-banner');
-  if (banner) banner.style.display = 'none';
-  sessionStorage.setItem('ios-banner-dismissed', '1');
-}
-
-// Close iOS modal when tapping backdrop
-document.getElementById('ios-install-modal')?.addEventListener('click', function(e) {
-  if (e.target === this) closeIOSModal();
-});
-
-// Show iOS banner after a short delay (only once per session)
-window.addEventListener('load', () => {
-  if (isIOSSafari() && !sessionStorage.getItem('ios-banner-dismissed')) {
-    setTimeout(() => {
-      const banner = document.getElementById('ios-install-banner');
-      if (banner) banner.style.display = 'flex';
-    }, 2500);
-  }
-});
-</script>
-
-<script>
 // ═══════════════════════════════════════════
-// DESKTOP SIDEBAR CONTROLLER
+// NOTIFICATIONS — Faculty/Table Guide bell
+// A row appears here whenever a student marks a Level Challenge quest
+// complete in the Student app. Filtered to the signed-in faculty's own
+// table (Table Guides) or shown in full (Admin/Director/Record roles).
 // ═══════════════════════════════════════════
-function updateSidebar() {
-  if (typeof APP === 'undefined') return;
-  var faculty = APP.currentFaculty;
-  var portalScreens = ['s-portal','s-view-tables','s-faculty-login','s-admin-login','s-record-login'];
-  var isPortalScreen = portalScreens.includes(APP.currentScreen);
-  var appEl = document.getElementById('app');
-  var sidebarEl = document.getElementById('desktop-sidebar');
+function facultyNotifRows() {
+  const role = APP.currentFaculty ? getRoleTypes(APP.currentFaculty["Role"]) : [];
+  const isTableGuideOnly = role.includes('faculty') && !role.includes('admin');
+  const tableNo = APP.currentFaculty?.["Table Assigned"];
+  let rows = APP.notifications || [];
+  // Rows explicitly addressed Audience="student" (e.g. an Admin "Notify
+  // Student" reminder) belong only in that student's own Student-app bell —
+  // keep them out of the Table Guide/Admin bell here even if they mention
+  // one of this table's students. Blank/legacy Audience defaults to "guide"
+  // for backward compatibility with rows written before this column existed.
+  rows = rows.filter(n => String(n["Audience"] || "guide").trim().toLowerCase() !== "student");
+  if (isTableGuideOnly && tableNo) {
+    rows = rows.filter(n => String(n["Table No"]) === String(tableNo));
+  }
+  return rows.slice().sort((a, b) => new Date(b["Created At"]) - new Date(a["Created At"]));
+}
 
-  // KEY FIX: toggle has-sidebar class on #app
-  // Portal/login = no sidebar, plain flex layout
-  // Logged in = grid layout with sidebar
-  if (appEl) {
-    appEl.classList.toggle('has-sidebar', !isPortalScreen && !!faculty);
+function unreadFacultyNotifCount() {
+  return facultyNotifRows().filter(n => n["Read"] !== "Yes" && n["Read"] !== true).length;
+}
+
+function updateFacultyNotifBadges() {
+  const count = unreadFacultyNotifCount();
+  [document.getElementById('f-notif-badge'), document.getElementById('f-home-notif-badge')].forEach(el => {
+    if (!el) return;
+    el.style.display = count > 0 ? '' : 'none';
+    el.textContent = count > 9 ? '9+' : String(count);
+  });
+}
+
+function renderFacultyNotifications() {
+  const list = document.getElementById('f-notif-list');
+  if (!list) return;
+  const rows = facultyNotifRows();
+  if (!rows.length) {
+    list.innerHTML = '<div class="notif-empty">No notifications yet. You\'ll see updates here when a student completes a quest, redeems a Redeem Store item, or a Director/Consultant sends your table a reminder.</div>';
+    updateFacultyNotifBadges();
+    return;
+  }
+  list.innerHTML = rows.map(n => {
+    const isRead = n["Read"] === "Yes" || n["Read"] === true;
+    const when = n["Created At"] ? new Date(n["Created At"]).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+    return `
+      <div class="notif-item ${isRead ? 'read' : 'unread'}" onclick="markFacultyNotifRead('${n["Notification ID"]}')">
+        <div class="notif-dot"></div>
+        <div class="notif-body">
+          <div class="notif-msg">${n["Message"] || ''}</div>
+          <div class="notif-time">${when}${isRead ? ' · read' : ''}</div>
+        </div>
+      </div>`;
+  }).join('');
+  updateFacultyNotifBadges();
+}
+
+async function markFacultyNotifRead(notificationId) {
+  const n = (APP.notifications || []).find(x => String(x["Notification ID"]) === String(notificationId));
+  if (n) n["Read"] = "Yes"; // optimistic update
+  renderFacultyNotifications();
+  try {
+    await apiPost({ action: 'markNotificationRead', notificationId, readBy: APP.currentFaculty?.['Full Name'] || '' });
+  } catch (e) { console.warn('markNotificationRead failed:', e); }
+}
+
+async function markAllNotifsReadForFaculty() {
+  const role = APP.currentFaculty ? getRoleTypes(APP.currentFaculty["Role"]) : [];
+  const isTableGuideOnly = role.includes('faculty') && !role.includes('admin');
+  const tableNo = isTableGuideOnly ? (APP.currentFaculty?.["Table Assigned"] || "") : "";
+  (APP.notifications || []).forEach(n => {
+    if (!tableNo || String(n["Table No"]) === String(tableNo)) n["Read"] = "Yes";
+  });
+  renderFacultyNotifications();
+  try {
+    await apiPost({ action: 'markAllNotificationsRead', tableNo, readBy: APP.currentFaculty?.['Full Name'] || '' });
+  } catch (e) { console.warn('markAllNotificationsRead failed:', e); }
+}
+
+// ── Makeup Status ────────────────────────────────────────────
+function loadMakeupStatusFromSheet(rows) {
+  APP.makeupStatus = {};
+  (rows || []).forEach(row => {
+    const attId = String(row['Attendance ID'] || '');
+    if (attId) APP.makeupStatus[attId] = { status: row['Status'] || 'Pending', notes: row['Notes'] || '' };
+  });
+}
+
+async function saveMakeupStatus(attendanceId, status, studentId, studentName, weekNo, tableNo, notes) {
+  const existing = APP.makeupStatus[attendanceId] || {};
+  APP.makeupStatus[attendanceId] = { status, notes: notes || '' };
+  try {
+    await apiPost({ action: 'updateMakeupStatus', attendanceId, studentId, studentName, weekNo, tableNo, status, updatedBy: APP.currentFaculty?.['Full Name'] || 'Admin', notes: notes || '' });
+  } catch(e) { console.warn('Makeup status sync failed:', e); }
+}
+
+// ── Make-up Class Weekly Assignment ──────────────────────────
+// One facilitator handles ALL absent students' make-up classes for a given
+// week, rather than assigning per-student.
+function loadMakeupWeekAssignmentsFromSheet(rows) {
+  APP.makeupWeekAssignments = {};
+  (rows || []).forEach(row => {
+    const wk = String(row['Week No'] || '');
+    if (wk) APP.makeupWeekAssignments[wk] = row['Assigned To'] || '';
+  });
+}
+
+async function saveMakeupWeekAssignment(weekNo, assignedTo) {
+  APP.makeupWeekAssignments[String(weekNo)] = assignedTo || '';
+  try {
+    await apiPost({ action: 'updateMakeupWeekAssignment', weekNo, assignedTo: assignedTo || '', updatedBy: APP.currentFaculty?.['Full Name'] || 'Admin' });
+  } catch(e) { console.warn('Makeup week assignment sync failed:', e); }
+}
+
+// ── Makeup Class Video (one YouTube link per week) ─────────────
+// Every student marked Absent for a given week sees this same video in
+// the Student app and must watch it start-to-finish (no fast-forwarding)
+// before their make-up class can be marked done — same enforcement as a
+// Level Challenge "watch" quest.
+function loadMakeupVideosFromSheet(rows) {
+  APP.makeupVideos = {};
+  (rows || []).forEach(row => {
+    const wk = row['Week No'];
+    if (wk === '' || wk === undefined || wk === null) return;
+    APP.makeupVideos[String(wk)] = { title: row['Video Title'] || '', url: row['Video URL'] || '' };
+  });
+}
+
+async function saveMakeupVideoForWeek(weekNo, videoTitle, videoUrl) {
+  APP.makeupVideos[String(weekNo)] = { title: videoTitle || '', url: videoUrl || '' };
+  try {
+    await apiPost({
+      action: 'saveMakeupVideo',
+      weekNo,
+      videoTitle: videoTitle || '',
+      videoUrl: videoUrl || '',
+      updatedBy: APP.currentFaculty?.['Full Name'] || 'Admin'
+    });
+  } catch(e) { console.warn('Makeup video sync failed:', e); }
+}
+
+// ── Module / Lesson Completion (drives Certificate of Completion) ──────
+function lessonKey(moduleNo, lessonNo) { return moduleNo + '-' + lessonNo; }
+
+function loadLessonCompletionFromSheet(rows) {
+  APP.students.forEach(s => { APP.lessonCompletion[s['Student ID']] = {}; });
+  (rows || []).forEach(row => {
+    const sid = String(row['Student ID'] || '');
+    const mod = Number(row['Module No']);
+    const les = Number(row['Lesson No']);
+    const status = row['Status'] || '';
+    if (sid && mod && les) {
+      if (!APP.lessonCompletion[sid]) APP.lessonCompletion[sid] = {};
+      if (status === 'Done' || status === 'Makeup') APP.lessonCompletion[sid][lessonKey(mod, les)] = status;
+    }
+  });
+}
+
+function getLessonStatus(studentId, moduleNo, lessonNo) {
+  const rec = APP.lessonCompletion[studentId];
+  return (rec && rec[lessonKey(moduleNo, lessonNo)]) || '';
+}
+
+// Count of lessons marked "Done" within a single module (1 or 2)
+function getModuleDoneCount(studentId, moduleNo) {
+  const rec = APP.lessonCompletion[studentId] || {};
+  let count = 0;
+  for (let l = 1; l <= LESSONS_PER_MODULE; l++) if (rec[lessonKey(moduleNo, l)] === 'Done') count++;
+  return count;
+}
+
+// Count of lessons marked "Done" across both modules (out of TOTAL_LESSONS)
+function getTotalLessonsDoneCount(studentId) {
+  return getModuleDoneCount(studentId, 1) + getModuleDoneCount(studentId, 2);
+}
+
+// Count of lessons marked "Makeup" across both modules
+function getTotalLessonsMakeupCount(studentId) {
+  const rec = APP.lessonCompletion[studentId] || {};
+  let count = 0;
+  for (let m = 1; m <= TOTAL_MODULES; m++)
+    for (let l = 1; l <= LESSONS_PER_MODULE; l++)
+      if (rec[lessonKey(m, l)] === 'Makeup') count++;
+  return count;
+}
+
+// Certificate of Completion eligibility: every single lesson in both
+// modules must be marked "Done" — no make-up classes, no blanks.
+function isCertificateEligible(studentId) {
+  return getTotalLessonsDoneCount(studentId) === TOTAL_LESSONS;
+}
+
+// ── Lesson Points grid (per-lesson Attendance/Participation/Homework/Memory
+// Verse checkboxes — replaces the old manual "Add Points" form) ──────────
+function loadLessonPointsFromSheet(rows) {
+  APP.students.forEach(s => { APP.lessonPoints[s['Student ID']] = {}; });
+  (rows || []).forEach(row => {
+    const sid = String(row['Student ID'] || '');
+    const mod = Number(row['Module No']);
+    const les = Number(row['Lesson No']);
+    if (sid && mod && les) {
+      if (!APP.lessonPoints[sid]) APP.lessonPoints[sid] = {};
+      APP.lessonPoints[sid][lessonKey(mod, les)] = {
+        attendance:    Number(row['Attendance Points'] || 0),
+        participation: Number(row['Participation Points'] || 0),
+        homework:      Number(row['Homework Points'] || 0),
+        memoryVerse:   Number(row['Memory Verse Points'] || 0)
+      };
+    }
+  });
+}
+
+// Current point value of a single box (0 = unchecked)
+function getLessonPointBox(studentId, moduleNo, lessonNo, categoryKey) {
+  const rec = APP.lessonPoints[studentId];
+  const cell = rec && rec[lessonKey(moduleNo, lessonNo)];
+  return cell ? Number(cell[categoryKey] || 0) : 0;
+}
+
+// Sum of all 4 boxes for one lesson row
+function getLessonPointsRowTotal(studentId, moduleNo, lessonNo) {
+  const rec = APP.lessonPoints[studentId];
+  const cell = rec && rec[lessonKey(moduleNo, lessonNo)];
+  if (!cell) return 0;
+  return POINT_CATEGORIES.reduce((sum, c) => sum + Number(cell[c.key] || 0), 0);
+}
+
+// Sum of every box across all 20 lessons for a student — this is the
+// student's total from the points grid (added to any legacy manual credits).
+function getStudentLessonPointsTotal(studentId) {
+  const rec = APP.lessonPoints[studentId] || {};
+  let total = 0;
+  Object.keys(rec).forEach(k => {
+    POINT_CATEGORIES.forEach(c => { total += Number(rec[k][c.key] || 0); });
+  });
+  return total;
+}
+
+// ═══════════════════════════════════════════
+// CERTIFICATE OF COMPLETION — PDF generation
+// Fills "CERTIFICATE PLAIN TEMPLATE.pdf" with the student's name and
+// today's date, then downloads it. Coordinates below were measured
+// against the template's own printed guide lines (name underline and
+// the DATE signature line), so they line up with the design exactly.
+// ═══════════════════════════════════════════
+const CERT_TEMPLATE_URL = encodeURI('CERTIFICATE PLAIN TEMPLATE.pdf');
+const ROBOTO_BOLD_URL   = encodeURI('fonts/Roboto-Bold.ttf');
+
+async function generateCertificate(studentId) {
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  if (!student) { alert('Student not found.'); return; }
+  if (!isCertificateEligible(studentId)) { alert('This student has not completed all 20 lessons yet.'); return; }
+
+  const btn = document.getElementById('modcomp-cert-btn');
+  const originalLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+  try {
+    if (typeof PDFLib === 'undefined') throw new Error('PDF library did not load. Check your connection and try again.');
+    if (typeof fontkit === 'undefined') throw new Error('Font library did not load. Check your connection and try again.');
+
+    const bytes = await fetch(CERT_TEMPLATE_URL).then(r => {
+      if (!r.ok) throw new Error('Could not load certificate template (' + r.status + ').');
+      return r.arrayBuffer();
+    });
+    const robotoBytes = await fetch(ROBOTO_BOLD_URL).then(r => {
+      if (!r.ok) throw new Error('Could not load Roboto font (' + r.status + ').');
+      return r.arrayBuffer();
+    });
+
+    const pdfDoc  = await PDFLib.PDFDocument.load(bytes);
+    pdfDoc.registerFontkit(fontkit);
+    const page    = pdfDoc.getPages()[0];
+    const { width: pageW, height: pageH } = page.getSize();
+    const font    = await pdfDoc.embedFont(robotoBytes); // Roboto Bold
+    const green   = PDFLib.rgb(0x0d/255, 0x47/255, 0x2b/255);
+    const black   = PDFLib.rgb(0.1, 0.1, 0.1);
+
+    // Coordinates below were measured as pixel positions on the reference
+    // template image, which is 2000 x 1545 px (CERTIFICATE PLAIN TEMPLATE.png).
+    // Convert px -> pt using the actual page width/height (NOT a single
+    // shared ratio) since the reference image isn't square.
+    const REF_IMG_W = 2000;
+    const REF_IMG_H = 1545;
+    const scaleX = pageW / REF_IMG_W;
+    const scaleY = pageH / REF_IMG_H;
+    // px (x, yFromTop) -> pt {x, y} (y from bottom, as drawText expects)
+    const pxToPt = (px, py) => ({ x: px * scaleX, y: pageH - (py * scaleY) });
+
+    // Name — centered on the underline beneath "presented to"
+    const name = (student['Full Name'] || '').toUpperCase();
+    const namePt = pxToPt(667.5, 660);
+    const nameMaxWidth    = 280; // available width above the underline
+    let nameSize = 30;
+    while (nameSize > 12 && font.widthOfTextAtSize(name, nameSize) > nameMaxWidth) nameSize -= 1;
+    const nameWidth = font.widthOfTextAtSize(name, nameSize);
+    page.drawText(name, {
+      x: namePt.x - nameWidth / 2,
+      y: namePt.y,
+      size: nameSize,
+      font,
+      color: green
+    });
+
+    // Equipping class name — centered under "for the successful completion of".
+    // Pulled straight from SYSTEM_SETTINGS: Batch Name (e.g. "School of Leaders 2").
+    const className = (APP.settings && APP.settings['Batch Name']) ? String(APP.settings['Batch Name']).toUpperCase() : '';
+    const classPt = pxToPt(666.5, 910);
+    const classMaxWidth = 300; // available width on that line
+    let classSize = 22;
+    while (classSize > 10 && font.widthOfTextAtSize(className, classSize) > classMaxWidth) classSize -= 1;
+    const classWidth = font.widthOfTextAtSize(className, classSize);
+    page.drawText(className, {
+      x: classPt.x - classWidth / 2,
+      y: classPt.y,
+      size: classSize,
+      font,
+      color: green
+    });
+
+    // Date — centered above the "DATE" signature line, baseline aligned
+    // with the "LEMUEL P. QUILOS" text on the right so the whole row sits even.
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
+    const datePt = pxToPt(314, 1334);
+    const fieldSize = 12.7;
+    const dateWidth = font.widthOfTextAtSize(dateStr, fieldSize);
+    page.drawText(dateStr, {
+      x: datePt.x - dateWidth / 2,
+      y: datePt.y,
+      size: fieldSize,
+      font,
+      color: black
+    });
+
+    // Student ID — centered under the description paragraph, above the
+    // DATE / LEAD PASTOR row. Taken straight from the STUDENTS sheet.
+    const studentIdStr = String(student['Student ID'] || '');
+    const studentIdPt = pxToPt(670, 1270);
+    const studentIdWidth = font.widthOfTextAtSize(studentIdStr, fieldSize);
+    page.drawText(studentIdStr, {
+      x: studentIdPt.x - studentIdWidth / 2,
+      y: studentIdPt.y,
+      size: fieldSize,
+      font,
+      color: green
+    });
+
+    const outBytes = await pdfDoc.save();
+    const blob = new Blob([outBytes], { type: 'application/pdf' });
+    const url  = URL.createObjectURL(blob);
+
+    const link = document.getElementById('cert-download-link');
+    link.href = url;
+    link.download = `Certificate - ${student['Full Name'] || studentId}.pdf`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+  } catch (err) {
+    console.error('Certificate generation failed:', err);
+    alert('Could not generate the certificate: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+  }
+}
+
+// ═══════════════════════════════════════════
+// CERTIFICATE OF APPRECIATION (DEVOTIONAL) — PDF generation
+// Same idea as the Module Completion certificate above, but earned by
+// checking off all 140 devotional days instead of all 20 lessons, and
+// filled onto "CERTIFICATE OF DEVOTIONAL PLAIN TEMPLATE.pdf". That
+// template shares the exact same layout grid as the completion one
+// (name / student ID / date all sit at identical coordinates), so the
+// same pxToPt math is reused as-is.
+// ═══════════════════════════════════════════
+const DEVOTIONAL_CERT_TEMPLATE_URL = encodeURI('CERTIFICATE OF DEVOTIONAL PLAIN TEMPLATE.pdf');
+
+// Devotional certificate eligibility: every one of the 140 devotional
+// days must be checked off — no gaps.
+function isDevotionalCertificateEligible(studentId) {
+  return getDevotionalCount(studentId) === TOTAL_DEVOTIONAL_DAYS;
+}
+
+async function generateDevotionalCertificate(studentId) {
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  if (!student) { alert('Student not found.'); return; }
+  if (!isDevotionalCertificateEligible(studentId)) { alert('This student has not completed all 140 devotional days yet.'); return; }
+
+  const btn = document.getElementById('devot-cert-btn');
+  const originalLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+  try {
+    if (typeof PDFLib === 'undefined') throw new Error('PDF library did not load. Check your connection and try again.');
+    if (typeof fontkit === 'undefined') throw new Error('Font library did not load. Check your connection and try again.');
+
+    const bytes = await fetch(DEVOTIONAL_CERT_TEMPLATE_URL).then(r => {
+      if (!r.ok) throw new Error('Could not load certificate template (' + r.status + ').');
+      return r.arrayBuffer();
+    });
+    const robotoBytes = await fetch(ROBOTO_BOLD_URL).then(r => {
+      if (!r.ok) throw new Error('Could not load Roboto font (' + r.status + ').');
+      return r.arrayBuffer();
+    });
+
+    const pdfDoc  = await PDFLib.PDFDocument.load(bytes);
+    pdfDoc.registerFontkit(fontkit);
+    const page    = pdfDoc.getPages()[0];
+    const { width: pageW, height: pageH } = page.getSize();
+    const font    = await pdfDoc.embedFont(robotoBytes); // Roboto Bold
+    const green   = PDFLib.rgb(0x0d/255, 0x47/255, 0x2b/255);
+    const black   = PDFLib.rgb(0.1, 0.1, 0.1);
+
+    const REF_IMG_W = 2000;
+    const REF_IMG_H = 1545;
+    const scaleX = pageW / REF_IMG_W;
+    const scaleY = pageH / REF_IMG_H;
+    const pxToPt = (px, py) => ({ x: px * scaleX, y: pageH - (py * scaleY) });
+
+    // Name — centered on the underline beneath "presented to".
+    const name = (student['Full Name'] || '').toUpperCase();
+    const namePt = pxToPt(667.5, 660);
+    const nameMaxWidth = 280;
+    let nameSize = 30;
+    while (nameSize > 12 && font.widthOfTextAtSize(name, nameSize) > nameMaxWidth) nameSize -= 1;
+    const nameWidth = font.widthOfTextAtSize(name, nameSize);
+    page.drawText(name, {
+      x: namePt.x - nameWidth / 2,
+      y: namePt.y,
+      size: nameSize,
+      font,
+      color: green
+    });
+
+    // Date — centered above the "DATE" signature line.
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
+    const datePt = pxToPt(314, 1334);
+    const fieldSize = 12.7;
+    const dateWidth = font.widthOfTextAtSize(dateStr, fieldSize);
+    page.drawText(dateStr, {
+      x: datePt.x - dateWidth / 2,
+      y: datePt.y,
+      size: fieldSize,
+      font,
+      color: black
+    });
+
+    // Student ID — centered under the description paragraph.
+    const studentIdStr = String(student['Student ID'] || '');
+    const studentIdPt = pxToPt(670, 1270);
+    const studentIdWidth = font.widthOfTextAtSize(studentIdStr, fieldSize);
+    page.drawText(studentIdStr, {
+      x: studentIdPt.x - studentIdWidth / 2,
+      y: studentIdPt.y,
+      size: fieldSize,
+      font,
+      color: green
+    });
+
+    const outBytes = await pdfDoc.save();
+    const blob = new Blob([outBytes], { type: 'application/pdf' });
+    const url  = URL.createObjectURL(blob);
+
+    const link = document.getElementById('cert-download-link');
+    link.href = url;
+    link.download = `Certificate of Appreciation - ${student['Full Name'] || studentId}.pdf`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+  } catch (err) {
+    console.error('Devotional certificate generation failed:', err);
+    alert('Could not generate the certificate: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+  }
+}
+
+async function saveLessonStatus(studentId, moduleNo, lessonNo, status) {
+  if (!APP.lessonCompletion[studentId]) APP.lessonCompletion[studentId] = {};
+  if (status) APP.lessonCompletion[studentId][lessonKey(moduleNo, lessonNo)] = status;
+  else delete APP.lessonCompletion[studentId][lessonKey(moduleNo, lessonNo)];
+
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  try {
+    await apiPost({
+      action: 'toggleLessonCompletion',
+      studentId,
+      studentName: student?.['Full Name'] || '',
+      tableNo: student?.['Table No'] || '',
+      moduleNo, lessonNo, status,
+      markedBy: APP.currentFaculty?.['Full Name'] || ''
+    });
+  } catch(e) { console.warn('Lesson completion sync failed:', e); }
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  loadAllData();
+  initClock();
+  updateSyncStatus(false);
+  setInterval(pollNotifications, 45000); // light-weight refresh, doesn't touch the rest of the data
+});
+
+// Re-fetches just the NOTIFICATIONS sheet so the Faculty bell badge/list stay
+// current without re-pulling every other sheet.
+async function pollNotifications() {
+  if (!APP.currentFaculty) return; // no one logged in yet
+  try {
+    const res = await apiGet('notifications');
+    APP.notifications = res?.data || [];
+    updateFacultyNotifBadges();
+    if (APP.currentScreen === 's-f-notifications') renderFacultyNotifications();
+  } catch (e) { /* silent — will retry on next tick */ }
+}
+
+// ═══════════════════════════════════════════
+// LOAD ALL DATA
+// ═══════════════════════════════════════════
+function safeData(settled) {
+  if (settled.status === 'rejected') {
+    console.warn('API call failed:', settled.reason);
+    return [];
+  }
+  return settled.value?.data || [];
+}
+
+async function loadAllData() {
+  updateSyncStatus(false);
+  const results = await Promise.allSettled([
+    apiGet('students'),
+    apiGet('faculty'),
+    apiGet('credits'),
+    apiGet('payments'),
+    apiGet('studentAttendance'),
+    apiGet('facultyAttendance'),
+    apiGet('lessonWeeks'),
+    apiGet('qrscans'),
+    apiGet('tableGuides'),
+    apiGet('settings'),
+    apiGet('devotionals'),
+    apiGet('makeupStatus'),
+    apiGet('lessonCompletion'),
+    apiGet('lessonPoints'),
+    apiGet('questProgress'),
+    apiGet('notifications'),
+    apiGet('makeupWeekAssignments'),
+    apiGet('levelQuests'),
+    apiGet('staffMessages'),
+    apiGet('makeupVideos')
+  ]);
+
+  APP.students          = safeData(results[0]);
+  APP.faculty           = safeData(results[1]);
+  APP.credits           = safeData(results[2]);
+  APP.payments          = safeData(results[3]);
+  APP.attendance        = safeData(results[4]);
+  APP.facultyAttendance = safeData(results[5]);
+  APP.lessons           = safeData(results[6]);
+  APP.qrScans           = safeData(results[7]);
+  APP.tableGuides       = safeData(results[8]);
+
+  const settingsData = safeData(results[9]);
+  if (settingsData.length) {
+    settingsData.forEach(row => { APP.settings[row['Setting']] = row['Value']; });
+    APP.currentWeek = Number(APP.settings['Current Week'] || 1);
+    APP.totalFee    = Number(APP.settings['Total Class Fee'] || 500);
   }
 
-  if (!faculty) {
-    if (sidebarEl) sidebarEl.style.display = 'none';
+  const devotionalRows = safeData(results[10]);
+  const makeupRows     = safeData(results[11]);
+  const lessonCompletionRows = safeData(results[12]);
+  const lessonPointsRows     = safeData(results[13]);
+  const questProgressRows    = safeData(results[14]);
+  APP.notifications          = safeData(results[15]);
+  const makeupWeekAssignRows = safeData(results[16]);
+  const levelQuestsRows      = safeData(results[17]);
+  loadLevelQuestsFromSheet(levelQuestsRows);
+  // Sort newest-first so the "Recently Sent" list on the Message
+  // Faculty & Staff screen shows the latest blast at the top.
+  APP.staffMessages = safeData(results[18]).slice().reverse();
+  const makeupVideoRows = safeData(results[19]);
+
+  loadDevotionalsFromSheet(devotionalRows);
+  loadDevotionalsLocal();   // fill blanks from localStorage (offline fallback)
+  loadMakeupStatusFromSheet(makeupRows);
+  loadMakeupWeekAssignmentsFromSheet(makeupWeekAssignRows);
+  loadMakeupVideosFromSheet(makeupVideoRows);
+  loadLessonCompletionFromSheet(lessonCompletionRows);
+  loadLessonPointsFromSheet(lessonPointsRows);
+  loadQuestProgressFromSheet(questProgressRows);
+  loadQuestProgressLocal();  // fill blanks from localStorage (offline fallback)
+
+  const failCount = results.slice(0, 10).filter(r => r.status === 'rejected').length;
+
+  populateCreditStudentSelect();
+  populatePayStudentSelect();
+  populateWeekDropdowns();
+  updateAdminHomeStats();
+  updateFacultyHome();
+  updateFacultyNotifBadges();
+  renderRecordStats();
+  renderBalancesSummary();
+  refreshCurrentScreen();
+
+  if (failCount === 10) {
+    updateSyncStatus(false, 'Cannot reach server — check GAS_URL');
+    showConnectionError();
+  } else if (failCount > 0) {
+    updateSyncStatus(false, failCount + ' source(s) failed to load');
+  } else {
+    updateSyncStatus(true);
+  }
+}
+
+function showConnectionError() {
+  const el = document.getElementById('sync-label-portal');
+  if (el) {
+    el.innerHTML = '⚠️ <strong>Not connected.</strong> Set GAS_URL in script1.js, then redeploy.';
+    el.style.color = '#c0392b';
+    el.style.fontSize = '12px';
+  }
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+function showToast(msg, duration = 3000) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-50%) translateY(20px)';
+  }, duration);
+}
+
+// ═══════════════════════════════════════════
+// REASON SELECTOR
+// ═══════════════════════════════════════════
+function selectReason(btn, reason) {
+  const grid = btn.closest('.reason-grid');
+  if (grid) grid.querySelectorAll('.reason-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  APP.selectedReason = reason;
+
+  const creditOther = document.getElementById('credit-other-wrap');
+  if (creditOther) creditOther.style.display = (reason === '__other__' && btn.closest('#s-add-credit')) ? '' : 'none';
+  const modalOther = document.getElementById('modal-other-wrap');
+  if (modalOther) modalOther.style.display = (reason === '__other__' && btn.closest('#modal-table-credit')) ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════
+// POPULATE SELECTS
+// ═══════════════════════════════════════════
+function populateCreditStudentSelect() {
+  const sel = document.getElementById('credit-student-sel');
+  if (!sel) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const filtered = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  sel.innerHTML = filtered.map(s =>
+    `<option value="${s["Student ID"]}">${s["Full Name"]}</option>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════
+// REFRESH CURRENT SCREEN
+// ═══════════════════════════════════════════
+function refreshCurrentScreen() {
+  const id = APP.currentScreen;
+  if (id === 's-faculty-home')  updateFacultyHome();
+  if (id === 's-f-lessons')     renderWeeks('f');
+  if (id === 's-f-students')    renderFStudents();
+  if (id === 's-f-payment')     renderFPayment();
+  if (id === 's-f-credits')     renderFCredits();
+  if (id === 's-f-devotional')  renderFDevotional();
+  if (id === 's-f-modcomp')     renderFModComp();
+  if (id === 's-add-credit')    renderFPointsGrid();
+  if (id === 's-f-points-grid-detail' && pointsGridCurrentStudent) renderPointsGridChecklist(pointsGridCurrentStudent);
+  if (id === 's-admin-home')    updateAdminHomeStats();
+  if (id === 's-a-student-att') renderAStudentAtt();
+  if (id === 's-a-faculty-att') renderAFacultyAtt();
+  if (id === 's-a-makeup')      renderMakeup();
+  if (id === 's-a-dropped')     renderDroppedStudents();
+  if (id === 's-a-tables')      renderATables();
+  if (id === 's-a-notify')      renderANotifyTableSelect();
+  if (id === 's-a-staff-sms')   renderAStaffSmsScreen();
+  if (id === 's-a-leaderboard') switchLeaderboardTab('students');
+  if (id === 's-a-devotional')  renderADevotionalTables();
+  if (id === 's-a-modcomp')     renderAModCompTables();
+  if (id === 's-a-quests')      renderAQuests();
+  if (id === 's-record-home')   renderRecordStats();
+  if (id === 's-r-qr')          { switchQRTab('scan'); }
+  if (id === 's-r-attendance')  switchAttTab('students');
+  if (id === 's-r-payment')     populatePayStudentSelect();
+  if (id === 's-r-balances')    { renderBalances(); renderBalancesSummary(); }
+  if (id === 's-view-tables')   renderViewTables();
+  if (id === 's-f-notifications') renderFacultyNotifications();
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+const LOGIN_SCREEN_IDS = ['s-portal', 's-view-tables', 's-faculty-login', 's-admin-login', 's-record-login', 's-gs-host-login', 's-gs-buzzer-login'];
+
+function go(id) {
+  const main = document.getElementById('desktop-main');
+  (main ? main.querySelectorAll('.screen') : document.querySelectorAll('.screen'))
+    .forEach(s => { s.classList.remove('active'); s.classList.remove('screen-animated'); });
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('screen-animated'); el.classList.add('active'); }
+  APP.currentScreen = id;
+
+  // Going back to the portal landing screen ends any Add Student session
+  // right away, even if the 5-minute window hasn't run out yet.
+  if (id === 's-portal') endAddStudentSession();
+
+  const refreshBtn = document.getElementById('global-refresh-btn');
+  if (refreshBtn) refreshBtn.classList.toggle('is-hidden', LOGIN_SCREEN_IDS.includes(id));
+
+  if (id === 's-faculty-home')  updateFacultyHome();
+  if (id === 's-f-lessons')     renderWeeks('f');
+  if (id === 's-f-students')    renderFStudents();
+  if (id === 's-f-payment')     renderFPayment();
+  if (id === 's-f-credits')     renderFCredits();
+  if (id === 's-f-devotional')  renderFDevotional();
+  if (id === 's-f-modcomp')     renderFModComp();
+  if (id === 's-add-credit')    renderFPointsGrid();
+  if (id === 's-f-points-grid-detail' && pointsGridCurrentStudent) renderPointsGridChecklist(pointsGridCurrentStudent);
+  if (id === 's-admin-home')    updateAdminHomeStats();
+  if (id === 's-a-student-att') renderAStudentAtt();
+  if (id === 's-a-faculty-att') renderAFacultyAtt();
+  if (id === 's-a-makeup')      renderMakeup();
+  if (id === 's-a-dropped')     renderDroppedStudents();
+  if (id === 's-a-tables')      renderATables();
+  if (id === 's-a-notify')      renderANotifyTableSelect();
+  if (id === 's-a-staff-sms')   renderAStaffSmsScreen();
+  if (id === 's-a-leaderboard') switchLeaderboardTab('students');
+  if (id === 's-a-devotional')  renderADevotionalTables();
+  if (id === 's-a-modcomp')     renderAModCompTables();
+  if (id === 's-a-quests')      renderAQuests();
+  if (id === 's-record-home')   renderRecordStats();
+  if (id === 's-r-qr')          { switchQRTab('scan'); }
+  if (id === 's-r-attendance')  switchAttTab('students');
+  if (id === 's-r-payment')     populatePayStudentSelect();
+  if (id === 's-r-balances')    { renderBalances(); renderBalancesSummary(); }
+  if (id === 's-add-credit')   populateCreditStudentSelect();
+  if (id === 's-view-tables')  renderViewTables();
+  if (id === 's-f-notifications') renderFacultyNotifications();
+}
+
+// Manually re-syncs all data from the sheet and re-renders whatever screen
+// is currently open — no page reload, so the person stays logged in.
+async function refreshApp() {
+  const btn = document.getElementById('global-refresh-btn');
+  if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
+  try {
+    await loadAllData();
+    showToast('✅ Data refreshed');
+  } catch (err) {
+    showToast('❌ Refresh failed — check connection');
+    console.error('refreshApp error:', err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.classList.remove('spinning'); }
+  }
+}
+
+// ═══════════════════════════════════════════
+// WEEK LESSONS
+// ═══════════════════════════════════════════
+function renderWeeks(prefix) {
+  const grid = document.getElementById(`week-grid-${prefix}`);
+  if (!grid) return;
+  if (!APP.lessons.length) {
+    grid.innerHTML = '<p style="padding:16px;color:var(--gray)">No lessons found.</p>';
+    return;
+  }
+  // Sort so lessons within the same week stay grouped and ordered (Week 1
+  // Lesson 1, Week 1 Lesson 2, Week 2 Lesson 3, Week 2 Lesson 4, ...)
+  const sorted = APP.lessons.slice().sort((a, b) => {
+    const wDiff = Number(a["Week No"]) - Number(b["Week No"]);
+    if (wDiff !== 0) return wDiff;
+    return Number(a["Lesson No"] || 0) - Number(b["Lesson No"] || 0);
+  });
+  grid.innerHTML = sorted.map(l => `
+    <div class="week-card" style="cursor:pointer;border:1.5px solid var(--border);border-radius:12px;padding:14px;background:#fff;transition:box-shadow 0.15s" onclick="showLessonDetail(${l['Week No']},${l['Lesson No'] || 'null'},'${prefix}')" onmouseover="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.10)'" onmouseout="this.style.boxShadow='none'">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:2px">WEEK ${l["Week No"]}${l["Lesson No"] ? ` · LESSON ${l["Lesson No"]}` : ''}</div>
+      <strong style="font-size:14px;color:var(--text1)">${l["Lesson Title"] || ""}</strong>
+      <div style="margin-top:6px;font-size:11px;color:var(--text3)">${l["Status"] || ""}</div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// Turns the raw multi-line "Lesson Content" cell text (exactly as typed/arranged
+// in Google Sheets, with blank-line paragraph breaks and "1. ITEM — description"
+// style numbered points) into properly structured, styled HTML.
+function formatLessonContent(raw) {
+  if (!raw || !String(raw).trim()) {
+    return '<span style="color:var(--text3)">No content added yet.</span>';
+  }
+
+  const text = String(raw).replace(/\r\n/g, '\n').trim();
+  const blocks = text.split(/\n\s*\n/); // paragraphs = blank-line separated chunks
+  let html = '';
+
+  blocks.forEach(block => {
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+
+    const isNumberedList = lines.length > 1 && lines.every(l => /^\d+\.\s*/.test(l));
+
+    if (isNumberedList) {
+      html += '<div class="lc-list">';
+      lines.forEach(line => {
+        const m = line.match(/^(\d+)\.\s*(.+)$/);
+        const num = m[1];
+        const rest = m[2];
+        const dashMatch = rest.match(/^(.*?)\s*[—–-]\s*(.+)$/);
+        const label = dashMatch ? dashMatch[1].trim() : rest.trim();
+        const desc  = dashMatch ? dashMatch[2].trim() : '';
+        html += `<div class="lc-list-item">
+          <span class="lc-num">${num}.</span>
+          <span class="lc-item-body"><strong>${escapeHtml(label)}</strong>${desc ? ' — ' + escapeHtml(desc) : ''}</span>
+        </div>`;
+      });
+      html += '</div>';
+      return;
+    }
+
+    if (lines.length === 1) {
+      const letters = lines[0].replace(/[^A-Za-z]/g, '');
+      const isHeading = letters.length > 3 && letters === letters.toUpperCase();
+      if (isHeading) {
+        html += `<div class="lc-heading">${escapeHtml(lines[0])}</div>`;
+        return;
+      }
+    }
+
+    html += `<p class="lc-para">${lines.map(escapeHtml).join('<br>')}</p>`;
+  });
+
+  return html || `<p class="lc-para">${escapeHtml(text)}</p>`;
+}
+
+// Turns a normal Google Slides "share" link (the kind you get from the
+// Share button — e.g. .../presentation/d/XXXXX/edit?usp=sharing) into an
+// embeddable URL. Also accepts a link already in /embed or /pub form and
+// passes it through unchanged. Returns '' if it doesn't look like a Slides
+// link at all, so callers can safely fall back to the text content.
+function getSlidesEmbedUrl(raw) {
+  const url = String(raw || '').trim();
+  if (!url) return '';
+  if (!/docs\.google\.com\/presentation/i.test(url)) return '';
+  if (/\/embed/i.test(url) || /\/pub/i.test(url)) return url; // already embeddable
+  const m = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+  if (!m) return '';
+  return `https://docs.google.com/presentation/d/${m[1]}/embed?start=false&loop=false&delayms=3000`;
+}
+
+function showLessonDetail(weekNo, lessonNo, prefix) {
+  const lesson = (lessonNo !== null && lessonNo !== undefined && lessonNo !== '')
+    ? APP.lessons.find(l => String(l["Week No"]) === String(weekNo) && String(l["Lesson No"]) === String(lessonNo))
+    : APP.lessons.find(l => String(l["Week No"]) === String(weekNo));
+  if (!lesson) return;
+
+  const titleEl = document.getElementById('lesson-detail-title');
+  const bodyEl  = document.getElementById('lesson-detail-body');
+
+  const slidesEmbedUrl = getSlidesEmbedUrl(lesson["Slides URL"]);
+  const contentBlockHtml = slidesEmbedUrl
+    ? `<div class="slides-embed-wrap"><iframe src="${slidesEmbedUrl}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe></div>`
+    : `<div class="lc-content">${formatLessonContent(lesson["Lesson Content"])}</div>`;
+
+  if (titleEl) titleEl.textContent = `Week ${lesson["Week No"]}${lesson["Lesson No"] ? ` · Lesson ${lesson["Lesson No"]}` : ''}`;
+  if (bodyEl) bodyEl.innerHTML = `
+    <div class="card" style="margin-bottom:12px;background:linear-gradient(135deg,var(--navy),var(--navy-light));padding:18px">
+      <div style="font-size:11px;color:rgba(255,255,255,0.65);font-weight:600;margin-bottom:4px">LESSON TITLE</div>
+      <div style="font-size:18px;font-weight:700;color:#fff;font-family:var(--font-head)">${lesson["Lesson Title"] || "—"}</div>
+    </div>
+    <div class="card" style="margin-bottom:12px;padding:${slidesEmbedUrl ? '14px' : '18px'}">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;${slidesEmbedUrl ? 'padding:0 4px' : ''}">${slidesEmbedUrl ? 'LESSON SLIDES' : 'LESSON CONTENT'}</div>
+      ${contentBlockHtml}
+    </div>
+    <div style="display:flex;gap:10px">
+      <div class="card" style="flex:1;padding:14px;text-align:center">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">DATE RELEASED</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text1)">${lesson["Date Released"] ? new Date(lesson["Date Released"]).toLocaleDateString() : "—"}</div>
+      </div>
+      <div class="card" style="flex:1;padding:14px;text-align:center">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">STATUS</div>
+        <div style="font-size:13px;font-weight:600;color:${lesson["Status"] === "Released" ? "var(--green)" : "var(--text3)"}">${lesson["Status"] || "—"}</div>
+      </div>
+    </div>
+  `;
+
+  APP._lessonDetailPrefix = prefix;
+  go('s-f-lesson-detail');
+}
+
+// ═══════════════════════════════════════════
+// FACULTY — ATTENDANCE LIST (renamed from Students)
+// ═══════════════════════════════════════════
+function renderFStudents() {
+  const list = document.getElementById('f-students-list');
+  if (!list) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const week = document.getElementById('f-week-filter')?.value || APP.currentWeek;
+  const filtered = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  if (!filtered.length) {
+    list.innerHTML = '<p style="padding:16px;color:var(--gray)">No students found.</p>';
     return;
   }
 
-  if (sidebarEl) sidebarEl.style.display = isPortalScreen ? 'none' : '';
-
-  // Update sidebar user info
-  var userName = document.getElementById('sidebar-user-name');
-  var userRole = document.getElementById('sidebar-user-role');
-  var userAv   = document.getElementById('sidebar-user-av');
-  var sidebarBot = document.getElementById('sidebar-bottom');
-  if (userName) userName.textContent = faculty['Full Name'] || '–';
-  if (userRole) userRole.textContent = faculty['Role'] || '–';
-  if (userAv)   userAv.textContent   = (faculty['Full Name'] || '?')[0].toUpperCase();
-  if (sidebarBot) sidebarBot.style.display = isPortalScreen ? 'none' : 'block';
-
-  // Show correct nav — prefer the nav that matches the screen actually being
-  // shown (needed for dual-role users like a Director who is also a Table
-  // Guide and can switch between the Admin view and their own Table Guide view).
-  ['sidebar-portal-nav','sidebar-faculty-nav','sidebar-admin-nav','sidebar-record-nav']
-    .forEach(id => { var el = document.getElementById(id); if(el) el.style.display = 'none'; });
-
-  var facultyScreens = ['s-faculty-home','s-f-lessons','s-f-students','s-f-payment','s-f-credits','s-add-credit','s-f-devotional','s-f-devot-detail'];
-  var adminScreens   = ['s-admin-home','s-a-student-att','s-a-faculty-att','s-a-tables','s-a-table-detail','s-a-leaderboard','s-a-makeup','s-a-dropped','s-a-devotional','s-a-devot-table','s-a-modcomp','s-a-quests'];
-  var recordScreens  = ['s-record-home','s-r-qr','s-r-attendance','s-r-payment','s-r-balances'];
-
-  var role = typeof getRoleType === 'function' ? getRoleType(faculty['Role']) : 'faculty';
-  var navId;
-  if (facultyScreens.indexOf(APP.currentScreen) !== -1) navId = 'sidebar-faculty-nav';
-  else if (adminScreens.indexOf(APP.currentScreen) !== -1) navId = 'sidebar-admin-nav';
-  else if (recordScreens.indexOf(APP.currentScreen) !== -1) navId = 'sidebar-record-nav';
-  else navId = role === 'admin' ? 'sidebar-admin-nav' : role === 'record' ? 'sidebar-record-nav' : 'sidebar-faculty-nav';
-
-  var nav = document.getElementById(navId);
-  if (nav && !isPortalScreen) { nav.style.display = 'flex'; nav.style.flexDirection = 'column'; }
-
-  // Dual-role helpers: show "My Table" inside the Admin sidebar only if this
-  // person has a Table Assigned, and show "Back to Admin" inside the Faculty
-  // sidebar only if this person's role resolves to admin.
-  var myTableBtn = document.getElementById('sidebar-my-table-btn');
-  if (myTableBtn) myTableBtn.style.display = (APP.currentFaculty && APP.currentFaculty['Table Assigned']) ? '' : 'none';
-  var backToAdminBtn = document.getElementById('sidebar-back-to-admin-btn');
-  if (backToAdminBtn) backToAdminBtn.style.display = (role === 'admin') ? '' : 'none';
-
-  // Same "Back to Admin" logic, but for the mobile Table Guide screen — the
-  // menu item and bottom-nav icon existed in the HTML but nothing ever
-  // toggled them on, so mobile admins had no visible way back.
-  var backToAdminWrapMobile = document.getElementById('f-back-to-admin-wrap');
-  if (backToAdminWrapMobile) backToAdminWrapMobile.style.display = (role === 'admin') ? '' : 'none';
-  var backToAdminBnavMobile = document.getElementById('f-bnav-admin');
-  if (backToAdminBnavMobile) backToAdminBnavMobile.style.display = (role === 'admin') ? '' : 'none';
-
-  // Same helper, but for the mobile "MANAGE" menu on the admin home screen —
-  // this block existed in the HTML but was never actually wired up, so it
-  // never showed on phones.
-  var myTableWrapMobile = document.getElementById('a-my-table-wrap');
-  var assignedTable = APP.currentFaculty && APP.currentFaculty['Table Assigned'];
-  if (myTableWrapMobile) myTableWrapMobile.style.display = assignedTable ? '' : 'none';
-  var myTableTitleMobile = document.getElementById('a-my-table-title');
-  if (myTableTitleMobile && assignedTable) myTableTitleMobile.textContent = getTableLabel(assignedTable) + ' Guide View';
-
-  // Dropped badge
-  var sbBadge = document.getElementById('sb-dropped-badge');
-  if (sbBadge) {
-    var count = APP.students.filter(function(s){ return (s['Status']||'').toLowerCase() === 'dropped'; }).length;
-    sbBadge.textContent = count;
-    sbBadge.style.display = count > 0 ? '' : 'none';
-  }
-
-  // Active sidebar button highlight
-  document.querySelectorAll('.sidebar-btn').forEach(function(b){ b.classList.remove('active'); });
-  var screenNavMap = {
-    's-faculty-home':'sidebar-faculty-nav','s-f-lessons':'sidebar-faculty-nav',
-    's-f-students':'sidebar-faculty-nav','s-f-payment':'sidebar-faculty-nav',
-    's-f-credits':'sidebar-faculty-nav','s-add-credit':'sidebar-faculty-nav',
-    's-f-devotional':'sidebar-faculty-nav','s-f-devot-detail':'sidebar-faculty-nav',
-    's-admin-home':'sidebar-admin-nav','s-a-student-att':'sidebar-admin-nav',
-    's-a-tables':'sidebar-admin-nav','s-a-table-detail':'sidebar-admin-nav',
-    's-a-leaderboard':'sidebar-admin-nav','s-a-makeup':'sidebar-admin-nav',
-    's-a-dropped':'sidebar-admin-nav','s-a-devotional':'sidebar-admin-nav',
-    's-a-devot-table':'sidebar-admin-nav','s-a-modcomp':'sidebar-admin-nav',
-    's-a-quests':'sidebar-admin-nav','s-record-home':'sidebar-record-nav',
-    's-r-qr':'sidebar-record-nav','s-r-attendance':'sidebar-record-nav',
-    's-r-payment':'sidebar-record-nav','s-r-balances':'sidebar-record-nav'
+  const statusColors = {
+    present: { bg: '#e8f5ee', color: '#46586e', label: 'Present' },
+    late:    { bg: '#fff5e0', color: '#c9960c', label: 'Late'    },
+    absent:  { bg: '#fdecea', color: '#e53935', label: 'Absent'  },
+    none:    { bg: '#eceef1', color: '#6b7280', label: 'Not yet recorded' },
   };
-  var activeNav = document.getElementById(screenNavMap[APP.currentScreen]);
-  if (activeNav) {
-    activeNav.querySelectorAll('.sidebar-btn').forEach(function(b){
-      if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(APP.currentScreen))
-        b.classList.add('active');
+
+  // Tally tardiness and absences for warning
+  list.innerHTML = filtered.map(s => {
+    const att = APP.attendance.find(a =>
+      String(a["Student ID"]) === String(s["Student ID"]) &&
+      String(a["Week No"]) === String(week)
+    );
+
+    // IMPORTANT: no attendance row at all (never scanned, not marked absent)
+    // must NOT be displayed as "Absent" — that's a real, distinct status
+    // someone explicitly recorded. Missing data just means nothing has
+    // happened yet for this student/week.
+    let key;
+    if (!att) {
+      key = "none";
+    } else {
+      const rawStatus = (att["Attendance Status"] || att["Status"] || "present").toLowerCase();
+      key = rawStatus.includes("late") ? "late" : rawStatus.includes("absent") ? "absent" : "present";
+    }
+    const { bg, color, label } = statusColors[key];
+
+    // Count totals for warnings
+    const allAtt = APP.attendance.filter(a => String(a["Student ID"]) === String(s["Student ID"]));
+    const totalLate = allAtt.filter(a => (a["Attendance Status"]||a["Status"]||"").toLowerCase().includes("late")).length;
+    const totalAbsent = allAtt.filter(a => (a["Attendance Status"]||a["Status"]||"").toLowerCase().includes("absent")).length;
+    const warningHtml = totalAbsent >= 2 ? `<div style="font-size:10px;color:#e53935;margin-top:2px">⚠️ ${totalAbsent} absences${totalAbsent >= 3 ? ' — DROP RISK' : ''}</div>` :
+                        totalLate >= 2 ? `<div style="font-size:10px;color:#c9960c;margin-top:2px">⏰ ${totalLate} tardiness${totalLate >= 3 ? ' = 1 Absent' : ''}</div>` : '';
+
+    return `
+      <div class="row" style="align-items:center">
+        <div>
+          <strong>${s["Full Name"]}</strong><br>
+          <small>${getTableLabel(s["Table No"])} · Week ${week}</small>
+          ${warningHtml}
+        </div>
+        <div style="background:${bg};color:${color};font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap">${label}</div>
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// FACULTY — DEVOTIONAL & ACTIVITIES (Student List)
+// ═══════════════════════════════════════════
+let devotActCurrentStudent = null;
+
+function renderFDevotional() {
+  const el = document.getElementById('f-devotional-list');
+  if (!el) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const filtered = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  if (!filtered.length) {
+    el.innerHTML = '<p style="padding:16px;color:var(--gray)">No students found.</p>';
+    return;
+  }
+  el.innerHTML = filtered.map(s => {
+    const devotDone = getDevotionalCount(s["Student ID"]);
+    const devotPct  = Math.round((devotDone / TOTAL_DEVOTIONAL_DAYS) * 100);
+    const eligible  = isDevotionalCertificateEligible(s["Student ID"]);
+    return `
+      <button class="row" style="align-items:center;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:12px 0;border-bottom:1px solid #f0f0f0" onclick="openDevotActDetail('${s["Student ID"]}')">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">${s["Full Name"]} ${eligible ? '<span style="color:#1e7e34;font-size:11px;font-weight:700">🎓 Eligible</span>' : ''}</div>
+          <div style="margin-top:4px">
+            <div style="font-size:10px;color:#46586e;font-weight:600;margin-bottom:2px">📖 Devotionals ${devotDone}/${TOTAL_DEVOTIONAL_DAYS}</div>
+            <div style="height:4px;background:#e0e0e0;border-radius:4px;overflow:hidden">
+              <div style="height:100%;width:${devotPct}%;background:${devotPct >= 80 ? '#46586e' : devotPct >= 50 ? '#c9960c' : '#e53935'};border-radius:4px;transition:width 0.3s"></div>
+            </div>
+          </div>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="width:16px;height:16px;margin-left:10px;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>`;
+  }).join('');
+}
+
+function openDevotActDetail(studentId) {
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  if (!student) return;
+  devotActCurrentStudent = studentId;
+  const el = document.getElementById('f-devot-detail-name');
+  if (el) el.textContent = student["Full Name"];
+  renderDevotChecklist(studentId);
+  go('s-f-devot-detail');
+}
+
+// Banner shown above the devotional checklist: progress summary, and once
+// all 140 days are checked, a button to generate the Certificate of
+// Appreciation. Mirrors modCompHeaderHtml's eligible-state pattern.
+function devotHeaderHtml(studentId) {
+  const devotDone = getDevotionalCount(studentId);
+  const eligible = isDevotionalCertificateEligible(studentId);
+  return `
+    <div style="background:${eligible ? 'linear-gradient(135deg,#1e7e34,#3fae5c)' : 'linear-gradient(135deg,#46586e,#8fa4b8)'};border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
+      <div style="font-size:11px;opacity:0.85;margin-bottom:2px">20-Week Program · 140 Days</div>
+      <div style="font-size:15px;font-weight:700">${eligible ? '🎓 Certificate Eligible — all devotionals Done!' : `📖 ${devotDone}/${TOTAL_DEVOTIONAL_DAYS} Devotionals Done`}</div>
+      ${eligible ? `
+      <button id="devot-cert-btn" class="btn-primary" style="background:#fff;color:#1e7e34;margin-top:12px" onclick="generateDevotionalCertificate('${studentId}')">
+        🎓 Generate Certificate
+      </button>` : ''}
+    </div>`;
+}
+
+// Render the devotional checklist, grouped by Module -> Week -> 7-day row
+function renderDevotChecklist(studentId) {
+  const el = document.getElementById('f-devot-checklist');
+  if (!el) return;
+  const devotDone = APP.devotionals[studentId] || new Set();
+
+  const counter = document.getElementById('f-devot-counter');
+  if (counter) counter.textContent = `${devotDone.size}/${TOTAL_DEVOTIONAL_DAYS}`;
+
+  let html = devotHeaderHtml(studentId);
+  let lastModule = 0;
+  for (let week = 1; week <= TOTAL_DEVOTIONAL_WEEKS; week++) {
+    const module = Math.ceil(week / DEVOTIONAL_WEEKS_PER_MODULE);
+    if (module !== lastModule) {
+      html += `<div class="devot-module-head">Module ${module}</div>`;
+      lastModule = module;
+    }
+    const startDay = (week - 1) * 7 + 1;
+    let weekDone = 0;
+    let dayChips = '';
+    for (let i = 0; i < 7; i++) {
+      const day = startDay + i;
+      const checked = devotDone.has(day);
+      if (checked) weekDone++;
+      dayChips += `
+        <label class="devot-day-chip ${checked ? 'checked' : ''}">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleDevot('${studentId}', ${day}, this.checked)">
+          <span>${DEVOTIONAL_DAY_NAMES[i]}</span>
+        </label>`;
+    }
+    html += `
+      <div class="devot-week-block">
+        <div class="devot-week-head">
+          <span class="devot-week-title">Module ${module} — Week ${week}</span>
+          <span class="devot-week-count ${weekDone === 7 ? 'all-done' : ''}">${weekDone}/7</span>
+        </div>
+        <div class="devot-day-row">${dayChips}</div>
+      </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function toggleDevot(studentId, day, checked) {
+  saveDevotional(studentId, day, checked);
+  renderDevotChecklist(studentId);
+  renderFDevotional();
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — DEVOTIONAL & ACTIVITIES RECORDS VIEW
+// ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+// ADMIN — LEVEL CHALLENGE TASKS EDITOR
+// Director/Consultant customizes each level's quests. Edits happen in a
+// local "draft" array; nothing is written to the sheet until Save. Saving
+// replaces the whole level's rows in LEVEL_QUESTS at once (see
+// saveLevelQuests in the GAS backend).
+// ═══════════════════════════════════════════
+let questsEditLevel = 1;
+let questsEditDraft = [];
+
+function openQuestsEditorLevel(lvl) {
+  questsEditLevel = lvl;
+  seedQuestsEditDraft();
+  renderAQuests();
+}
+
+function seedQuestsEditDraft() {
+  const source = (APP.levelQuests[questsEditLevel] && APP.levelQuests[questsEditLevel].length)
+    ? APP.levelQuests[questsEditLevel]
+    : (QUESTS[questsEditLevel] || []);
+  questsEditDraft = source.map(q => ({ icon: q.icon || '⭐', type: q.type || '', title: q.title || '' }));
+}
+
+function renderAQuests() {
+  const tabs = document.getElementById('a-quests-level-tabs');
+  if (!tabs) return;
+  if (!questsEditDraft.length) seedQuestsEditDraft();
+
+  tabs.innerHTML = Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1).map(lvl => {
+    const active = lvl === questsEditLevel;
+    const customized = !!(APP.levelQuests[lvl] && APP.levelQuests[lvl].length);
+    return `<button class="menu-item" style="width:auto;padding:8px 12px;margin:0;${active ? 'background:var(--green);color:#fff' : ''}" onclick="openQuestsEditorLevel(${lvl})">
+      <div class="mi-text"><div class="mi-title" style="${active ? 'color:#fff' : ''}">L${lvl}${customized ? ' •' : ''}</div></div>
+    </button>`;
+  }).join('');
+
+  renderQuestsEditorRows();
+  const status = document.getElementById('a-quests-status');
+  if (status) status.textContent = `Editing Level ${questsEditLevel} — ${LEVEL_NAMES[questsEditLevel] || ''}`;
+}
+
+function renderQuestsEditorRows() {
+  const list = document.getElementById('a-quests-list');
+  if (!list) return;
+  const typeSelect = (i, val) => `
+    <select onchange="questsEditDraft[${i}].type=this.value" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-top:6px">
+      <option value="" ${!val ? 'selected' : ''}>Normal task (student self check-off)</option>
+      <option value="watch" ${val === 'watch' ? 'selected' : ''}>Watch video</option>
+      <option value="upload" ${val === 'upload' ? 'selected' : ''}>Upload video testimony</option>
+      <option value="photoUpload" ${val === 'photoUpload' ? 'selected' : ''}>Upload photo</option>
+    </select>`;
+
+  list.innerHTML = questsEditDraft.map((q, i) => `
+    <div style="border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <input type="text" value="${escapeAttr(q.icon)}" maxlength="4" placeholder="🎯"
+          oninput="questsEditDraft[${i}].icon=this.value"
+          style="width:52px;flex:0 0 auto;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:16px;text-align:center">
+        <textarea rows="2" placeholder="Task description…"
+          oninput="questsEditDraft[${i}].title=this.value"
+          style="flex:1;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;resize:vertical;font-family:var(--font)">${escapeHtmlAdmin(q.title)}</textarea>
+        <button onclick="removeQuestsEditorRow(${i})" title="Remove task"
+          style="flex:0 0 auto;width:34px;height:34px;border:none;border-radius:8px;background:#fdecea;color:#e53935;font-weight:700;cursor:pointer">✕</button>
+      </div>
+      ${typeSelect(i, q.type)}
+    </div>`).join('') || '<p style="color:var(--gray);font-size:13px">No tasks yet — tap "+ Add Task" below.</p>';
+}
+
+function escapeHtmlAdmin(str) {
+  return String(str || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+function escapeAttr(str) {
+  return String(str || '').replace(/"/g, '&quot;');
+}
+
+function addQuestsEditorRow() {
+  questsEditDraft.push({ icon: '⭐', type: '', title: '' });
+  renderQuestsEditorRows();
+}
+
+function removeQuestsEditorRow(i) {
+  questsEditDraft.splice(i, 1);
+  renderQuestsEditorRows();
+}
+
+function resetQuestsEditorToDefault() {
+  const def = QUESTS[questsEditLevel] || [];
+  questsEditDraft = def.map(q => ({ icon: q.icon || '⭐', type: q.type || '', title: q.title || '' }));
+  renderQuestsEditorRows();
+  showToast('Reset to default — tap Save Changes to apply');
+}
+
+async function saveQuestsEditor() {
+  const cleaned = questsEditDraft
+    .map(q => ({ icon: (q.icon || '⭐').trim(), type: (q.type || '').trim(), title: (q.title || '').trim() }))
+    .filter(q => q.title);
+
+  if (!cleaned.length) {
+    showToast('Add at least one task with a description first.');
+    return;
+  }
+
+  try {
+    const res = await apiPost({
+      action: 'saveLevelQuests',
+      levelNo: questsEditLevel,
+      quests: cleaned,
+      updatedBy: APP.currentFaculty?.['Full Name'] || ''
     });
+    if (res && res.success) {
+      APP.levelQuests[questsEditLevel] = cleaned;
+      questsEditDraft = cleaned.map(q => ({ ...q }));
+      renderAQuests();
+      showToast(res.message || 'Saved');
+    } else {
+      showToast((res && res.message) || 'Save failed — please try again.');
+    }
+  } catch (e) {
+    console.warn('saveLevelQuests failed:', e);
+    showToast('Could not reach the server — please try again.');
   }
 }
 
-// Patch go() to also update sidebar
-if (typeof go === 'function') {
-  var _origGo = go;
-  window.go = function(id) { _origGo(id); updateSidebar(); };
+function renderADevotionalTables() {
+  const el = document.getElementById('a-devot-tables');
+  if (!el) return;
+  const tableNos = [...new Set(APP.students.map(s => String(s["Table No"])))].filter(Boolean).sort();
+  el.innerHTML = tableNos.map(tno => {
+    const students = APP.students.filter(s => String(s["Table No"]) === tno && (s["Status"]||"Active").toLowerCase() !== "dropped");
+    const totalS = students.length;
+    const totalDevot = students.reduce((sum, s) => sum + getDevotionalCount(s["Student ID"]), 0);
+    const maxPossible = totalS * TOTAL_DEVOTIONAL_DAYS;
+    const devotPct = maxPossible > 0 ? Math.round((totalDevot / maxPossible) * 100) : 0;
+    return `
+      <button class="menu-item" onclick="openADevotTable('${tno}')" style="margin-bottom:8px">
+        <div class="mi-icon" style="background:#e8f5ee"><svg viewBox="0 0 24 24" stroke="#46586e" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></div>
+        <div class="mi-text">
+          <div class="mi-title">${getTableLabel(tno)} — ${totalS} students</div>
+          <div class="mi-sub">📖 ${devotPct}% devotionals</div>
+        </div>
+        <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>`;
+  }).join('') || '<p style="padding:16px;color:var(--gray)">No tables found.</p>';
 }
 
-// Patch logout to reset sidebar
-if (typeof logout === 'function') {
-  var _origLogout = logout;
-  window.logout = function() { _origLogout(); updateSidebar(); };
+function openADevotTable(tableNo) {
+  const el = document.getElementById('a-devot-table-title');
+  if (el) el.textContent = `${getTableLabel(tableNo)} — Devotionals`;
+  renderADevotTableStudents(tableNo);
+  go('s-a-devot-table');
 }
 
-document.addEventListener('DOMContentLoaded', function(){ updateSidebar(); });
-</script>
+function renderADevotTableStudents(tableNo) {
+  const el = document.getElementById('a-devot-table-list');
+  if (!el) return;
+  const students = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"]||"Active").toLowerCase() !== "dropped"
+  ).sort((a, b) => getDevotionalCount(b["Student ID"]) - getDevotionalCount(a["Student ID"]));
 
+  el.innerHTML = students.map((s, i) => {
+    const devotDone = getDevotionalCount(s["Student ID"]);
+    const devotPct  = Math.round((devotDone / TOTAL_DEVOTIONAL_DAYS) * 100);
+    return `
+      <div class="row" style="align-items:flex-start;padding:12px 0;flex-direction:column">
+        <div style="display:flex;align-items:center;width:100%;margin-bottom:8px">
+          <div style="width:26px;height:26px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#666;flex-shrink:0;margin-right:10px">#${i+1}</div>
+          <div style="font-weight:600;font-size:14px">${s["Full Name"]}</div>
+        </div>
+        <div style="width:100%;padding-left:36px">
+          <div style="font-size:10px;color:#46586e;font-weight:600;margin-bottom:3px">📖 Devotionals ${devotDone}/${TOTAL_DEVOTIONAL_DAYS} (${devotPct}%)</div>
+          <div style="height:5px;background:#e0e0e0;border-radius:5px;overflow:hidden">
+            <div style="height:100%;width:${devotPct}%;background:#46586e;border-radius:5px"></div>
+          </div>
+        </div>
+      </div>`;
+  }).join('') || '<p style="padding:16px;color:var(--gray)">No students found.</p>';
+}
 
-<script>
-// ══════════════════════════════════════════
-// RIPPLE EFFECT
-// ══════════════════════════════════════════
-function createRipple(event) {
-  const el = event.currentTarget;
-  const ripple = document.createElement('span');
-  ripple.classList.add('ripple-effect');
-  const rect = el.getBoundingClientRect();
-  const x = (event.clientX ?? rect.left + rect.width / 2) - rect.left;
-  const y = (event.clientY ?? rect.top + rect.height / 2) - rect.top;
-  ripple.style.left = x + 'px';
-  ripple.style.top  = y + 'px';
-  const bg = window.getComputedStyle(el).backgroundColor;
-  if (bg && (bg.includes('255, 255, 255') || bg === 'rgba(0, 0, 0, 0)')) {
-    ripple.style.background = 'rgba(0,0,0,0.1)';
+// ═══════════════════════════════════════════
+// FACULTY — MODULE COMPLETION (Student List)
+// ═══════════════════════════════════════════
+let modCompCurrentStudent = null;
+let modCompActiveModule = 1; // 1 or 2
+
+function renderFModComp() {
+  const el = document.getElementById('f-modcomp-list');
+  if (!el) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const filtered = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  if (!filtered.length) {
+    el.innerHTML = '<p style="padding:16px;color:var(--gray)">No students found.</p>';
+    return;
   }
-  el.appendChild(ripple);
-  ripple.addEventListener('animationend', () => ripple.remove());
+  el.innerHTML = filtered.map(s => {
+    const doneCount = getTotalLessonsDoneCount(s["Student ID"]);
+    const makeupCount = getTotalLessonsMakeupCount(s["Student ID"]);
+    const pct = Math.round((doneCount / TOTAL_LESSONS) * 100);
+    const eligible = isCertificateEligible(s["Student ID"]);
+    return `
+      <button class="row" style="align-items:center;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:12px 0;border-bottom:1px solid #f0f0f0" onclick="openModCompDetail('${s["Student ID"]}')">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">${s["Full Name"]} ${eligible ? '<span style="color:#1e7e34;font-size:11px;font-weight:700">🎓 Eligible</span>' : ''}</div>
+          <div style="margin-top:4px">
+            <div style="font-size:10px;color:#1e3a8a;font-weight:600;margin-bottom:2px">📘 Lessons Done ${doneCount}/${TOTAL_LESSONS}${makeupCount ? ` · ⚠️ ${makeupCount} make-up` : ''}</div>
+            <div style="height:5px;background:#e0e0e0;border-radius:5px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${eligible ? '#1e7e34' : pct >= 50 ? '#1e3a8a' : '#c9960c'};border-radius:5px;transition:width 0.3s"></div>
+            </div>
+          </div>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="width:16px;height:16px;margin-left:10px;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>`;
+  }).join('');
 }
-function attachRipples() {
-  const sel = '.portal-btn,.menu-item,.btn-primary,.sidebar-btn,.topbar-back,.ni,.reason-btn,.week-btn';
-  document.querySelectorAll(sel).forEach(el => {
-    if (!el.dataset.ripple) {
-      el.dataset.ripple = '1';
-      el.addEventListener('click', createRipple);
+
+function openModCompDetail(studentId) {
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  if (!student) return;
+  modCompCurrentStudent = studentId;
+  modCompActiveModule = 1;
+  const el = document.getElementById('f-modcomp-detail-name');
+  if (el) el.textContent = student["Full Name"];
+  renderModCompChecklist(studentId);
+  go('s-f-modcomp-detail');
+}
+
+function switchModCompModule(moduleNo) {
+  modCompActiveModule = moduleNo;
+  renderModCompChecklist(modCompCurrentStudent);
+}
+
+function modCompHeaderHtml(studentId) {
+  const doneCount = getTotalLessonsDoneCount(studentId);
+  const makeupCount = getTotalLessonsMakeupCount(studentId);
+  const eligible = isCertificateEligible(studentId);
+  return `
+    <div style="background:${eligible ? 'linear-gradient(135deg,#1e7e34,#3fae5c)' : 'linear-gradient(135deg,#1e3a8a,#3b5fc9)'};border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#fff">
+      <div style="font-size:11px;opacity:0.85;margin-bottom:2px">2 Modules · 10 Lessons each · 20 total</div>
+      <div style="font-size:15px;font-weight:700">${eligible ? '🎓 Certificate Eligible — all lessons Done!' : `📘 ${doneCount}/${TOTAL_LESSONS} Lessons Done${makeupCount ? ` · ⚠️ ${makeupCount} Make-up` : ''}`}</div>
+      ${eligible ? `
+      <button id="modcomp-cert-btn" class="btn-primary" style="background:#fff;color:#1e7e34;margin-top:12px" onclick="generateCertificate('${studentId}')">
+        🎓 Generate Certificate
+      </button>` : ''}
+    </div>`;
+}
+
+// Renders the Module 1 / Module 2 tab switcher + the active module's 10-lesson checklist.
+// Each lesson has two buttons: ✓ Done and ✗ Make-up (tap again to un-mark).
+function renderModCompChecklist(studentId) {
+  const el = document.getElementById('f-modcomp-checklist');
+  if (!el) return;
+
+  const counter = document.getElementById('f-modcomp-counter');
+  if (counter) counter.textContent = `${getTotalLessonsDoneCount(studentId)}/${TOTAL_LESSONS} done`;
+
+  let tabsHtml = '';
+  for (let m = 1; m <= TOTAL_MODULES; m++) {
+    const isActive = modCompActiveModule === m;
+    const modDone = getModuleDoneCount(studentId, m);
+    tabsHtml += `
+      <button onclick="switchModCompModule(${m})"
+        style="flex:1;padding:10px 0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid ${isActive ? '#1e3a8a' : '#e8e8e8'};background:${isActive ? '#1e3a8a' : '#fff'};color:${isActive ? '#fff' : '#1e3a8a'};transition:all 0.2s">
+        Module ${m}<br><span style="font-size:11px;opacity:0.85">${modDone}/${LESSONS_PER_MODULE} done</span>
+      </button>`;
+  }
+
+  let lessonsHtml = '';
+  for (let l = 1; l <= LESSONS_PER_MODULE; l++) {
+    const status = getLessonStatus(studentId, modCompActiveModule, l);
+    const isDone = status === 'Done';
+    const isMakeup = status === 'Makeup';
+    lessonsHtml += `
+      <div data-lesson="${l}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:${isDone ? '#e8f5ee' : isMakeup ? '#fdecea' : '#fafafa'};margin-bottom:6px;border:1.5px solid ${isDone ? '#1e7e34' : isMakeup ? '#e53935' : '#e8e8e8'};transition:all 0.2s">
+        <div style="flex:1">
+          <span style="font-weight:600;font-size:13px">Lesson ${l}</span>
+        </div>
+        <button onclick="setLessonMark('${studentId}', ${modCompActiveModule}, ${l}, 'Done')"
+          title="Mark Done" style="width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:800;border:1.5px solid ${isDone ? '#1e7e34' : '#dcdcdc'};background:${isDone ? '#1e7e34' : '#fff'};color:${isDone ? '#fff' : '#1e7e34'}">✓</button>
+        <button onclick="setLessonMark('${studentId}', ${modCompActiveModule}, ${l}, 'Makeup')"
+          title="Mark Make-up Class" style="width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:800;border:1.5px solid ${isMakeup ? '#e53935' : '#dcdcdc'};background:${isMakeup ? '#e53935' : '#fff'};color:${isMakeup ? '#fff' : '#e53935'}">✗</button>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    ${modCompHeaderHtml(studentId)}
+    <div style="display:flex;gap:8px;margin-bottom:14px">${tabsHtml}</div>
+    <div id="modcomp-lesson-list">${lessonsHtml}</div>`;
+}
+
+// Tapping the same status again clears the mark (toggle off); tapping the
+// other status switches straight over.
+function setLessonMark(studentId, moduleNo, lessonNo, status) {
+  const current = getLessonStatus(studentId, moduleNo, lessonNo);
+  const next = current === status ? '' : status;
+  saveLessonStatus(studentId, moduleNo, lessonNo, next);
+  renderModCompChecklist(studentId);
+  renderFModComp();
+}
+
+// ═══════════════════════════════════════════
+// FACULTY — POINTS GRID (replaces the old manual "Add Points" form)
+// Per Module → Lesson, four boxes: Attendance / Participation / Homework /
+// Memory Verse. Tapping an unchecked box asks the facilitator how many
+// points to give; tapping a checked box removes those points immediately.
+// ═══════════════════════════════════════════
+let pointsGridCurrentStudent = null;
+let pointsGridActiveModule = 1;
+
+function renderFPointsGrid() {
+  const el = document.getElementById('f-points-grid-list');
+  if (!el) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const filtered = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  if (!filtered.length) {
+    el.innerHTML = '<p style="padding:16px;color:var(--gray)">No students found.</p>';
+    return;
+  }
+  const sorted = [...filtered].sort(
+    (a, b) => getStudentCredits(b["Student ID"]) - getStudentCredits(a["Student ID"])
+  );
+  el.innerHTML = sorted.map((s, i) => `
+    <button class="row" style="align-items:center;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:12px 0;border-bottom:1px solid #f0f0f0" onclick="openPointsGridDetail('${s["Student ID"]}')">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">#${i + 1} ${s["Full Name"]}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${getTableLabel(s["Table No"])}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap;margin-right:6px">${getStudentCredits(s["Student ID"])} pts</div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="width:16px;height:16px;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`).join('');
+}
+
+function openPointsGridDetail(studentId) {
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  if (!student) return;
+  pointsGridCurrentStudent = studentId;
+  pointsGridActiveModule = 1;
+  const el = document.getElementById('f-points-grid-detail-name');
+  if (el) el.textContent = student["Full Name"];
+  renderPointsGridChecklist(studentId);
+  go('s-f-points-grid-detail');
+}
+
+function switchPointsGridModule(moduleNo) {
+  pointsGridActiveModule = moduleNo;
+  renderPointsGridChecklist(pointsGridCurrentStudent);
+}
+
+function renderPointsGridChecklist(studentId) {
+  const el = document.getElementById('f-points-grid-checklist');
+  if (!el) return;
+
+  const counter = document.getElementById('f-points-grid-counter');
+  if (counter) counter.textContent = `${getStudentCredits(studentId)} pts total`;
+
+  let tabsHtml = '';
+  for (let m = 1; m <= TOTAL_MODULES; m++) {
+    const isActive = pointsGridActiveModule === m;
+    tabsHtml += `
+      <button onclick="switchPointsGridModule(${m})"
+        style="flex:1;padding:10px 0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid ${isActive ? '#1e3a8a' : '#e8e8e8'};background:${isActive ? '#1e3a8a' : '#fff'};color:${isActive ? '#fff' : '#1e3a8a'};transition:all 0.2s">
+        Module ${m}
+      </button>`;
+  }
+
+  let lessonsHtml = '';
+  for (let l = 1; l <= LESSONS_PER_MODULE; l++) {
+    const rowTotal = getLessonPointsRowTotal(studentId, pointsGridActiveModule, l);
+    let boxesHtml = '';
+    POINT_CATEGORIES.forEach(cat => {
+      const val = getLessonPointBox(studentId, pointsGridActiveModule, l, cat.key);
+      const checked = val > 0;
+      boxesHtml += `
+        <button onclick="handlePointsBoxTap('${studentId}', ${pointsGridActiveModule}, ${l}, '${cat.key}', '${cat.label}')"
+          title="${cat.label}"
+          style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:8px;cursor:pointer;border:1.5px solid ${checked ? '#1e7e34' : '#dcdcdc'};background:${checked ? '#e8f5ee' : '#fff'};color:${checked ? '#1e7e34' : '#666'}">
+          <span style="font-size:15px">${checked ? '✅' : cat.icon}</span>
+          <span style="font-size:9px;font-weight:700;line-height:1.2;text-align:center">${cat.label}</span>
+          ${checked ? `<span style="font-size:10px;font-weight:800">${val}pt</span>` : ''}
+        </button>`;
+    });
+    lessonsHtml += `
+      <div style="padding:10px 12px;border-radius:10px;background:${rowTotal ? '#fafdff' : '#fafafa'};margin-bottom:8px;border:1.5px solid ${rowTotal ? '#c9d9f5' : '#e8e8e8'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-weight:600;font-size:13px">Lesson ${l}</span>
+          ${rowTotal ? `<span style="font-size:11px;font-weight:700;color:var(--navy)">${rowTotal} pts</span>` : ''}
+        </div>
+        <div style="display:flex;gap:6px">${boxesHtml}</div>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:14px">${tabsHtml}</div>
+    <div id="points-grid-lesson-list">${lessonsHtml}</div>`;
+}
+
+// Tapping a box: unchecked -> ask how many points to award; checked ->
+// confirm removal (this pulls those points straight back out of the total).
+function handlePointsBoxTap(studentId, moduleNo, lessonNo, categoryKey, categoryLabel) {
+  const current = getLessonPointBox(studentId, moduleNo, lessonNo, categoryKey);
+  if (current > 0) {
+    if (!confirm(`Remove the ${current} pts already given for ${categoryLabel} (Lesson ${lessonNo})?`)) return;
+    savePointsBox(studentId, moduleNo, lessonNo, categoryKey, 0);
+    return;
+  }
+  const input = prompt(`Points to award for ${categoryLabel} — Lesson ${lessonNo}:`, '5');
+  if (input === null) return;
+  const points = Number(input);
+  if (!Number.isFinite(points) || points <= 0) {
+    showToast('⚠️ Enter a valid positive number');
+    return;
+  }
+  savePointsBox(studentId, moduleNo, lessonNo, categoryKey, points);
+}
+
+async function savePointsBox(studentId, moduleNo, lessonNo, categoryKey, points) {
+  if (!APP.lessonPoints[studentId]) APP.lessonPoints[studentId] = {};
+  const key = lessonKey(moduleNo, lessonNo);
+  if (!APP.lessonPoints[studentId][key]) {
+    APP.lessonPoints[studentId][key] = { attendance: 0, participation: 0, homework: 0, memoryVerse: 0 };
+  }
+  APP.lessonPoints[studentId][key][categoryKey] = points;
+
+  // Optimistic UI update, then sync in the background.
+  renderPointsGridChecklist(studentId);
+  renderFPointsGrid();
+
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  try {
+    await apiPost({
+      action: 'toggleLessonPointBox',
+      studentId,
+      studentName: student?.["Full Name"] || '',
+      tableNo: student?.["Table No"] || '',
+      moduleNo, lessonNo,
+      category: categoryKey,
+      points,
+      markedBy: APP.currentFaculty?.["Full Name"] || ''
+    });
+  } catch (e) {
+    console.warn('Lesson points sync failed:', e);
+    showToast('⚠️ Saved locally — will retry sync');
+  }
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — MODULE COMPLETION RECORDS VIEW
+// ═══════════════════════════════════════════
+function renderAModCompTables() {
+  const el = document.getElementById('a-modcomp-tables');
+  if (!el) return;
+  const tableNos = [...new Set(APP.students.map(s => String(s["Table No"])))].filter(Boolean).sort();
+  el.innerHTML = tableNos.map(tno => {
+    const students = APP.students.filter(s => String(s["Table No"]) === tno && (s["Status"]||"Active").toLowerCase() !== "dropped");
+    const totalS = students.length;
+    const eligibleCount = students.filter(s => isCertificateEligible(s["Student ID"])).length;
+    const totalDone = students.reduce((sum, s) => sum + getTotalLessonsDoneCount(s["Student ID"]), 0);
+    const maxPossible = totalS * TOTAL_LESSONS;
+    const pct = maxPossible > 0 ? Math.round((totalDone / maxPossible) * 100) : 0;
+    return `
+      <button class="menu-item" onclick="openAModCompTable('${tno}')" style="margin-bottom:8px">
+        <div class="mi-icon" style="background:#e8f0fb"><svg viewBox="0 0 24 24" stroke="#1e3a8a" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+        <div class="mi-text">
+          <div class="mi-title">${getTableLabel(tno)} — ${totalS} students</div>
+          <div class="mi-sub">📘 ${pct}% lessons done · 🎓 ${eligibleCount}/${totalS} certificate-eligible</div>
+        </div>
+        <svg class="mi-arr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>`;
+  }).join('') || '<p style="padding:16px;color:var(--gray)">No tables found.</p>';
+}
+
+function openAModCompTable(tableNo) {
+  const el = document.getElementById('a-modcomp-table-title');
+  if (el) el.textContent = `${getTableLabel(tableNo)} — Module Completion`;
+  renderAModCompTableStudents(tableNo);
+  go('s-a-modcomp-table');
+}
+
+function renderAModCompTableStudents(tableNo) {
+  const el = document.getElementById('a-modcomp-table-list');
+  if (!el) return;
+  const students = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"]||"Active").toLowerCase() !== "dropped"
+  ).sort((a, b) => getTotalLessonsDoneCount(b["Student ID"]) - getTotalLessonsDoneCount(a["Student ID"]));
+
+  el.innerHTML = students.map((s, i) => {
+    const doneCount = getTotalLessonsDoneCount(s["Student ID"]);
+    const makeupCount = getTotalLessonsMakeupCount(s["Student ID"]);
+    const pct = Math.round((doneCount / TOTAL_LESSONS) * 100);
+    const eligible = isCertificateEligible(s["Student ID"]);
+    const mod1 = getModuleDoneCount(s["Student ID"], 1);
+    const mod2 = getModuleDoneCount(s["Student ID"], 2);
+    return `
+      <div class="row" style="align-items:flex-start;padding:12px 0;flex-direction:column">
+        <div style="display:flex;align-items:center;width:100%;margin-bottom:8px">
+          <div style="width:26px;height:26px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#666;flex-shrink:0;margin-right:10px">#${i+1}</div>
+          <div style="font-weight:600;font-size:14px;flex:1">${s["Full Name"]}</div>
+          ${eligible ? '<span style="background:#e8f5ee;color:#1e7e34;font-size:10px;font-weight:700;border-radius:8px;padding:3px 8px">🎓 Eligible</span>' : ''}
+        </div>
+        <div style="width:100%;padding-left:36px">
+          <div style="font-size:10px;color:#1e3a8a;font-weight:600;margin-bottom:3px">📘 Module 1: ${mod1}/${LESSONS_PER_MODULE} · Module 2: ${mod2}/${LESSONS_PER_MODULE} — ${doneCount}/${TOTAL_LESSONS} (${pct}%)${makeupCount ? ` · ⚠️ ${makeupCount} make-up` : ''}</div>
+          <div style="height:5px;background:#e0e0e0;border-radius:5px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${eligible ? '#1e7e34' : '#1e3a8a'};border-radius:5px"></div>
+          </div>
+        </div>
+      </div>`;
+  }).join('') || '<p style="padding:16px;color:var(--gray)">No students found.</p>';
+}
+
+// ═══════════════════════════════════════════
+function getStudentCredits(studentId) {
+  const manualLegacy = APP.credits
+    .filter(c => String(c["Student ID"]) === String(studentId))
+    .reduce((sum, c) => sum + Number(c["Credits Added"] || 0), 0);
+  return manualLegacy + getStudentLessonPointsTotal(studentId);
+}
+
+// ═══════════════════════════════════════════
+// PAYMENT CALCULATION
+// ═══════════════════════════════════════════
+function getStudentPayment(studentId) {
+  const payments = APP.payments.filter(p => String(p["Student ID"]) === String(studentId));
+  if (!payments.length) return { paid: 0, balance: APP.totalFee, status: "Unpaid" };
+  const paid = payments.reduce((sum, p) => sum + Number(p["Amount Paid"] || 0), 0);
+  const balance = APP.totalFee - paid;
+  return { paid, balance, status: balance <= 0 ? "Paid" : "Partial" };
+}
+
+// ═══════════════════════════════════════════
+// FACULTY — PAYMENT LIST
+// ═══════════════════════════════════════════
+function renderFPayment() {
+  const el = document.getElementById('f-payment-list');
+  if (!el) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const filtered = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  if (!filtered.length) {
+    el.innerHTML = '<p style="padding:16px;color:var(--gray)">No students found.</p>';
+    return;
+  }
+  el.innerHTML = filtered.map(s => {
+    const pay = getStudentPayment(s["Student ID"]);
+    return `
+      <div class="row">
+        <div>
+          <strong>${s["Full Name"]}</strong><br>
+          <small>₱${pay.paid.toLocaleString()} paid · ₱${pay.balance.toLocaleString()} balance</small>
+        </div>
+        <div>${pay.status}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// FACULTY — CREDITS LEADERBOARD
+// ═══════════════════════════════════════════
+function renderFCredits() {
+  const el = document.getElementById('f-credits-list');
+  if (!el) return;
+  const tableNo = APP.currentFaculty?.["Table Assigned"] || "";
+  const filtered = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  const sorted = [...filtered].sort(
+    (a, b) => getStudentCredits(b["Student ID"]) - getStudentCredits(a["Student ID"])
+  );
+  el.innerHTML = sorted.map((s, i) => `
+    <div class="row">
+      <div><strong>#${i + 1} ${s["Full Name"]}</strong><br><small>${getTableLabel(s["Table No"])}</small></div>
+      <div>${getStudentCredits(s["Student ID"])} pts</div>
+    </div>
+  `).join('') || '<p style="padding:16px;color:var(--gray)">No points yet.</p>';
+}
+
+// Builds the Present / Late / Absent summary bar shown at the top of an
+// attendance list. `roster` is the total enrolled count for that group
+// (students or faculty); anyone in the roster without a Present/Late record
+// for the week counts as Absent.
+function buildAttendanceSummary(weekAtt, rosterTotal) {
+  const norm = a => (a["Attendance Status"] || a["Status"] || "present").toLowerCase();
+  const present = weekAtt.filter(a => norm(a) === "present").length;
+  const late    = weekAtt.filter(a => norm(a).includes("late")).length;
+  const explicitAbsent = weekAtt.filter(a => norm(a).includes("absent")).length;
+  const unaccounted = Math.max(rosterTotal - present - late - explicitAbsent, 0);
+  const absent = explicitAbsent + unaccounted;
+
+  return `
+    <div class="att-summary-bar">
+      <div class="att-summary-item att-summary-present">
+        <div class="att-summary-num">${present}</div>
+        <div class="att-summary-lbl">Present</div>
+      </div>
+      <div class="att-summary-item att-summary-late">
+        <div class="att-summary-num">${late}</div>
+        <div class="att-summary-lbl">Late</div>
+      </div>
+      <div class="att-summary-item att-summary-absent">
+        <div class="att-summary-num">${absent}</div>
+        <div class="att-summary-lbl">Absent</div>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — STUDENT ATTENDANCE
+// ═══════════════════════════════════════════
+function renderAStudentAtt() {
+  const el = document.getElementById('a-att-list');
+  const week = document.getElementById('a-att-week')?.value || APP.currentWeek;
+  if (!el) return;
+  const weekAtt = APP.attendance.filter(a => String(a["Week No"]) === String(week));
+  const summaryHtml = buildAttendanceSummary(weekAtt, APP.students.length);
+
+  if (!weekAtt.length) {
+    el.innerHTML = summaryHtml + `<p style="padding:16px;color:var(--gray)">No attendance records for Week ${week}.</p>`;
+    return;
+  }
+  el.innerHTML = summaryHtml + weekAtt.map(a => `
+    <div class="row">
+      <div>
+        <strong>${a["Student Name"] || a["StudentName"] || "—"}</strong><br>
+        <small>${getTableLabel(a["Table No"] || "—")} · ${a["LG Leader"] || ""}</small>      </div>
+      <div>${a["Attendance Status"] || a["Status"] || "Present"}</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════
+// PUBLIC — VIEW TABLES (no login required)
+// Reached from the "View Tables" button on the portal screen.
+// Shows every table with a member count; tap a table to expand
+// and see the member names + facilitator.
+// ═══════════════════════════════════════════
+function openViewTables() {
+  go('s-view-tables');
+}
+
+function renderViewTables() {
+  const list = document.getElementById('vt-list');
+  if (!list) return;
+
+  const tableMap = {};
+  APP.students
+    .filter(s => (s['Status'] || 'Active').toLowerCase() !== 'dropped')
+    .forEach(s => {
+      const t = String(s['Table No'] || '');
+      if (!t) return;
+      if (!tableMap[t]) tableMap[t] = [];
+      tableMap[t].push(s);
+    });
+
+  const tables = Object.keys(tableMap).sort((a, b) => Number(a) - Number(b));
+  if (!tables.length) {
+    list.innerHTML = '<p style="padding:16px;color:var(--text3)">No table data found.</p>';
+    return;
+  }
+
+  list.innerHTML = tables.map(t => {
+    const students = tableMap[t].sort((a, b) => String(a['Full Name']).localeCompare(String(b['Full Name'])));
+    const guide = APP.tableGuides.find(g => String(g['Table No']) === String(t));
+    const facilitator = (guide && guide['Facilitator Name']) ? guide['Facilitator Name'] : 'Not assigned';
+    const namesHtml = students.map(s => `<div class="vt-name-row">${s['Full Name']}</div>`).join('')
+      || '<div class="vt-name-row" style="color:var(--text3)">No members yet.</div>';
+    return `
+      <div class="vt-card" id="vt-card-${t}">
+        <div class="vt-card-head" onclick="toggleViewTable('${t}')">
+          <div>
+            <div class="vt-card-title">${getTableLabel(t)}</div>
+            <div class="vt-card-sub">${students.length} member${students.length === 1 ? '' : 's'}</div>
+          </div>
+          <svg class="vt-card-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="vt-card-body">
+          <div class="vt-card-fac">Facilitator: <strong>${facilitator}</strong></div>
+          ${namesHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleViewTable(tableNo) {
+  const card = document.getElementById(`vt-card-${tableNo}`);
+  if (card) card.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — TABLES VIEW
+// ═══════════════════════════════════════════
+function renderATables() {
+  const grid = document.getElementById('a-table-grid');
+  const week = document.getElementById('a-table-week')?.value || APP.currentWeek;
+  if (!grid) return;
+
+  const weekAtt = APP.attendance.filter(a => String(a["Week No"]) === String(week));
+  const tableMap = {};
+  APP.students.forEach(s => {
+    const t = String(s["Table No"]);
+    if (!tableMap[t]) tableMap[t] = { students: [], present: 0 };
+    tableMap[t].students.push(s);
+  });
+  weekAtt.forEach(a => {
+    const t = String(a["Table No"]);
+    if (tableMap[t]) tableMap[t].present++;
+  });
+
+  const tables = Object.keys(tableMap).sort((a, b) => Number(a) - Number(b));
+  if (!tables.length) {
+    grid.innerHTML = '<p style="padding:16px;color:var(--gray)">No table data found.</p>';
+    return;
+  }
+  grid.innerHTML = tables.map(t => {
+    const totalLC = getTableCredits(t);
+    return `
+      <div class="card" style="padding:14px;cursor:pointer" onclick="showTableDetail('${t}')">
+        <div style="font-family:var(--font-head);font-size:18px;font-weight:700">${getTableLabel(t)}</div>
+        <div style="font-size:12px;color:var(--gray);margin-top:4px">${totalLC} pts</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — TABLE DETAIL
+// ═══════════════════════════════════════════
+function showTableDetail(tableNo) {
+  go('s-a-table-detail');
+  // Store current table so refresh works
+  APP._currentTableDetail = tableNo;
+  const title       = document.getElementById('a-td-title');
+  const stats       = document.getElementById('a-td-stats');
+  const presentStat = document.getElementById('a-td-present-stat');
+  const list        = document.getElementById('a-td-list');
+  if (title) title.textContent = getTableLabel(tableNo);
+
+  // Only active (non-dropped) students
+  const students = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  const presentThisWeek = APP.attendance.filter(a =>
+    String(a["Table No"]) === String(tableNo) && String(a["Week No"]) === String(APP.currentWeek)
+  );
+  // Table-level credits only (not individual student sum)
+  const tableCredits = getTableCredits(tableNo);
+
+  if (presentStat) presentStat.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--green),var(--green-light));border-radius:12px;padding:14px 18px;margin-bottom:12px">
+      <div style="font-size:28px;font-family:var(--font-head);font-weight:700;color:#fff">${presentThisWeek.length}<span style="font-size:14px;font-weight:500;opacity:0.7">/${students.length}</span></div>
+      <div style="color:rgba(255,255,255,0.85);font-size:13px;font-weight:600">Present — Week ${APP.currentWeek}</div>
+    </div>
+  `;
+
+  if (stats) stats.innerHTML = `
+    <div class="stat-card"><div class="stat-val">${students.length}</div><div class="stat-label">Students</div></div>
+    <div class="stat-card"><div class="stat-val">${tableCredits}</div><div class="stat-label">Table Points</div></div>
+  `;
+
+  const sorted = [...students].sort((a, b) => getStudentCredits(b["Student ID"]) - getStudentCredits(a["Student ID"]));
+  if (list) list.innerHTML = sorted.map(s => `
+    <div class="row">
+      <div><strong>${s["Full Name"]}</strong></div>
+      <div>${getStudentCredits(s["Student ID"])} pts</div>
+    </div>
+  `).join('') || '<p style="padding:16px;color:var(--gray)">No students in this table.</p>';
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — NOTIFY TABLE GUIDE / NOTIFY STUDENT
+// Lets a Director/Consultant remind a Table Guide about a student's
+// remaining Level Challenge quests, or send a free-text note — these land
+// in that Table Guide's own bell. The "Send to" toggle switches the target
+// to the Student instead — those messages land ONLY in that one student's
+// own bell in the Student app, never the Table Guide's (see the Audience
+// column filtering in facultyNotifRows()/doGet's "notifications" case).
+// ═══════════════════════════════════════════
+function setNotifyAudience(audience) {
+  APP._notifyAudience = (audience === 'student') ? 'student' : 'guide';
+  const guideBtn = document.getElementById('a-notify-aud-guide');
+  const studentBtn = document.getElementById('a-notify-aud-student');
+  const hint = document.getElementById('a-notify-aud-hint');
+  const generalWrap = document.getElementById('a-notify-general-wrap');
+  if (guideBtn) guideBtn.classList.toggle('active', APP._notifyAudience === 'guide');
+  if (studentBtn) studentBtn.classList.toggle('active', APP._notifyAudience === 'student');
+  if (hint) {
+    hint.textContent = APP._notifyAudience === 'student'
+      ? "Lands only in that student's own bell (in the Student app) — the Table Guide won't see it."
+      : "Lands in the Table Guide's own bell — the student won't see this.";
+  }
+  // The general free-text note is a table-wide broadcast to the guide only —
+  // hide it for Student audience since a "student" message needs one named
+  // recipient (use a per-student 🔔 button above instead).
+  if (generalWrap) generalWrap.style.display = APP._notifyAudience === 'student' ? 'none' : '';
+  renderANotifyTableStudents(APP._notifyTableNo || '');
+}
+
+function renderANotifyTableSelect() {
+  const sel = document.getElementById('a-notify-table-sel');
+  if (!sel) return;
+
+  // Sync the Send-to toggle buttons/hint/general-note visibility with
+  // whatever audience was last selected (defaults to 'guide').
+  const guideBtn = document.getElementById('a-notify-aud-guide');
+  const studentBtn = document.getElementById('a-notify-aud-student');
+  const hint = document.getElementById('a-notify-aud-hint');
+  const generalWrap = document.getElementById('a-notify-general-wrap');
+  if (guideBtn) guideBtn.classList.toggle('active', APP._notifyAudience !== 'student');
+  if (studentBtn) studentBtn.classList.toggle('active', APP._notifyAudience === 'student');
+  if (hint) {
+    hint.textContent = APP._notifyAudience === 'student'
+      ? "Lands only in that student's own bell (in the Student app) — the Table Guide won't see it."
+      : "Lands in the Table Guide's own bell — the student won't see this.";
+  }
+  if (generalWrap) generalWrap.style.display = APP._notifyAudience === 'student' ? 'none' : '';
+
+  const tables = [...new Set(APP.students.map(s => String(s['Table No'])))]
+    .filter(Boolean)
+    .sort((a, b) => Number(a) - Number(b));
+  sel.innerHTML = '<option value="">Select a table…</option>' +
+    tables.map(t => `<option value="${t}">${getTableLabel(t)}</option>`).join('');
+  // keep whatever table was previously selected, if any, when re-rendering
+  if (APP._notifyTableNo && tables.includes(APP._notifyTableNo)) sel.value = APP._notifyTableNo;
+  renderANotifyTableStudents(sel.value || '');
+}
+
+function onANotifyTableChange() {
+  const tableNo = document.getElementById('a-notify-table-sel')?.value || '';
+  renderANotifyTableStudents(tableNo);
+}
+
+function totalLevelChallengeQuests() {
+  let sum = 0;
+  for (let lvl = 1; lvl <= TOTAL_LEVELS; lvl++) sum += questsForLevel(lvl).length;
+  return sum;
+}
+
+function questsDoneCountFor(studentId) {
+  const state = APP.questProgress[studentId] || {};
+  return Object.keys(state).filter(k => state[k]).length;
+}
+
+function renderANotifyTableStudents(tableNo) {
+  APP._notifyTableNo = tableNo;
+  const wrap = document.getElementById('a-notify-students');
+  const guideInfo = document.getElementById('a-notify-guide-info');
+  if (!wrap) return;
+
+  if (!tableNo) {
+    wrap.innerHTML = '<p style="padding:16px 0;color:var(--gray)">Select a table above to see who still has quests left.</p>';
+    if (guideInfo) guideInfo.textContent = '';
+    return;
+  }
+
+  const guide = (APP.tableGuides || []).find(g => String(g['Table No']) === String(tableNo));
+  if (guideInfo) {
+    guideInfo.textContent = guide && guide['Facilitator Name']
+      ? `Table Guide: ${guide['Facilitator Name']}`
+      : 'No Table Guide on file for this table yet.';
+  }
+
+  const students = APP.students.filter(s =>
+    String(s['Table No']) === String(tableNo) &&
+    (s['Status'] || 'Active').toLowerCase() !== 'dropped'
+  );
+
+  const totalQuests = totalLevelChallengeQuests();
+  const withRemaining = students.filter(s => questsDoneCountFor(s['Student ID']) < totalQuests);
+
+  if (!students.length) {
+    wrap.innerHTML = '<p style="padding:16px 0;color:var(--gray)">No active students at this table.</p>';
+    return;
+  }
+  if (!withRemaining.length) {
+    wrap.innerHTML = '<p style="padding:16px 0;color:var(--gray)">🎉 Every student at this table has finished all their quests.</p>';
+    return;
+  }
+
+  wrap.innerHTML = withRemaining.map(s => {
+    const sid = s['Student ID'];
+    const done = questsDoneCountFor(sid);
+    const highest = getHighestLevel(sid);
+    const nameEsc = String(s['Full Name'] || '').replace(/'/g, "\\'");
+    const isStudentAud = APP._notifyAudience === 'student';
+    return `
+      <div class="row" style="align-items:center">
+        <div>
+          <strong>${s['Full Name']}</strong>
+          <div style="font-size:11px;color:var(--gray)">Level ${highest}/${TOTAL_LEVELS} · ${done}/${totalQuests} quests done</div>
+        </div>
+        <button onclick="sendQuestReminder('${sid}','${nameEsc}',${done},${totalQuests})"
+          style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+          ${isStudentAud ? '📣 Notify Student' : '🔔 Remind Guide'}
+        </button>
+      </div>`;
+  }).join('');
+}
+
+async function sendQuestReminder(studentId, studentName, done, totalQuests) {
+  const tableNo = APP._notifyTableNo;
+  const audience = APP._notifyAudience === 'student' ? 'student' : 'guide';
+  if (!tableNo) { showToast('⚠️ Select a table first'); return; }
+  const remaining = totalQuests - done;
+
+  const message = audience === 'student'
+    ? `You still have ${remaining} quest${remaining === 1 ? '' : 's'} remaining in the SOL2 Level Challenge ` +
+      `(${done}/${totalQuests} done so far). Keep going!`
+    : `Reminder: ${studentName} still has ${remaining} quest${remaining === 1 ? '' : 's'} remaining ` +
+      `in the SOL2 Level Challenge (${done}/${totalQuests} done so far). Please check in with them.`;
+
+  const confirmMsg = audience === 'student'
+    ? `Send this reminder directly to ${studentName}?\n\n"${message}"`
+    : `Send this reminder to the Table Guide?\n\n"${message}"`;
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    await apiPost({
+      action: 'sendAdminNotification',
+      audience,
+      tableNo,
+      studentId,
+      studentName,
+      message,
+      sentBy: APP.currentFaculty?.['Full Name'] || 'Director/Consultant'
+    });
+    showToast(audience === 'student' ? `✅ Sent to ${studentName}` : `✅ Reminder sent — Table ${tableNo}`);
+  } catch (e) {
+    console.warn('sendAdminNotification failed:', e);
+    showToast('⚠️ Could not send reminder — try again');
+  }
+}
+
+async function sendGeneralTableNote() {
+  const tableNo = APP._notifyTableNo;
+  const textEl = document.getElementById('a-notify-message');
+  const message = (textEl?.value || '').trim();
+  if (!tableNo) { showToast('⚠️ Select a table first'); return; }
+  if (!message) { showToast('⚠️ Write a message first'); return; }
+  if (!confirm(`Send this message to Table ${tableNo}'s guide?\n\n"${message}"`)) return;
+  try {
+    await apiPost({
+      action: 'sendAdminNotification',
+      audience: 'guide',
+      tableNo,
+      message,
+      sentBy: APP.currentFaculty?.['Full Name'] || 'Director/Consultant'
+    });
+    if (textEl) textEl.value = '';
+    showToast(`✅ Message sent — Table ${tableNo}`);
+  } catch (e) {
+    console.warn('sendAdminNotification failed:', e);
+    showToast('⚠️ Could not send message — try again');
+  }
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — MESSAGE FACULTY & STAFF (SMS)
+// ═══════════════════════════════════════════
+// Faculty rows carry their mobile number in a "Contact No" column added to
+// the FACULTY_STAFF sheet (see the setup note in SOL2_GAS_BACKEND.js).
+// Anyone with a blank number just can't be selected here.
+function staffHasContactNo(f) {
+  return String(f['Contact No'] || '').trim().length > 0;
+}
+
+function renderAStaffSmsScreen() {
+  const wrap = document.getElementById('a-staff-sms-list');
+  if (!wrap) return;
+
+  const staff = (APP.faculty || []).slice().sort((a, b) =>
+    String(a['Full Name'] || '').localeCompare(String(b['Full Name'] || '')));
+
+  if (!staff.length) {
+    wrap.innerHTML = '<p style="padding:16px 0;color:var(--gray)">No faculty/staff on file yet.</p>';
+  } else {
+    wrap.innerHTML = staff.map(f => {
+      const id = f['Faculty ID'];
+      const name = f['Full Name'] || '—';
+      const role = f['Role'] || '';
+      const phone = String(f['Contact No'] || '').trim();
+      const has = phone.length > 0;
+      return `
+        <div class="row" style="align-items:center">
+          <label style="display:flex;align-items:center;gap:10px;flex:1;cursor:${has ? 'pointer' : 'not-allowed'};opacity:${has ? '1' : '0.5'}">
+            <input type="checkbox" class="a-staff-sms-check" data-id="${id}" data-name="${String(name).replace(/"/g,'&quot;')}" data-phone="${phone}" ${has ? '' : 'disabled'} onchange="updateStaffSmsCount()">
+            <div>
+              <div style="font-size:13.5px;font-weight:600">${name}</div>
+              <div style="font-size:11px;color:var(--text3)">${role}${role ? ' · ' : ''}${has ? phone : 'No number on file'}</div>
+            </div>
+          </label>
+        </div>`;
+    }).join('');
+  }
+
+  updateStaffSmsCount();
+  renderAStaffSmsLog();
+}
+
+function setAllStaffSmsChecked(checked) {
+  document.querySelectorAll('.a-staff-sms-check').forEach(cb => {
+    if (!cb.disabled) cb.checked = checked;
+  });
+  updateStaffSmsCount();
+}
+
+function getSelectedStaffSmsContacts() {
+  return Array.from(document.querySelectorAll('.a-staff-sms-check:checked')).map(cb => ({
+    name: cb.dataset.name,
+    phone: cb.dataset.phone
+  }));
+}
+
+function updateStaffSmsCount() {
+  const countEl = document.getElementById('a-staff-sms-count');
+  if (!countEl) return;
+  const n = getSelectedStaffSmsContacts().length;
+  countEl.textContent = `${n} recipient${n === 1 ? '' : 's'} selected`;
+}
+
+function renderAStaffSmsLog() {
+  const el = document.getElementById('a-staff-sms-log');
+  if (!el) return;
+  const rows = (APP.staffMessages || []).slice(0, 8);
+  if (!rows.length) {
+    el.innerHTML = '<p style="padding:16px 0;color:var(--gray)">Nothing sent yet.</p>';
+    return;
+  }
+  el.innerHTML = rows.map(r => `
+    <div class="row" style="align-items:flex-start;flex-direction:column;gap:2px">
+      <div style="font-size:12.5px;font-weight:600">${r['Recipients'] || '—'}</div>
+      <div style="font-size:12px;color:var(--text2)">${r['Message'] || ''}</div>
+      <div style="font-size:10.5px;color:var(--text3)">${formatDate(r['Sent At'])} · by ${r['Sent By'] || '—'}</div>
+    </div>`).join('');
+}
+
+async function sendStaffSms() {
+  const contacts = getSelectedStaffSmsContacts();
+  const textEl = document.getElementById('a-staff-sms-message');
+  const message = (textEl?.value || '').trim();
+
+  if (!contacts.length) { showToast('⚠️ Select at least one recipient'); return; }
+  if (!message) { showToast('⚠️ Write a message first'); return; }
+
+  const numbers = contacts.map(c => c.phone);
+  const names = contacts.map(c => c.name);
+
+  if (!confirm(`Send this SMS to ${contacts.length} recipient(s)?\n\n${names.join(', ')}\n\n"${message}"`)) return;
+
+  const btn = document.getElementById('a-staff-sms-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+  try {
+    const res = await apiPost({
+      action: 'sendStaffSms',
+      recipients: names.join(', '),
+      numbers: numbers.join(','),
+      message,
+      sentBy: APP.currentFaculty?.['Full Name'] || 'Director/Consultant'
+    });
+
+    if (res && res.success) {
+      APP.staffMessages.unshift({
+        'Recipients': names.join(', '),
+        'Recipient Numbers': numbers.join(', '),
+        'Message': message,
+        'Sent By': APP.currentFaculty?.['Full Name'] || 'Director/Consultant',
+        'Sent At': new Date()
+      });
+      renderAStaffSmsLog();
+      if (textEl) textEl.value = '';
+      setAllStaffSmsChecked(false);
+      showToast(`✅ SMS sent to ${contacts.length} recipient(s)`);
+    } else {
+      showToast('❌ ' + ((res && res.message) || 'Send failed — please try again.'));
+    }
+  } catch (e) {
+    console.warn('sendStaffSms failed:', e);
+    showToast('⚠️ Could not reach the server — please try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📩 Send SMS Now'; }
+  }
+}
+
+async function copyToClipboardSafe(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function copyStaffSmsNumbers() {
+  const contacts = getSelectedStaffSmsContacts();
+  if (!contacts.length) { showToast('⚠️ Select at least one recipient'); return; }
+  const ok = await copyToClipboardSafe(contacts.map(c => c.phone).join(', '));
+  showToast(ok ? '✅ Numbers copied' : '⚠️ Could not copy — copy manually');
+}
+
+async function copyStaffSmsMessage() {
+  const message = (document.getElementById('a-staff-sms-message')?.value || '').trim();
+  if (!message) { showToast('⚠️ Write a message first'); return; }
+  const ok = await copyToClipboardSafe(message);
+  showToast(ok ? '✅ Message copied' : '⚠️ Could not copy — copy manually');
+}
+
+async function confirmDropStudentFromTable(studentId, studentName) {
+  if (!confirm(`Drop ${studentName}? This will remove them from active student lists.`)) return;
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  if (!student) { showToast('⚠️ Student not found'); return; }
+  try {
+    await apiPost({
+      action: "updateStudentStatus",
+      studentId: student["Student ID"],
+      studentName: student["Full Name"],
+      status: "Dropped"
+    });
+    student["Status"] = "Dropped";
+    showToast(`✅ ${student["Full Name"]} marked as Dropped`);
+    renderDroppedStudents();
+    updateAdminHomeStats();
+    populateCreditStudentSelect();
+    // Refresh table detail in place
+    showTableDetail(APP._currentTableDetail);
+  } catch (err) {
+    console.error('confirmDropStudentFromTable error:', err);
+    showToast('❌ Failed to update status');
+  }
+}
+
+// Get total LC credits for a whole table — table-level only (studentId is blank)
+function getTableCredits(tableNo) {
+  return APP.credits
+    .filter(c => String(c["Table No"]) === String(tableNo) && (!c["Student ID"] || String(c["Student ID"]).startsWith('TABLE-')))
+    .reduce((sum, c) => sum + Number(c["Credits Added"] || 0), 0);
+}
+
+// Get total LC credits for a table summing all student credits in that table
+function getTableTotalStudentCredits(tableNo) {
+  const students = APP.students.filter(s => String(s["Table No"]) === String(tableNo));
+  return students.reduce((sum, s) => sum + getStudentCredits(s["Student ID"]), 0);
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — LEADERBOARD
+// ═══════════════════════════════════════════
+function switchLeaderboardTab(tab) {
+  const studentList = document.getElementById('a-leaderboard-list');
+  const tableList   = document.getElementById('a-table-leaderboard-list');
+  const sBtn        = document.getElementById('lb-tab-students');
+  const tBtn        = document.getElementById('lb-tab-tables');
+  if (tab === 'students') {
+    studentList.style.display = ''; tableList.style.display = 'none';
+    sBtn.style.background = '#c9960c'; sBtn.style.color = '#fff';
+    tBtn.style.background = '#fff';   tBtn.style.color = '#c9960c';
+    renderLeaderboard();
+  } else {
+    studentList.style.display = 'none'; tableList.style.display = '';
+    tBtn.style.background = '#c9960c'; tBtn.style.color = '#fff';
+    sBtn.style.background = '#fff';    sBtn.style.color = '#c9960c';
+    renderTableLeaderboard();
+  }
+}
+
+function renderLeaderboard() {
+  const el = document.getElementById('a-leaderboard-list');
+  if (!el) return;
+  const sorted = [...APP.students].sort((a, b) => getStudentCredits(b["Student ID"]) - getStudentCredits(a["Student ID"]));
+  const medals = ['🥇','🥈','🥉'];
+  el.innerHTML = sorted.map((s, i) => `
+    <div class="row">
+      <div><strong>${medals[i] || `#${i + 1}`} ${s["Full Name"]}</strong><br><small>${getTableLabel(s["Table No"])}</small></div>
+      <div>${getStudentCredits(s["Student ID"])} pts</div>
+    </div>
+  `).join('') || '<p style="padding:16px;color:var(--gray)">No students yet.</p>';
+}
+
+function renderTableLeaderboard() {
+  const el = document.getElementById('a-table-leaderboard-list');
+  if (!el) return;
+  const tableSet = new Set(APP.students.map(s => String(s["Table No"])));
+  const tableMap = {};
+  tableSet.forEach(t => {
+    tableMap[t] = {
+      total: getTableCredits(t),
+      count: APP.students.filter(s => String(s["Table No"]) === t).length
+    };
+  });
+  const sorted = Object.keys(tableMap).sort((a, b) => tableMap[b].total - tableMap[a].total);
+  const medals = ['🥇','🥈','🥉'];
+  el.innerHTML = sorted.map((t, i) => `
+    <div class="row">
+      <div><strong>${medals[i] || `#${i + 1}`} ${getTableLabel(t)}</strong><br><small>${tableMap[t].count} students</small></div>
+      <div>${tableMap[t].total} pts</div>
+    </div>
+  `).join('') || '<p style="padding:16px;color:var(--gray)">No data yet.</p>';
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — DROPPED STUDENTS
+// ═══════════════════════════════════════════
+function renderDroppedStudents() {
+  const el = document.getElementById('a-dropped-list');
+  if (!el) return;
+  const dropped = APP.students.filter(s =>
+    (s["Status"] || "").toLowerCase() === "dropped"
+  );
+  if (!dropped.length) {
+    el.innerHTML = '<p style="padding:16px;color:var(--gray)">No dropped students found.</p>';
+    return;
+  }
+
+  // Group by table
+  const byTable = {};
+  dropped.forEach(s => {
+    const t = String(s["Table No"] || "—");
+    if (!byTable[t]) byTable[t] = [];
+    byTable[t].push(s);
+  });
+
+  const tables = Object.keys(byTable).sort((a, b) => Number(a) - Number(b));
+  el.innerHTML = tables.map(t => `
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.05em;padding:10px 16px 4px">TABLE ${t}</div>
+      ${byTable[t].map(s => {
+        // Count absences for this student
+        const absenceCount = APP.attendance.filter(a =>
+          String(a['Student ID']) === String(s['Student ID']) &&
+          (a['Attendance Status'] || a['Status'] || '').toLowerCase().includes('absent')
+        ).length;
+        return `
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#fff">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div>
+              <div style="font-weight:700;font-size:14px;color:var(--text1)">${s["Full Name"]}</div>
+              <div style="font-size:12px;color:var(--text3)">${s["LG Leader"] || "—"} · ${getTableLabel(t)}</div>
+              <div style="font-size:11px;color:#e53935;margin-top:2px;font-weight:600">🚫 DROPPED — ${absenceCount} absence${absenceCount !== 1 ? 's' : ''}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="handleDropDecision('${s["Student ID"]}','${s["Full Name"].replace(/'/g,"\\'")}','drop')"
+              style="flex:1;padding:8px;border-radius:8px;border:1.5px solid #e53935;background:#fdecea;color:#e53935;font-size:12px;font-weight:700;cursor:pointer">
+              🗑 Drop (no excuse)
+            </button>
+            <button onclick="handleDropDecision('${s["Student ID"]}','${s["Full Name"].replace(/'/g,"\\'")}','continue')"
+              style="flex:1;padding:8px;border-radius:8px;border:1.5px solid #27ae60;background:#e8f5ee;color:#27ae60;font-size:12px;font-weight:700;cursor:pointer">
+              ✅ Continue (valid excuse)
+            </button>
+          </div>
+        </div>
+      `}).join('')}
+    </div>
+  `).join('');
+}
+
+async function handleDropDecision(studentId, studentName, decision) {
+  const student = APP.students.find(s => String(s['Student ID']) === String(studentId));
+  if (!student) return;
+
+  if (decision === 'drop') {
+    if (!confirm(`Confirm DROP for ${studentName}?\n\nNo valid excuse — this student will remain dropped and their QR code will stay disabled.`)) return;
+    // Already dropped — just confirm and keep as-is (status stays "Dropped")
+    showToast(`🗑 ${studentName} confirmed Dropped`);
+    renderDroppedStudents();
+
+  } else if (decision === 'continue') {
+    const excuse = prompt(`Allow ${studentName} to CONTINUE?\n\nEnter the valid excuse / reason (required):`);
+    if (excuse === null) return; // cancelled
+    if (!excuse.trim()) { showToast('⚠️ Excuse is required to reinstate.'); return; }
+    try {
+      await apiPost({
+        action: 'updateStudentStatus',
+        studentId: student['Student ID'],
+        studentName: student['Full Name'],
+        status: 'Active',
+        notes: excuse.trim()
+      });
+      student['Status'] = 'Active';
+      showToast(`✅ ${studentName} reinstated — QR re-enabled`);
+      renderDroppedStudents();
+      updateAdminHomeStats();
+      populateCreditStudentSelect();
+    } catch (err) {
+      console.error('handleDropDecision error:', err);
+      showToast('❌ Failed to update status');
+    }
+  }
+}
+
+function openDropStudentModal() {
+  const modal = document.getElementById('modal-drop-student');
+  if (!modal) return;
+  // Reset to table picker step
+  document.getElementById('drop-step-table').style.display = '';
+  document.getElementById('drop-step-students').style.display = 'none';
+  // Build table buttons
+  const tableSet = [...new Set(
+    APP.students
+      .filter(s => (s["Status"] || "Active").toLowerCase() !== "dropped")
+      .map(s => String(s["Table No"]))
+  )].sort((a, b) => Number(a) - Number(b));
+  const tableGrid = document.getElementById('drop-table-grid');
+  if (tableGrid) {
+    tableGrid.innerHTML = tableSet.map(t => `
+      <button onclick="selectDropTable('${t}')" style="padding:14px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:700;cursor:pointer;color:var(--text1)">${getTableLabel(t)}</button>
+    `).join('');
+  }
+  modal.style.display = 'flex';
+}
+
+function selectDropTable(tableNo) {
+  document.getElementById('drop-step-table').style.display = 'none';
+  document.getElementById('drop-step-students').style.display = '';
+  document.getElementById('drop-step-table-label').textContent = `${getTableLabel(tableNo)} — Select Student`;
+  const students = APP.students.filter(s =>
+    String(s["Table No"]) === String(tableNo) &&
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  const list = document.getElementById('drop-student-list');
+  if (!list) return;
+  if (!students.length) {
+    list.innerHTML = '<p style="padding:12px;color:var(--gray);text-align:center">No active students in this table.</p>';
+    return;
+  }
+  list.innerHTML = students.map(s => `
+    <div onclick="confirmDropStudent('${s["Student ID"]}', '${s["Full Name"].replace(/'/g, "\\'")}')"
+      style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="font-size:14px;font-weight:600;color:var(--text1)">${s["Full Name"]}</div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red,#e53935)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+  `).join('');
+}
+
+async function confirmDropStudent(studentId, studentName) {
+  if (!confirm(`Drop ${studentName}? This will remove them from active student lists.`)) return;
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  if (!student) { showToast('⚠️ Student not found'); return; }
+  try {
+    await apiPost({
+      action: "updateStudentStatus",
+      studentId: student["Student ID"],
+      studentName: student["Full Name"],
+      status: "Dropped"
+    });
+    student["Status"] = "Dropped";
+    showToast(`✅ ${student["Full Name"]} marked as Dropped`);
+    closeDropStudentModal();
+    renderDroppedStudents();
+    updateAdminHomeStats();
+  } catch (err) {
+    console.error('confirmDropStudent error:', err);
+    showToast('❌ Failed to update status');
+  }
+}
+
+function closeDropStudentModal() {
+  const modal = document.getElementById('modal-drop-student');
+  if (modal) modal.style.display = 'none';
+}
+
+
+// ═══════════════════════════════════════════
+// QR SCANNER
+// ═══════════════════════════════════════════
+let html5QrScanner = null;
+let qrScanCooldown = false;
+
+// ═══════════════════════════════════════════
+// QR TAB SWITCHER
+// ═══════════════════════════════════════════
+function switchQRTab(tab) {
+  const scanPanel = document.getElementById('qr-panel-scan');
+  const genPanel  = document.getElementById('qr-panel-gen');
+  const scanBtn   = document.getElementById('qr-tab-scan');
+  const genBtn    = document.getElementById('qr-tab-gen');
+  if (tab === 'scan') {
+    scanPanel.style.display = ''; genPanel.style.display = 'none';
+    scanBtn.style.background = 'var(--purple)'; scanBtn.style.color = '#fff';
+    genBtn.style.background  = '#fff';           genBtn.style.color  = 'var(--purple)';
+  } else {
+    scanPanel.style.display = 'none'; genPanel.style.display = '';
+    genBtn.style.background  = 'var(--purple)'; genBtn.style.color  = '#fff';
+    scanBtn.style.background = '#fff';           scanBtn.style.color = 'var(--purple)';
+    stopQRCamera();
+    renderQRGenList();
+  }
+}
+
+// ═══════════════════════════════════════════
+// QR SCANNER — with live status indicator
+// ═══════════════════════════════════════════
+function setScanStatus(state, msg) {
+  // state: 'idle' | 'scanning' | 'success' | 'error'
+  const bar = document.getElementById('qr-status-bar');
+  if (!bar) return;
+  const colors = { idle:'#6b7280', scanning:'#7c3aed', success:'#46586e', error:'#e53935' };
+  const icons  = { idle:'📷', scanning:'🔍', success:'✅', error:'⚠️' };
+  bar.style.display = msg ? '' : 'none';
+  bar.style.background = colors[state] || colors.idle;
+  bar.innerHTML = `<span style="font-size:15px">${icons[state]||''}</span> <span>${msg}</span>`;
+}
+
+function startQRCamera() {
+  const placeholder = document.getElementById('qr-reader-placeholder');
+  const startBtn    = document.getElementById('qr-start-btn');
+  const stopBtn     = document.getElementById('qr-stop-btn');
+  if (placeholder) placeholder.style.display = 'none';
+  if (startBtn)    startBtn.style.display = 'none';
+  if (stopBtn)     stopBtn.style.display  = '';
+  if (html5QrScanner) { try { html5QrScanner.stop(); } catch(e){} html5QrScanner = null; }
+
+  setScanStatus('scanning', 'Camera starting… point at a SOL2 QR code');
+
+  html5QrScanner = new Html5Qrcode('qr-reader');
+  html5QrScanner.start(
+    { facingMode: 'environment' },
+    { fps: 15, qrbox: { width: 230, height: 230 }, aspectRatio: 1.0 },
+    onQRCodeScanned,
+    (errorMsg) => {
+      // Called every frame when no QR found — only update if not in cooldown
+      if (!qrScanCooldown) setScanStatus('scanning', 'Scanning… point camera at QR code');
+    }
+  ).then(() => {
+    setScanStatus('scanning', 'Camera ready — point at a SOL2 QR code');
+  }).catch(err => {
+    setScanStatus('error', 'Camera error: ' + err);
+    showToast('Camera error: ' + err);
+    if (placeholder) placeholder.style.display = '';
+    if (startBtn)    startBtn.style.display = '';
+    if (stopBtn)     stopBtn.style.display  = 'none';
+  });
+}
+
+function stopQRCamera() {
+  if (html5QrScanner) { html5QrScanner.stop().catch(()=>{}); html5QrScanner = null; }
+  const placeholder = document.getElementById('qr-reader-placeholder');
+  const startBtn    = document.getElementById('qr-start-btn');
+  const stopBtn     = document.getElementById('qr-stop-btn');
+  const reader      = document.getElementById('qr-reader');
+  if (placeholder) placeholder.style.display = '';
+  if (startBtn)    startBtn.style.display = '';
+  if (stopBtn)     stopBtn.style.display  = 'none';
+  if (reader)      reader.innerHTML = '';
+  setScanStatus('idle', '');
+}
+
+async function onQRCodeScanned(decodedText) {
+  if (qrScanCooldown) return;
+  qrScanCooldown = true;
+
+  // Flash green on the scanner box
+  const scanBox = document.querySelector('.qr-scan-box');
+  if (scanBox) {
+    scanBox.style.outline = '4px solid #4ade80';
+    setTimeout(() => { scanBox.style.outline = ''; }, 600);
+  }
+
+  if (!decodedText.startsWith(QR_PREFIX)) {
+    setScanStatus('error', 'Invalid QR — only SOL2 QR codes accepted');
+    const resultEl = document.getElementById('qr-result');
+    if (resultEl) resultEl.innerHTML = `
+      <div style="background:#fff3cd;padding:14px 16px;border-radius:12px;border-left:4px solid #e8a020;margin-top:8px;display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:20px">⚠️</span>
+        <div><strong>Invalid QR Code</strong><br><span style="font-size:12px;color:#666">Only SOL2 QR codes are accepted. Try the QR Generator tab to create one.</span></div>
+      </div>`;
+    showToast('⚠️ Not a SOL2 QR code');
+    setTimeout(() => {
+      qrScanCooldown = false;
+      setScanStatus('scanning', 'Scanning… point camera at QR code');
+    }, 3000);
+    return;
+  }
+
+  const personId = decodedText.slice(QR_PREFIX.length);
+  const student  = APP.students.find(s => String(s['Student ID']) === String(personId));
+  if (student) { await scanQR(student['Student ID']); setTimeout(() => { qrScanCooldown = false; setScanStatus('scanning','Ready — scan next'); }, 3000); return; }
+  const faculty  = APP.faculty.find(f => String(f['Faculty ID']) === String(personId));
+  if (faculty)  { await scanFacultyQR(faculty['Faculty ID']); setTimeout(() => { qrScanCooldown = false; setScanStatus('scanning','Ready — scan next'); }, 3000); return; }
+
+  setScanStatus('error', 'QR not recognised — ID: ' + personId);
+  showToast('QR not recognised: ' + personId);
+  setTimeout(() => { qrScanCooldown = false; setScanStatus('scanning','Scanning…'); }, 3000);
+}
+
+async function scanQR(id) {
+  const student = APP.students.find(s => String(s['Student ID']) === String(id));
+  if (!student) return;
+
+  // ── Block dropped students ──────────────────────────────────────────────
+  const studentStatus = (student['Status'] || 'Active').toLowerCase();
+  if (studentStatus === 'dropped') {
+    setScanStatus('error', student['Full Name'] + ' — DROPPED (QR disabled)');
+    const resultEl = document.getElementById('qr-result');
+    if (resultEl) resultEl.innerHTML = `
+      <div style="background:#fdecea;padding:14px 16px;border-radius:12px;border-left:4px solid #e53935;margin-top:8px;display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:28px">🚫</span>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#b71c1c">${student['Full Name']}</div>
+          <div style="font-size:12px;color:#e53935;margin-top:2px">This student has been <strong>DROPPED</strong>.</div>
+          <div style="font-size:11px;color:#888;margin-top:4px">Contact the director or consultant to reinstate.</div>
+        </div>
+      </div>`;
+    showToast('🚫 ' + student['Full Name'] + ' — Dropped, QR disabled');
+    return;
+  }
+
+  // ── Check if already scanned this week ────────────────────────────────
+  const alreadyScanned = APP.attendance.find(a =>
+    String(a['Student ID']) === String(id) &&
+    String(a['Week No']) === String(APP.currentWeek)
+  );
+  if (alreadyScanned) {
+    const prevStatus = alreadyScanned['Attendance Status'] || alreadyScanned['Status'] || 'Present';
+    setScanStatus('error', student['Full Name'] + ' already recorded as ' + prevStatus + ' this week');
+    const resultEl = document.getElementById('qr-result');
+    if (resultEl) resultEl.innerHTML = `
+      <div style="background:#fff3cd;padding:14px 16px;border-radius:12px;border-left:4px solid #e8a020;margin-top:8px;display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:20px">⚠️</span>
+        <div><strong>${student['Full Name']}</strong><br><span style="font-size:12px;color:#666">Already recorded as <strong>${prevStatus}</strong> for Week ${APP.currentWeek}.</span></div>
+      </div>`;
+    showToast('⚠️ Already scanned — ' + student['Full Name']);
+    return;
+  }
+
+  const status = getAttendanceStatusByTime();
+  setScanStatus('scanning', 'Saving attendance for ' + student['Full Name'] + '…');
+
+  await apiPost({
+    action:'addQRScan', qrCode:String(student['Student ID']),
+    personType:'student', personId:student['Student ID'],
+    name:student['Full Name'], weekNo:APP.currentWeek, scanType:'attendance'
+  });
+  await apiPost({
+    action:'addAttendance', studentId:student['Student ID'],
+    studentName:student['Full Name'], age:student['Age']||'',
+    gender:student['Gender']||'', lgLeader:student['LG Leader']||'',
+    networkLeader:student['Network Leader']||'', tableNo:student['Table No'],
+    weekNo:APP.currentWeek, status:status, remarks:''
+  });
+
+  // ── Check absence count AFTER recording this scan ─────────────────────
+  if (status === 'Absent') {
+    // Count absences including the one just recorded (reload first for accuracy)
+    await loadAllData();
+    const totalAbsences = APP.attendance.filter(a =>
+      String(a['Student ID']) === String(id) &&
+      (a['Attendance Status'] || a['Status'] || '').toLowerCase().includes('absent')
+    ).length;
+
+    if (totalAbsences >= 3) {
+      // Auto-drop: update status to Dropped
+      await apiPost({
+        action: 'updateStudentStatus',
+        studentId: student['Student ID'],
+        studentName: student['Full Name'],
+        status: 'Dropped'
+      });
+      // Update local state immediately
+      student['Status'] = 'Dropped';
+      setScanStatus('error', student['Full Name'] + ' — AUTO-DROPPED (3 absences)');
+      const resultEl = document.getElementById('qr-result');
+      if (resultEl) resultEl.innerHTML = `
+        <div style="background:#fdecea;padding:14px 16px;border-radius:12px;border-left:4px solid #b71c1c;margin-top:8px;display:flex;gap:10px;align-items:flex-start">
+          <span style="font-size:28px">🚫</span>
+          <div>
+            <div style="font-weight:700;font-size:15px;color:#b71c1c">${student['Full Name']}</div>
+            <div style="font-size:13px;color:#e53935;margin-top:2px"><strong>AUTO-DROPPED</strong> — 3rd unexcused absence reached.</div>
+            <div style="font-size:11px;color:#888;margin-top:4px">Director or consultant must review in admin portal.</div>
+          </div>
+        </div>`;
+      showToast('🚫 ' + student['Full Name'] + ' AUTO-DROPPED — 3 absences');
+      updateAdminHomeStats();
+      return;
+    }
+
+    // Show warning if 2 absences (next = drop)
+    if (totalAbsences === 2) {
+      const resultEl = document.getElementById('qr-result');
+      if (resultEl) resultEl.innerHTML = `
+        <div style="background:#fdecea;padding:14px 16px;border-radius:12px;border-left:4px solid #e53935;margin-top:8px;display:flex;gap:10px;align-items:center">
+          <span style="font-size:28px">❌</span>
+          <div>
+            <div style="font-weight:700;font-size:15px;color:#b71c1c">${student['Full Name']}</div>
+            <div style="font-size:12px;color:#e53935">Marked <strong>Absent</strong> — Week ${APP.currentWeek} · ${getTableLabel(student['Table No'])}</div>
+            <div style="font-size:12px;color:#b71c1c;font-weight:700;margin-top:4px">⚠️ WARNING: 2 absences — 1 more = AUTO-DROP</div>
+          </div>
+        </div>`;
+      showToast('❌ ' + student['Full Name'] + ' — Absent (2nd, 1 more = Drop)');
+      setTimeout(() => alert(`⚠️ WARNING\n\n${student['Full Name']} now has 2 absences.\nOne more unexcused absence will automatically DROP this student.`), 300);
+      updateAdminHomeStats();
+      return;
+    }
+  }
+
+  // ── Normal result display ──────────────────────────────────────────────
+  const alertMsg = getAttendanceAlertMessage(status);
+  const statusColors = { Present: { bg:'#e8f5ee', border:'#46586e', icon:'✅' }, Late: { bg:'#fff5e0', border:'#c9960c', icon:'⏰' }, Absent: { bg:'#fdecea', border:'#e53935', icon:'❌' } };
+  const sc = statusColors[status] || statusColors['Present'];
+
+  setScanStatus(status === 'Present' ? 'success' : (status === 'Late' ? 'scanning' : 'error'), student['Full Name'] + ' — ' + status + ' ✓');
+  const resultEl = document.getElementById('qr-result');
+  if (resultEl) resultEl.innerHTML = `
+    <div style="background:${sc.bg};padding:14px 16px;border-radius:12px;border-left:4px solid ${sc.border};margin-top:8px;display:flex;gap:10px;align-items:center">
+      <span style="font-size:28px">${sc.icon}</span>
+      <div>
+        <div style="font-weight:700;font-size:15px;color:#1a3a2a">${student['Full Name']}</div>
+        <div style="font-size:12px;color:${sc.border}">Marked <strong>${status}</strong> — Week ${APP.currentWeek} · ${getTableLabel(student['Table No'])}</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">${new Date().toLocaleTimeString()}</div>
+        ${status === 'Late' ? '<div style="font-size:11px;color:#c9960c;margin-top:3px">⚠️ 3 unexcused late = 1 Absent</div>' : ''}
+        ${status === 'Absent' ? '<div style="font-size:11px;color:#e53935;margin-top:3px">⚠️ 3 unexcused absences = Drop</div>' : ''}
+      </div>
+    </div>`;
+
+  // Show alert popup for Late/Absent
+  if (status === 'Late' || status === 'Absent') {
+    setTimeout(() => alert(alertMsg), 300);
+  }
+
+  showToast((status === 'Present' ? '✅' : status === 'Late' ? '⏰' : '❌') + ' ' + student['Full Name'] + ' — ' + status);
+  await loadAllData();
+}
+
+async function scanFacultyQR(id) {
+  const faculty = APP.faculty.find(f => String(f['Faculty ID']) === String(id));
+  if (!faculty) return;
+  setScanStatus('scanning', 'Saving attendance for ' + faculty['Full Name'] + '…');
+
+  await apiPost({
+    action:'addQRScan', qrCode:String(faculty['Faculty ID']),
+    personType:'faculty', personId:faculty['Faculty ID'],
+    name:faculty['Full Name'], weekNo:APP.currentWeek, scanType:'attendance'
+  });
+  await apiPost({
+    action:'addFacultyAttendance', facultyId:faculty['Faculty ID'],
+    facultyName:faculty['Full Name'], role:faculty['Role']||'',
+    weekNo:APP.currentWeek, status:'Present'
+  });
+
+  setScanStatus('success', faculty['Full Name'] + ' (' + (faculty['Role']||'') + ') marked PRESENT ✓');
+  const resultEl = document.getElementById('qr-result');
+  if (resultEl) resultEl.innerHTML = `
+    <div style="background:#e8f5ee;padding:14px 16px;border-radius:12px;border-left:4px solid #46586e;margin-top:8px;display:flex;gap:10px;align-items:center">
+      <span style="font-size:28px">✅</span>
+      <div>
+        <div style="font-weight:700;font-size:15px;color:#1a3a2a">${faculty['Full Name']}</div>
+        <div style="font-size:12px;color:#46586e"><strong>${faculty['Role']||'Faculty'}</strong> marked PRESENT — Week ${APP.currentWeek}</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">${new Date().toLocaleTimeString()}</div>
+      </div>
+    </div>`;
+  showToast('✅ ' + faculty['Full Name'] + ' — Present');
+}
+
+// ═══════════════════════════════════════════
+// MARK UNSCANNED STUDENTS AS ABSENT
+// ═══════════════════════════════════════════
+async function markUnscannedAbsent() {
+  const week = APP.currentWeek;
+
+  // Students
+  const activeStudents = APP.students.filter(s => (s['Status'] || 'Active').toLowerCase() !== 'dropped');
+  const scannedStudentIds = new Set(
+    APP.attendance
+      .filter(a => String(a['Week No']) === String(week))
+      .map(a => String(a['Student ID']))
+  );
+  const unscannedStudents = activeStudents.filter(s => !scannedStudentIds.has(String(s['Student ID'])));
+
+  // Faculty & Staff
+  const scannedFacultyIds = new Set(
+    APP.facultyAttendance
+      .filter(a => String(a['Week No']) === String(week))
+      .map(a => String(a['Faculty ID'] || a['FacultyID']))
+  );
+  const unscannedFaculty = APP.faculty.filter(f => !scannedFacultyIds.has(String(f['Faculty ID'])));
+
+  if (!unscannedStudents.length && !unscannedFaculty.length) {
+    showToast('✅ Everyone already has attendance for Week ' + week);
+    return;
+  }
+
+  const listLines = [
+    ...unscannedStudents.map(s => '• ' + s['Full Name'] + ' (Student)'),
+    ...unscannedFaculty.map(f => '• ' + f['Full Name'] + ' (Faculty/Staff)')
+  ].join('\n');
+  const confirmed = confirm(
+    `Mark ${unscannedStudents.length} student(s) and ${unscannedFaculty.length} faculty/staff as ABSENT for Week ${week}?\n\n${listLines}`
+  );
+  if (!confirmed) return;
+
+  const btn = document.getElementById('mark-absent-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  let studentCount = 0;
+  for (const student of unscannedStudents) {
+    try {
+      await apiPost({
+        action:'addAttendance', studentId:student['Student ID'],
+        studentName:student['Full Name'], age:student['Age']||'',
+        gender:student['Gender']||'', lgLeader:student['LG Leader']||'',
+        networkLeader:student['Network Leader']||'', tableNo:student['Table No'],
+        weekNo:week, status:'Absent', remarks:'Auto-marked (unscanned)'
+      });
+      studentCount++;
+    } catch(e) { console.error('Failed to mark student absent:', student['Full Name'], e); }
+  }
+
+  let facultyCount = 0;
+  for (const faculty of unscannedFaculty) {
+    try {
+      await apiPost({
+        action:'addFacultyAttendance', facultyId:faculty['Faculty ID'],
+        facultyName:faculty['Full Name'], role:faculty['Role']||'',
+        weekNo:week, status:'Absent'
+      });
+      facultyCount++;
+    } catch(e) { console.error('Failed to mark faculty absent:', faculty['Full Name'], e); }
+  }
+
+  showToast(`✅ ${studentCount} student(s) & ${facultyCount} faculty/staff marked Absent for Week ${week}`);
+  if (btn) { btn.disabled = false; btn.textContent = '📋 Mark Unscanned as Absent'; }
+  await loadAllData();
+}
+
+
+let qrGenCurrentId   = null;
+let qrGenCurrentName = null;
+
+function renderQRGenList() {
+  const type   = document.getElementById('qrgen-type')?.value || 'student';
+  const search = (document.getElementById('qrgen-search')?.value || '').toLowerCase();
+  const list   = document.getElementById('qrgen-list');
+  if (!list) return;
+
+  const items = type === 'student'
+    ? APP.students.filter(s => (s['Status']||'').toLowerCase() !== 'dropped' && (!search || s['Full Name'].toLowerCase().includes(search) || String(s['Student ID']).includes(search)))
+    : APP.faculty.filter(f  => !search || f['Full Name'].toLowerCase().includes(search) || String(f['Faculty ID']).includes(search));
+
+  if (!items.length) {
+    list.innerHTML = '<p style="color:var(--text3);font-size:13px;text-align:center;padding:20px">No results found.</p>';
+    return;
+  }
+
+  list.innerHTML = items.map(item => {
+    const id   = type === 'student' ? item['Student ID'] : item['Faculty ID'];
+    const name = item['Full Name'];
+    const sub  = type === 'student' ? `ID: ${id} · ${getTableLabel(item['Table No'])}` : `ID: ${id} · ${item['Role']}`;
+    const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div onclick="openQRModal('${String(id).replace(/'/g,"\'")}','${name.replace(/'/g,"\'")}','${sub.replace(/'/g,"\'")}',this)"
+      style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#f8f8f8;border-radius:10px;cursor:pointer;border:1.5px solid transparent;transition:border-color 0.15s"
+      onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='transparent'">
+      <div style="width:38px;height:38px;background:var(--purple);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0">${initials}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text1)">${name}</div>
+        <div style="font-size:11px;color:var(--text3)">${sub}</div>
+      </div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    </div>`;
+  }).join('');
+}
+
+function openQRModal(id, name, sub) {
+  qrGenCurrentId   = id;
+  qrGenCurrentName = name;
+  const modal = document.getElementById('qrgen-modal');
+  modal.style.display = 'flex';
+  document.getElementById('qrgen-modal-name').textContent = name;
+  document.getElementById('qrgen-modal-id').textContent   = sub;
+
+  // Show loading state
+  const canvas = document.getElementById('qrgen-canvas');
+  const qrWrap = document.getElementById('qrgen-img-wrap');
+
+  // Use qrcode library — render into a fresh temp div then grab the img/canvas
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'absolute';
+  tempDiv.style.visibility = 'hidden';
+  document.body.appendChild(tempDiv);
+
+  const qrPayload = QR_PREFIX + String(id);
+
+  // Clear previous
+  if (qrWrap) qrWrap.innerHTML = '<div style="color:#999;font-size:13px;padding:20px">Generating…</div>';
+
+  new QRCode(tempDiv, {
+    text: qrPayload,
+    width: 240, height: 240,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  setTimeout(() => {
+    // QRCode lib renders either canvas or img depending on browser
+    const generatedCanvas = tempDiv.querySelector('canvas');
+    const generatedImg    = tempDiv.querySelector('img');
+
+    if (qrWrap) {
+      if (generatedCanvas) {
+        // Copy to our display canvas
+        canvas.width  = generatedCanvas.width;
+        canvas.height = generatedCanvas.height;
+        canvas.getContext('2d').drawImage(generatedCanvas, 0, 0);
+        canvas.style.display = '';
+        qrWrap.innerHTML = '';
+        qrWrap.appendChild(canvas);
+      } else if (generatedImg) {
+        // Some browsers generate an img — use it directly
+        const img = document.createElement('img');
+        img.src = generatedImg.src;
+        img.style.cssText = 'width:240px;height:240px;border-radius:8px;display:block';
+        img.onload = () => {
+          // Also copy to canvas for download
+          canvas.width = 240; canvas.height = 240;
+          canvas.getContext('2d').drawImage(img, 0, 0, 240, 240);
+        };
+        qrWrap.innerHTML = '';
+        qrWrap.appendChild(img);
+      } else {
+        qrWrap.innerHTML = '<div style="color:#e53935;font-size:13px;padding:20px">Failed to generate QR. Refresh and try again.</div>';
+      }
+    }
+
+    document.body.removeChild(tempDiv);
+
+    // Show payload for debugging
+    const payloadEl = document.getElementById('qrgen-payload');
+    if (payloadEl) payloadEl.textContent = 'Payload: ' + qrPayload;
+  }, 200);
+}
+
+function closeQRModal() {
+  document.getElementById('qrgen-modal').style.display = 'none';
+}
+
+function downloadQRCode() {
+  const canvas = document.getElementById('qrgen-canvas');
+  const link   = document.createElement('a');
+  link.download = `SOL2_QR_${qrGenCurrentId}_${(qrGenCurrentName||'').replace(/\s+/g,'_')}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// Stop camera when navigating away
+(function() {
+  const _origGo = go;
+  go = function(id) {
+    if (id !== 's-r-qr' && html5QrScanner) stopQRCamera();
+    _origGo(id);
+  };
+})();
+
+// ═══════════════════════════════════════════
+// ADMIN — TABLE ADD CREDIT MODAL
+// ═══════════════════════════════════════════
+function openTableAddCredit() {
+  const modal = document.getElementById('modal-table-credit');
+  if (!modal) return;
+  const tableNo    = document.getElementById('a-td-title')?.textContent?.replace('Table ','').trim();
+  const modalTitle = document.getElementById('modal-table-credit-title');
+  if (modalTitle) modalTitle.textContent = `Add Points — ${getTableLabel(tableNo)}`;
+  modal.style.display = 'flex';
+  document.querySelectorAll('#modal-table-credit .reason-btn').forEach((b, i) => {
+    b.classList.toggle('selected', i === 0);
+  });
+  APP.selectedReason = 'Attendance';
+  const otherWrap = document.getElementById('modal-other-wrap');
+  if (otherWrap) otherWrap.style.display = 'none';
+  const otherText = document.getElementById('modal-other-text');
+  if (otherText) otherText.value = '';
+  const amountEl = document.getElementById('modal-credit-amount');
+  if (amountEl) amountEl.value = 5;
+}
+
+function closeTableCreditModal() {
+  const modal = document.getElementById('modal-table-credit');
+  if (modal) modal.style.display = 'none';
+}
+
+async function doTableAddCredit() {
+  const tableNo = document.getElementById('a-td-title')?.textContent?.replace('Table ','').trim();
+  const amount  = Number(document.getElementById('modal-credit-amount')?.value || 5);
+  const rawReason = APP.selectedReason || 'Attendance';
+  const reason  = rawReason === '__other__'
+    ? (document.getElementById('modal-other-text')?.value?.trim() || 'Other')
+    : rawReason;
+
+  if (!tableNo) { showToast('⚠️ Table not found'); return; }
+  if (!amount || amount < 1) { showToast('⚠️ Enter a valid credit amount'); return; }
+
+  try {
+    const btn = document.getElementById('modal-add-credit-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+    await apiPost({
+      action:      'addCredit',
+      studentId:   '',
+      studentName: `${getTableLabel(tableNo)} (Group)`,
+      tableNo:     tableNo,
+      weekNo:      APP.currentWeek,
+      reason,
+      creditsAdded: amount,
+      addedBy:     APP.currentFaculty?.["Full Name"] || 'Admin'
+    });
+
+    closeTableCreditModal();
+    await loadAllData();
+    showToast(`✅ ${amount} pts added to ${getTableLabel(tableNo)}`);
+    showTableDetail(tableNo);
+  } catch (err) {
+    showToast('❌ ' + (err.message || 'Failed to save'));
+    console.error('doTableAddCredit error:', err);
+  } finally {
+    const btn = document.getElementById('modal-add-credit-btn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Add Credits to Table'; }
+  }
+}
+
+// ═══════════════════════════════════════════
+// ADD STUDENT (Director / Consultant / Record)
+// Reached via the ➕ button on the portal screen, which first shows a
+// login gate (see doAddStudentGateLogin below) — so this modal itself
+// is never reachable without signing in with an Admin or Record account.
+// Student ID, Status, and Registration Date are set automatically:
+// the ID is generated server-side (next number after the highest
+// existing "STUDENT-####"), Status is always "Active" for a new
+// enrollee, and Registration Date is today.
+// ═══════════════════════════════════════════
+function previewNextStudentId() {
+  let maxNum = 0;
+  APP.students.forEach(s => {
+    const m = String(s['Student ID'] || '').match(/(\d+)\s*$/);
+    if (m) { const n = parseInt(m[1], 10); if (n > maxNum) maxNum = n; }
+  });
+  return 'STUDENT-' + String(maxNum + 1).padStart(4, '0');
+}
+
+function populateAddStudentTableSelect() {
+  const sel = document.getElementById('as-tableno');
+  if (!sel) return;
+  const tables = [...APP.tableGuides]
+    .map(g => g['Table No'])
+    .filter(t => t !== '' && t !== null && t !== undefined)
+    .sort((a, b) => Number(a) - Number(b));
+  sel.innerHTML = '<option value="">Select…</option>' +
+    tables.map(t => `<option value="${t}">${getTableLabel(t)}</option>`).join('');
+}
+
+function onAddStudentTableChange() {
+  const tableNo = document.getElementById('as-tableno')?.value;
+  const facEl   = document.getElementById('as-facilitator');
+  if (!facEl) return;
+  const guide = APP.tableGuides.find(g => String(g['Table No']) === String(tableNo));
+  facEl.value = (guide && guide['Facilitator Name']) ? guide['Facilitator Name'] : '';
+}
+
+// ── Login gate ──────────────────────────────────────────────
+// Shown first when the ➕ button is tapped. Only a Director/Consultant
+// (admin) or Record account can pass through to the actual Add Student
+// form. Once signed in, that access is remembered for a short session
+// (see ADD_STUDENT_SESSION_MINUTES below) so the person isn't asked to
+// log in again for every student they add — the session ends early,
+// though, the moment they navigate back to the portal/home screen.
+const ADD_STUDENT_SESSION_MINUTES = 5;
+let addStudentSessionPerson = null;
+let addStudentSessionTimer = null;
+
+function startAddStudentSession(person) {
+  addStudentSessionPerson = person;
+  if (addStudentSessionTimer) clearTimeout(addStudentSessionTimer);
+  addStudentSessionTimer = setTimeout(endAddStudentSession, ADD_STUDENT_SESSION_MINUTES * 60 * 1000);
+}
+
+function endAddStudentSession() {
+  addStudentSessionPerson = null;
+  if (addStudentSessionTimer) { clearTimeout(addStudentSessionTimer); addStudentSessionTimer = null; }
+}
+
+function hasActiveAddStudentSession() {
+  return !!addStudentSessionPerson;
+}
+
+function openAddStudentGate() {
+  // Already signed in within the last few minutes — skip straight to the
+  // form and refresh the session clock instead of asking to log in again.
+  if (hasActiveAddStudentSession()) {
+    startAddStudentSession(addStudentSessionPerson); // reset the 5-min clock
+    openAddStudentModal();
+    return;
+  }
+  document.getElementById('asg-user').value = '';
+  document.getElementById('asg-pass').value = '';
+  hideLoginError('asg-err');
+  const modal = document.getElementById('modal-add-student-gate');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddStudentGate() {
+  const modal = document.getElementById('modal-add-student-gate');
+  if (modal) modal.style.display = 'none';
+}
+
+function doAddStudentGateLogin() {
+  const username = document.getElementById('asg-user')?.value || '';
+  const password = document.getElementById('asg-pass')?.value || '';
+  const btn      = document.getElementById('asg-login-btn');
+  hideLoginError('asg-err');
+  if (!username || !password) { showLoginError('asg-err', 'Please enter your username and password.'); return; }
+  if (isDataEmpty()) { showLoginError('asg-err', 'Still connecting to server. Please wait a moment and try again.'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+  setTimeout(() => {
+    const person = findFacultyByCredentials(username, password);
+    if (!person) {
+      showLoginError('asg-err', 'Incorrect username or password.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In & Continue'; }
+      document.getElementById('asg-pass').value = '';
+      return;
+    }
+    const roleTypes = getRoleTypes(person["Role"]);
+    if (!roleTypes.includes('admin') && !roleTypes.includes('record')) {
+      showLoginError('asg-err', 'Your account does not have Director, Consultant, or Record access.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In & Continue'; }
+      return;
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In & Continue'; }
+    startAddStudentSession(person);
+    closeAddStudentGate();
+    openAddStudentModal();
+  }, 120);
+}
+
+function openAddStudentModal() {
+  document.getElementById('as-fullname').value        = '';
+  document.getElementById('as-age').value              = '';
+  document.getElementById('as-gender').value           = '';
+  document.getElementById('as-lgleader').value         = '';
+  document.getElementById('as-networkleader').value    = '';
+  document.getElementById('as-tableno').value          = '';
+  document.getElementById('as-facilitator').value      = '';
+  document.getElementById('as-contact').value          = '';
+  const errEl = document.getElementById('as-err');
+  if (errEl) errEl.style.display = 'none';
+
+  populateAddStudentTableSelect();
+  document.getElementById('as-preview-id').textContent = previewNextStudentId();
+  document.getElementById('as-preview-date').textContent =
+    new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const modal = document.getElementById('modal-add-student');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddStudentModal() {
+  const modal = document.getElementById('modal-add-student');
+  if (modal) modal.style.display = 'none';
+}
+
+async function doAddStudent() {
+  const fullName      = document.getElementById('as-fullname')?.value.trim()      || '';
+  const age           = document.getElementById('as-age')?.value                  || '';
+  const gender        = document.getElementById('as-gender')?.value               || '';
+  const lgLeader      = document.getElementById('as-lgleader')?.value.trim()      || '';
+  const networkLeader = document.getElementById('as-networkleader')?.value.trim() || '';
+  const tableNo       = document.getElementById('as-tableno')?.value              || '';
+  const contactNo     = document.getElementById('as-contact')?.value.trim()       || '';
+
+  const errEl = document.getElementById('as-err');
+  const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; } };
+  if (errEl) errEl.style.display = 'none';
+
+  if (!fullName) { showErr('⚠️ Full Name is required.'); return; }
+  if (!tableNo)  { showErr('⚠️ Please select a Table No.'); return; }
+
+  try {
+    const btn = document.getElementById('modal-add-student-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+    const res = await apiPost({
+      action: 'addStudent',
+      fullName, age, gender, lgLeader, networkLeader, tableNo, contactNo
+    });
+
+    if (!res || res.success === false) throw new Error((res && res.message) || 'Failed to add student');
+
+    closeAddStudentModal();
+    await loadAllData();
+    showToast(`✅ ${fullName} added` + (res.data && res.data['Student ID'] ? ` (${res.data['Student ID']})` : ''));
+    go(APP.currentScreen); // re-render whichever home screen this was opened from
+  } catch (err) {
+    showErr('❌ ' + (err.message || 'Failed to add student'));
+    console.error('doAddStudent error:', err);
+  } finally {
+    const btn = document.getElementById('modal-add-student-btn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Add Student'; }
+  }
+}
+
+// ═══════════════════════════════════════════
+// RECORD — ATTENDANCE TAB SWITCH
+// ═══════════════════════════════════════════
+function switchAttTab(tab) {
+  const sPanel = document.getElementById('att-panel-students');
+  const fPanel = document.getElementById('att-panel-faculty');
+  const sBtn   = document.getElementById('att-tab-students');
+  const fBtn   = document.getElementById('att-tab-faculty');
+  if (tab === 'students') {
+    sPanel.style.display = ''; fPanel.style.display = 'none';
+    sBtn.style.background = 'var(--purple)'; sBtn.style.color = '#fff';
+    fBtn.style.background = '#fff';          fBtn.style.color = 'var(--purple)';
+    renderRAttendance();
+  } else {
+    sPanel.style.display = 'none'; fPanel.style.display = '';
+    fBtn.style.background = 'var(--purple)'; fBtn.style.color = '#fff';
+    sBtn.style.background = '#fff';          sBtn.style.color = 'var(--purple)';
+    renderRFacultyAtt();
+  }
+}
+
+function renderRFacultyAtt() {
+  const el   = document.getElementById('r-fac-att-list');
+  const week = document.getElementById('r-fac-att-week')?.value || APP.currentWeek;
+  if (!el) return;
+  const weekAtt = APP.facultyAttendance.filter(a => String(a["Week No"]) === String(week));
+  const summaryHtml = buildAttendanceSummary(weekAtt, APP.faculty.length);
+
+  if (!weekAtt.length) {
+    el.innerHTML = summaryHtml + `<p style="padding:16px;color:var(--gray)">No faculty attendance for Week ${week}.</p>`;
+    return;
+  }
+  el.innerHTML = summaryHtml + weekAtt.map(a => {
+    const name     = a["Faculty Name"] || a["FacultyName"] || "—";
+    const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const role     = a["Role"]   || "—";
+    const status   = a["Status"] || "Present";
+    const time     = formatDate(a["Scan Time"] || a["ScanTime"]);
+    const badgeCls = status.toLowerCase() === 'late' ? 'ba' : 'bg';
+    return `
+      <div class="att-row">
+        <div class="av">${initials}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${name}</div>
+          <div style="font-size:11px;color:var(--text3)">${role}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px">Scanned ${time}</div>
+        </div>
+        <span class="badge ${badgeCls}">${status}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderRAttendance() {
+  const el   = document.getElementById('r-att-list');
+  const week = document.getElementById('r-att-week')?.value || APP.currentWeek;
+  if (!el) return;
+  const weekAtt = APP.attendance.filter(a => String(a["Week No"]) === String(week));
+  const summaryHtml = buildAttendanceSummary(weekAtt, APP.students.length);
+
+  if (!weekAtt.length) {
+    el.innerHTML = summaryHtml + `<p style="padding:16px;color:var(--gray)">No attendance for Week ${week}.</p>`;
+    return;
+  }
+  el.innerHTML = summaryHtml + weekAtt.map(a => `
+    <div class="row">
+      <div>
+        <strong>${a["Student Name"] || a["StudentName"] || "—"}</strong><br>
+        <small>${formatDate(a["Scan Time"] || a["ScanTime"])}</small>
+      </div>
+      <div>${a["Attendance Status"] || a["Status"] || "Present"}</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════
+// BALANCES
+// ═══════════════════════════════════════════
+function renderBalances() {
+  const el = document.getElementById('r-bal-list');
+  if (!el) return;
+  if (!APP.students.length) {
+    el.innerHTML = '<p style="padding:16px;color:var(--gray)">No student records.</p>';
+    return;
+  }
+  const sorted = [...APP.students].sort((a, b) => {
+    const pa = getStudentPayment(a["Student ID"]);
+    const pb = getStudentPayment(b["Student ID"]);
+    return pb.balance - pa.balance;
+  });
+  el.innerHTML = sorted.map(s => {
+    const pay = getStudentPayment(s["Student ID"]);
+    return `
+      <div class="row">
+        <div>
+          <strong>${s["Full Name"]}</strong><br>
+          <small>${getTableLabel(s["Table No"])} · ₱${pay.paid.toLocaleString()} paid</small>
+        </div>
+        <div style="color:${pay.balance > 0 ? 'var(--red,#e53935)' : 'var(--green)'}">
+          ₱${pay.balance.toLocaleString()}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// PRINT
+// ═══════════════════════════════════════════
+function printAttendance() {
+  // Get the currently selected week from the attendance week filter
+  const weekEl = document.getElementById('a-att-week');
+  const selectedWeek = weekEl ? weekEl.value : APP.currentWeek;
+  const lessonInfo = APP.lessons.find(l => String(l['Week No']) === String(selectedWeek));
+  const lessonLabel = lessonInfo
+    ? `Lesson ${lessonInfo['Week No']}${lessonInfo['Lesson Title'] ? ' — ' + lessonInfo['Lesson Title'] : ''}`
+    : `Lesson ${selectedWeek}`;
+
+  // Filter attendance to only the selected lesson
+  const filtered = APP.attendance.filter(a => String(a['Week No']) === String(selectedWeek));
+
+  if (!filtered.length) {
+    alert('No attendance records found for ' + lessonLabel);
+    return;
+  }
+
+  const data = filtered.map(a => `
+    <tr>
+      <td>${formatDate(a["Scan Time"] || a["ScanTime"])}</td>
+      <td>${a["Student Name"] || a["StudentName"] || ""}</td>
+      <td>${a["Age"]            || ""}</td>
+      <td>${a["Gender"]         || ""}</td>
+      <td>${a["Attendance Status"] || a["Status"] || "Present"}</td>
+      <td>${a["LG Leader"]      || ""}</td>
+      <td>${a["Network Leader"] || ""}</td>
+    </tr>
+  `).join("");
+  const win = window.open("", "", "width=900,height=700");
+  win.document.write(`
+    <html><head><title>Student Attendance — ${lessonLabel}</title>
+    <style>
+      @page { size: A4 portrait; margin: 20mm; }
+      body { font-family: Arial, sans-serif; }
+      h2 { text-align: center; margin-bottom: 4px; }
+      h3 { text-align: center; margin-top: 0; margin-bottom: 20px; color: #555; font-weight: 400; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+      th { background: #f2f2f2; }
+    </style></head>
+    <body>
+      <h2>STUDENT ATTENDANCE REPORT — ${APP.settings["Batch Name"] || "SOL2"}</h2>
+      <h3>${lessonLabel}</h3>
+      <table>
+        <thead><tr><th>Scan Time</th><th>Name</th><th>Age</th><th>Gender</th><th>Status</th><th>LG Leader</th><th>Network Leader</th></tr></thead>
+        <tbody>${data}</tbody>
+      </table>
+      <script>window.print();<\/script>
+    </body></html>
+  `);
+  win.document.close();
+}
+
+// ═══════════════════════════════════════════
+// UTILITY
+// ═══════════════════════════════════════════
+function formatDate(val) {
+  if (!val) return "—";
+  try { return new Date(val).toLocaleString(); } catch { return String(val); }
+}
+
+function initClock() {
+  setInterval(() => {
+    const el = document.getElementById('qr-live-clock');
+    if (el) el.textContent = new Date().toLocaleTimeString();
+  }, 1000);
+}
+
+function updateSyncStatus(ok, msg) {
+  const el  = document.getElementById('sync-label-portal');
+  const dot = document.getElementById('sync-dot-portal');
+  if (!el) return;
+  if (ok) {
+    el.textContent = 'Online · Synced';
+    if (dot) { dot.style.background = '#27ae60'; dot.style.boxShadow = '0 0 0 3px rgba(39,174,96,0.25)'; }
+  } else if (msg) {
+    el.textContent = '⚠️ ' + msg;
+    if (dot) { dot.style.background = '#e67e22'; dot.style.boxShadow = '0 0 0 3px rgba(230,126,34,0.25)'; }
+  } else {
+    el.textContent = 'Syncing…';
+    if (dot) { dot.style.background = ''; dot.style.boxShadow = ''; }
+  }
+}
+
+// ═══════════════════════════════════════════
+// WEEK DROPDOWNS
+// ═══════════════════════════════════════════
+function populateWeekDropdowns() {
+  // Attendance is recorded once per week (not per lesson), so dedupe down
+  // to one option per distinct Week No even though APP.lessons now has 2
+  // rows per week (one per lesson). Combine both lesson titles into the
+  // label so it's still clear which two lessons that week covers.
+  const weekMap = new Map();
+  APP.lessons.forEach(l => {
+    const wk = Number(l["Week No"]);
+    if (isNaN(wk)) return;
+    if (!weekMap.has(wk)) weekMap.set(wk, []);
+    if (l["Lesson Title"]) weekMap.get(wk).push(l["Lesson Title"]);
+  });
+  const weekOptions = Array.from(weekMap.keys()).sort((a, b) => a - b).map(wk => {
+    const titles = weekMap.get(wk).join(' & ');
+    return `<option value="${wk}"${wk === APP.currentWeek ? ' selected' : ''}>Week ${wk}${titles ? ' – ' + titles : ''}</option>`;
+  }).join('');
+
+  const fWeek = document.getElementById('f-week-filter');
+  if (fWeek && weekOptions) fWeek.innerHTML = weekOptions;
+
+  ['a-att-week', 'a-table-week', 'a-fac-att-week'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && weekOptions) el.innerHTML = weekOptions;
+  });
+
+  const rAtt    = document.getElementById('r-att-week');
+  if (rAtt    && weekOptions) rAtt.innerHTML    = weekOptions;
+  const rFacAtt = document.getElementById('r-fac-att-week');
+  if (rFacAtt && weekOptions) rFacAtt.innerHTML = weekOptions;
+
+  const mkp = document.getElementById('makeup-week');
+  if (mkp) {
+    let weekNumbers = (APP.lessons || [])
+      .map(l => Number(l["Week No"]))
+      .filter(n => !isNaN(n));
+    // Fallback: LESSON_WEEKS sheet is empty/unfilled — derive the week list
+    // from whatever weeks actually show up in the attendance records
+    // instead, so the dropdown is never left with zero options.
+    if (!weekNumbers.length) {
+      weekNumbers = (APP.attendance || [])
+        .map(a => Number(a["Week No"]))
+        .filter(n => !isNaN(n));
+    }
+    weekNumbers = Array.from(new Set(weekNumbers)).sort((a, b) => a - b);
+    mkp.innerHTML = `<option value="0">All Weeks</option>` +
+      weekNumbers.map(w => `<option value="${w}">Week ${w} absences</option>`).join('');
+  }
+}
+
+// ═══════════════════════════════════════════
+// ADMIN HOME STATS
+// ═══════════════════════════════════════════
+function updateAdminHomeStats() {
+  const totalStudentsEl = document.getElementById('a-total-students');
+  const totalFacultyEl  = document.getElementById('a-total-faculty');
+  const totalPaidEl     = document.getElementById('a-total-paid');
+  const totalDroppedEl  = document.getElementById('a-total-dropped');
+
+  const activeStudents = APP.students.filter(s =>
+    (s["Status"] || "Active").toLowerCase() !== "dropped"
+  );
+  const droppedStudents = APP.students.filter(s =>
+    (s["Status"] || "Active").toLowerCase() === "dropped"
+  );
+
+  if (totalStudentsEl) totalStudentsEl.textContent = activeStudents.length;
+  if (totalFacultyEl)  totalFacultyEl.textContent  = APP.faculty.length;
+  if (totalDroppedEl)  totalDroppedEl.textContent  = droppedStudents.length;
+  if (totalPaidEl) {
+    const total = APP.payments.reduce((sum, p) => sum + Number(p["Amount Paid"] || 0), 0);
+    totalPaidEl.textContent = `₱${total.toLocaleString()}`;
+  }
+
+  const pendingMakeupCount = APP.attendance
+    .filter(a => {
+      const isAbsent = (a["Attendance Status"] || a["Status"] || "").toLowerCase() === "absent";
+      if (!isAbsent) return false;
+      const attId = a["Attendance ID"] || a["id"] || "";
+      const mkStatus = (APP.makeupStatus[attId]?.status || "Pending").toLowerCase();
+      return mkStatus === "pending";
+    }).length;
+  const badge = document.getElementById('a-makeup-badge');
+  if (badge) {
+    if (pendingMakeupCount > 0) { badge.textContent = `${pendingMakeupCount} pending`; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
+  }
+
+  // Dropped students badge
+  const droppedCount = APP.students.filter(s =>
+    (s["Status"] || "").toLowerCase() === "dropped"
+  ).length;
+  const droppedBadge = document.getElementById('a-dropped-badge');
+  if (droppedBadge) {
+    if (droppedCount > 0) { droppedBadge.textContent = `${droppedCount}`; droppedBadge.style.display = ''; }
+    else { droppedBadge.style.display = 'none'; }
+  }
+}
+
+// ═══════════════════════════════════════════
+// FACULTY HOME
+// ═══════════════════════════════════════════
+function updateFacultyHome() {
+  updateFacultyNotifBadges();
+  const nameEl = document.getElementById('f-home-name');
+  const roleEl = document.getElementById('f-home-role');
+  const f = APP.currentFaculty || APP.faculty[0];
+  if (!f) return;
+  if (nameEl) nameEl.textContent = f["Full Name"] || "—";
+  if (roleEl) roleEl.textContent = `${f["Role"] || ""}${f["Table Assigned"] ? ' · Table ' + f["Table Assigned"] : ''}`;
+
+  const tableNo = f["Table Assigned"] || "";
+  ['f-students-topbar','f-payment-topbar','f-credits-topbar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && tableNo) {
+      const labels = { 'f-students-topbar': 'Attendance', 'f-payment-topbar': 'Payment', 'f-credits-topbar': 'Points' };
+      el.textContent = `${getTableLabel(tableNo)} — ${labels[id]}`;
     }
   });
 }
-document.addEventListener('DOMContentLoaded', () => {
-  attachRipples();
-  new MutationObserver(attachRipples).observe(
-    document.getElementById('app'), { childList: true, subtree: true }
+
+// ═══════════════════════════════════════════
+// ADMIN — FACULTY ATTENDANCE
+// ═══════════════════════════════════════════
+function renderAFacultyAtt() {
+  const el   = document.getElementById('a-fac-att-list');
+  const week = document.getElementById('a-fac-att-week')?.value || APP.currentWeek;
+  if (!el) return;
+  const weekAtt = APP.facultyAttendance.filter(a => String(a["Week No"]) === String(week));
+  const summaryHtml = buildAttendanceSummary(weekAtt, APP.faculty.length);
+
+  if (!weekAtt.length) {
+    el.innerHTML = summaryHtml + `<p style="padding:16px;color:var(--gray)">No faculty attendance for Week ${week}.</p>`;
+    return;
+  }
+  el.innerHTML = summaryHtml + weekAtt.map(a => {
+    const name     = a["Faculty Name"] || a["FacultyName"] || "—";
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const role     = a["Role"]   || "—";
+    const status   = a["Status"] || "Present";
+    const time     = formatDate(a["Scan Time"] || a["ScanTime"]);
+    const badgeCls = status.toLowerCase() === 'late' ? 'ba' : 'bg';
+    return `
+      <div class="att-row">
+        <div class="av">${initials}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${name}</div>
+          <div style="font-size:11px;color:var(--text3)">${role}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px">Scanned ${time}</div>
+        </div>
+        <span class="badge ${badgeCls}">${status}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// ADMIN — MAKEUP LESSONS
+// ═══════════════════════════════════════════
+function renderMakeup() {
+  const el       = document.getElementById('makeup-list');
+  const assignEl = document.getElementById('makeup-week-assign');
+  const week     = document.getElementById('makeup-week')?.value || "0";
+  if (!el) return;
+  let absences = APP.attendance.filter(a =>
+    (a["Attendance Status"] || a["Status"] || "").toLowerCase() === "absent"
   );
-});
-</script>
-</body>
-</html>
+  if (week !== "0") absences = absences.filter(a => String(a["Week No"]) === String(week));
+
+  // ── Whole-week make-up class assignment ──
+  // One facilitator is assigned to handle ALL absent students' make-up
+  // classes for the selected week (only shown when a specific week is
+  // picked, since "All Weeks" spans more than one make-up session).
+  if (assignEl) {
+    if (week === "0") {
+      assignEl.innerHTML = '<p style="padding:4px 2px;color:var(--text3);font-size:12.5px">Select a specific week above to assign a facilitator to that week\'s make-up class.</p>';
+    } else {
+      const assignedTo = APP.makeupWeekAssignments[String(week)] || '';
+      const facultyOptions = APP.faculty
+        .slice()
+        .sort((x, y) => (x['Full Name'] || '').localeCompare(y['Full Name'] || ''))
+        .map(f => `<option value="${f['Full Name']}" ${assignedTo === f['Full Name'] ? 'selected' : ''}>${f['Full Name']}</option>`)
+        .join('');
+      assignEl.innerHTML = `
+        <div class="card" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--text)">Week ${week} Make-up Class</div>
+            <div style="font-size:11.5px;color:var(--text3)">Assigned to: <strong style="color:${assignedTo ? 'var(--text)' : 'var(--text3)'}">${assignedTo || 'Unassigned'}</strong></div>
+          </div>
+          <select onchange="doUpdateMakeupWeekAssignee(${week}, this.value)"
+            style="font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--text2);font-weight:600;cursor:pointer">
+            <option value="">Assign to…</option>
+            ${facultyOptions}
+          </select>
+        </div>`;
+    }
+  }
+
+  // ── Whole-week make-up class video ──
+  // The Director/Consultant pastes ONE YouTube link per week here; every
+  // student marked Absent that week sees it in their Student app and must
+  // watch it fully (no fast-forwarding) before they can mark it done.
+  const videoEl = document.getElementById('makeup-week-video');
+  if (videoEl) {
+    if (week === "0") {
+      videoEl.innerHTML = '';
+    } else {
+      const vid = APP.makeupVideos[String(week)] || { title: '', url: '' };
+      videoEl.innerHTML = `
+        <div class="card" style="padding:12px 16px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">🎬 Week ${week} Make-up Class Video</div>
+          <input type="text" id="makeup-video-title" placeholder="Video title (optional)" value="${(vid.title || '').replace(/"/g,'&quot;')}"
+            style="width:100%;box-sizing:border-box;font-size:12.5px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px">
+          <input type="text" id="makeup-video-url" placeholder="Paste YouTube link (e.g. https://youtu.be/...)" value="${(vid.url || '').replace(/"/g,'&quot;')}"
+            style="width:100%;box-sizing:border-box;font-size:12.5px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px">
+          <button onclick="doSaveMakeupVideo(${week})"
+            style="font-size:12px;padding:8px 14px;border:none;border-radius:8px;background:var(--green);color:#fff;font-weight:700;cursor:pointer">
+            ${vid.url ? '✅ Update Video' : 'Save Video'}
+          </button>
+          ${vid.url ? `<span style="font-size:11px;color:var(--text3);margin-left:8px">Currently set — students absent Week ${week} will see this.</span>` : ''}
+        </div>`;
+    }
+  }
+
+  if (!absences.length) {
+    el.innerHTML = '<p style="padding:16px;color:var(--gray)">No absences found.</p>';
+    return;
+  }
+
+  const statusColors = {
+    'Pending':   { bg: '#fdecea', color: '#e53935' },
+    'Scheduled': { bg: '#fff5e0', color: '#c9960c' },
+    'Done':      { bg: '#e8f5ee', color: '#46586e' }
+  };
+
+  el.innerHTML = absences.map(a => {
+    const attId = String(a["Attendance ID"] || '');
+    const mkStatus = (APP.makeupStatus[attId]?.status) || 'Pending';
+    const { bg, color } = statusColors[mkStatus] || statusColors['Pending'];
+    return `
+      <div class="row" style="align-items:center;flex-wrap:wrap;gap:6px;padding:12px 0">
+        <div style="flex:1;min-width:120px">
+          <strong>${a["Student Name"] || a["StudentName"] || "—"}</strong><br>
+          <small style="color:var(--text3)">Week ${a["Week No"]} · ${getTableLabel(a["Table No"] || "—")}</small>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div style="background:${bg};color:${color};font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap">${mkStatus}</div>
+          <select onchange="doUpdateMakeupStatus('${attId}', this.value, '${a["Student ID"] || ""}', '${(a["Student Name"]||"").replace(/'/g,"\\'")}', ${a["Week No"] || 0}, '${a["Table No"] || ""}')"
+            style="font-size:11px;padding:4px 8px;border:1.5px solid ${color};border-radius:8px;background:#fff;color:${color};font-weight:600;cursor:pointer">
+            <option value="Pending"   ${mkStatus === 'Pending'   ? 'selected' : ''}>Pending</option>
+            <option value="Scheduled" ${mkStatus === 'Scheduled' ? 'selected' : ''}>Scheduled</option>
+            <option value="Done"      ${mkStatus === 'Done'      ? 'selected' : ''}>Done</option>
+          </select>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function doUpdateMakeupStatus(attendanceId, status, studentId, studentName, weekNo, tableNo) {
+  if (!attendanceId) { showToast('⚠️ Cannot update — no attendance ID.'); return; }
+  showToast('⏳ Updating makeup status...');
+  await saveMakeupStatus(attendanceId, status, studentId, studentName, weekNo, tableNo, '');
+  renderMakeup();
+  showToast(`✅ Makeup status set to ${status}`);
+}
+
+async function doUpdateMakeupWeekAssignee(weekNo, assignedTo) {
+  showToast('⏳ Updating make-up class facilitator...');
+  await saveMakeupWeekAssignment(weekNo, assignedTo);
+  renderMakeup();
+  showToast(assignedTo ? `✅ Week ${weekNo} make-up class assigned to ${assignedTo}` : `✅ Week ${weekNo} make-up class unassigned`);
+}
+
+async function doSaveMakeupVideo(weekNo) {
+  const titleEl = document.getElementById('makeup-video-title');
+  const urlEl   = document.getElementById('makeup-video-url');
+  const title   = (titleEl?.value || '').trim();
+  const url     = (urlEl?.value || '').trim();
+  if (!url) { showToast('⚠️ Paste a YouTube link first.'); return; }
+  showToast('⏳ Saving make-up class video...');
+  await saveMakeupVideoForWeek(weekNo, title, url);
+  renderMakeup();
+  showToast(`✅ Week ${weekNo} make-up class video saved`);
+}
+
+
+
+// ═══════════════════════════════════════════
+// RECORD HOME STATS
+// ═══════════════════════════════════════════
+function renderRecordStats() {
+  const el = document.getElementById('r-stats');
+  if (!el) return;
+  const activeStudents = APP.students.filter(s => (s["Status"] || "Active").toLowerCase() !== "dropped");
+  const totalPaid = activeStudents.filter(s => getStudentPayment(s["Student ID"]).status === "Paid").length;
+  const totalPaymentsAmount = APP.payments.reduce((sum, p) => sum + Number(p["Amount Paid"] || 0), 0);
+  const totalUnpaid = activeStudents.filter(s => getStudentPayment(s["Student ID"]).status === "Unpaid").length;
+  el.innerHTML = `
+    <div class="stat-card"><div class="stat-val">${activeStudents.length}</div><div class="stat-label">Total Students</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${totalPaid}</div><div class="stat-label">Fully Paid</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:#3a4250">₱${totalPaymentsAmount.toLocaleString()}</div><div class="stat-label">Total Collected</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:${totalUnpaid > 0 ? '#e53935' : 'var(--green)'}">${totalUnpaid}</div><div class="stat-label">Unpaid</div></div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// RECORD — PAYMENT
+// ═══════════════════════════════════════════
+function populatePayStudentSelect() {
+  const sel = document.getElementById('pay-student-sel');
+  if (!sel) return;
+  sel.innerHTML = APP.students.map(s =>
+    `<option value="${s["Student ID"]}">${s["Full Name"]} (${getTableLabel(s["Table No"])})</option>`
+  ).join('');
+}
+
+function filterPayStudents() {
+  const query = document.getElementById('pay-search')?.value?.toLowerCase() || '';
+  const sel   = document.getElementById('pay-student-sel');
+  if (!sel) return;
+  const filtered = APP.students.filter(s =>
+    s["Full Name"].toLowerCase().includes(query) || String(s["Student ID"]).includes(query)
+  );
+  sel.innerHTML = filtered.map(s =>
+    `<option value="${s["Student ID"]}">${s["Full Name"]} (${getTableLabel(s["Table No"])})</option>`
+  ).join('');
+}
+
+async function doAddPayment() {
+  const studentId = document.getElementById('pay-student-sel')?.value;
+  const amount    = parseFloat(document.getElementById('pay-amount')?.value || 0);
+  const type      = document.getElementById('pay-type')?.value || 'Full';
+  const notes     = document.getElementById('pay-notes')?.value || '';
+
+  const student = APP.students.find(s => String(s["Student ID"]) === String(studentId));
+  if (!student) { showToast('⚠️ Please select a student.'); return; }
+  if (!amount || amount <= 0) { showToast('⚠️ Enter a valid amount.'); return; }
+
+  const pay     = getStudentPayment(student["Student ID"]);
+  const balance = Math.max(0, pay.balance - amount);
+  const status  = balance <= 0 ? "Paid" : "Partial";
+
+  try {
+    const btn = document.querySelector('#s-r-payment .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+    await apiPost({
+      action:      "addPayment",
+      studentId:   student["Student ID"],
+      studentName: student["Full Name"],
+      tableNo:     student["Table No"],
+      amountPaid:  amount,
+      balance:     balance,
+      status:      `${status} — ${type}${notes ? ' · ' + notes : ''}`
+    });
+
+    showToast(`✅ Payment recorded for ${student["Full Name"]}`);
+    document.getElementById('pay-amount').value = '';
+    document.getElementById('pay-notes').value  = '';
+    await loadAllData();
+  } catch (err) {
+    showToast('❌ ' + (err.message || 'Failed to record payment'));
+    console.error('doAddPayment error:', err);
+  } finally {
+    const btn = document.querySelector('#s-r-payment .btn-primary');
+    if (btn) { btn.disabled = false; btn.textContent = 'Record Payment'; }
+  }
+}
+
+// ═══════════════════════════════════════════
+// BALANCES SUMMARY
+// ═══════════════════════════════════════════
+function renderBalancesSummary() {
+  const feeEl = document.getElementById('r-total-fee');
+  if (feeEl) feeEl.textContent = `₱${APP.totalFee.toLocaleString()}.00`;
+
+  const summaryEl = document.getElementById('r-bal-summary');
+  if (!summaryEl) return;
+
+  const activeStudents = APP.students.filter(s => (s["Status"]||"Active").toLowerCase() !== "dropped");
+  const paid    = activeStudents.filter(s => getStudentPayment(s["Student ID"]).status === "Paid").length;
+  const partial = activeStudents.filter(s => getStudentPayment(s["Student ID"]).status === "Partial").length;
+  const unpaid  = activeStudents.filter(s => getStudentPayment(s["Student ID"]).status === "Unpaid").length;
+  const totalCollected = APP.payments.reduce((sum, p) => sum + Number(p["Amount Paid"] || 0), 0);
+  const totalExpected  = activeStudents.length * APP.totalFee;
+
+  summaryEl.innerHTML = `
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${paid}</div><div class="stat-label">Fully Paid</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:#e8a020">${partial}</div><div class="stat-label">Partial</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--red,#e53935)">${unpaid}</div><div class="stat-label">Unpaid</div></div>
+    <div class="stat-card" style="grid-column:1/-1;background:linear-gradient(135deg,#f3e8ff,#ede0f8)">
+      <div class="stat-val" style="color:#3a4250">₱${totalCollected.toLocaleString()}</div>
+      <div class="stat-label">Total Collected of ₱${totalExpected.toLocaleString()} expected</div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// LOGIN SYSTEM
+// ═══════════════════════════════════════════
+const ADMIN_ROLES  = ['director', 'consultant'];
+const RECORD_ROLES = ['record', 'recorder'];
+
+// Returns ALL role types that apply to this person (a person can be e.g.
+// "Consultant/Facilitator/Record" and have admin + faculty + record access).
+// Falls back to ['faculty'] if nothing matches.
+function getRoleTypes(role) {
+  const r = (role || '').toLowerCase().trim();
+  const types = [];
+  if (ADMIN_ROLES.some(a  => r.includes(a))) types.push('admin');
+  if (RECORD_ROLES.some(a => r.includes(a))) types.push('record');
+  // "Facilitator" (or anyone not matched above) gets faculty/facilitator access
+  if (r.includes('facilitator') || types.length === 0) types.push('faculty');
+  return types;
+}
+
+// Kept for any other call sites — returns the single highest-priority role
+// (admin > record > faculty). Prefer getRoleTypes().includes(x) for login gating.
+function getRoleType(role) {
+  const types = getRoleTypes(role);
+  if (types.includes('admin'))  return 'admin';
+  if (types.includes('record')) return 'record';
+  return 'faculty';
+}
+
+function findFacultyByCredentials(username, password) {
+  return APP.faculty.find(f =>
+    String(f["Username"] || '').trim().toLowerCase() === username.trim().toLowerCase() &&
+    String(f["Password"] || '').trim() === password.trim()
+  ) || null;
+}
+
+function isDataEmpty() { return APP.faculty.length === 0; }
+
+function showLoginError(errId, message) {
+  const el = document.getElementById(errId);
+  if (!el) return;
+  el.textContent = message;
+  el.style.display = 'block';
+}
+
+function hideLoginError(errId) {
+  const el = document.getElementById(errId);
+  if (el) el.style.display = 'none';
+}
+
+function setLoginLoading(btnEl, loading) {
+  if (!btnEl) return;
+  btnEl.disabled    = loading;
+  btnEl.textContent = loading ? 'Signing in…' : 'Sign in';
+}
+
+function doFacultyLogin() {
+  const username = document.getElementById('f-login-user')?.value || '';
+  const password = document.getElementById('f-login-pass')?.value || '';
+  const btn      = document.querySelector('#s-faculty-login .btn-primary');
+  hideLoginError('f-login-err');
+  if (!username || !password) { showLoginError('f-login-err', 'Please enter your username and password.'); return; }
+  if (isDataEmpty()) { showLoginError('f-login-err', 'Still connecting to server. Please wait a moment and try again.'); return; }
+  setLoginLoading(btn, true);
+  setTimeout(() => {
+    const person = findFacultyByCredentials(username, password);
+    if (!person) { showLoginError('f-login-err', 'Incorrect username or password.'); setLoginLoading(btn, false); document.getElementById('f-login-pass').value = ''; return; }
+    const roleTypes = getRoleTypes(person["Role"]);
+    if (!roleTypes.includes('faculty')) {
+      const suggestion = roleTypes.includes('admin') ? 'Admin' : (roleTypes.includes('record') ? 'Record' : 'the correct');
+      showLoginError('f-login-err', `Your account does not have Facilitator access. Use the ${suggestion} portal to sign in.`);
+      setLoginLoading(btn, false);
+      return;
+    }
+    APP.currentFaculty = person;
+    setLoginLoading(btn, false);
+    clearLoginFields('f-login-user', 'f-login-pass');
+    populateCreditStudentSelect();
+    updateFacultyHome();
+    go('s-faculty-home');
+  }, 120);
+}
+
+function doAdminLogin() {
+  const username = document.getElementById('a-login-user')?.value || '';
+  const password = document.getElementById('a-login-pass')?.value || '';
+  const btn      = document.querySelector('#s-admin-login .btn-primary');
+  hideLoginError('a-login-err');
+  if (!username || !password) { showLoginError('a-login-err', 'Please enter your username and password.'); return; }
+  if (isDataEmpty()) { showLoginError('a-login-err', 'Still connecting to server. Please wait a moment and try again.'); return; }
+  setLoginLoading(btn, true);
+  setTimeout(() => {
+    const person = findFacultyByCredentials(username, password);
+    if (!person) { showLoginError('a-login-err', 'Incorrect username or password.'); setLoginLoading(btn, false); document.getElementById('a-login-pass').value = ''; return; }
+    const roleTypes = getRoleTypes(person["Role"]);
+    if (!roleTypes.includes('admin')) { showLoginError('a-login-err', 'Your account does not have Admin access.'); setLoginLoading(btn, false); return; }
+    APP.currentFaculty = person;
+    setLoginLoading(btn, false);
+    clearLoginFields('a-login-user', 'a-login-pass');
+    updateAdminHomeStats();
+    go('s-admin-home');
+  }, 120);
+}
+
+function doRecordLogin() {
+  const username = document.getElementById('r-login-user')?.value || '';
+  const password = document.getElementById('r-login-pass')?.value || '';
+  const btn      = document.querySelector('#s-record-login .btn-primary');
+  hideLoginError('r-login-err');
+  if (!username || !password) { showLoginError('r-login-err', 'Please enter your username and password.'); return; }
+  if (isDataEmpty()) { showLoginError('r-login-err', 'Still connecting to server. Please wait a moment and try again.'); return; }
+  setLoginLoading(btn, true);
+  setTimeout(() => {
+    const person = findFacultyByCredentials(username, password);
+    if (!person) { showLoginError('r-login-err', 'Incorrect username or password.'); setLoginLoading(btn, false); document.getElementById('r-login-pass').value = ''; return; }
+    const roleTypes = getRoleTypes(person["Role"]);
+    if (!roleTypes.includes('record')) { showLoginError('r-login-err', 'Your account does not have Record access.'); setLoginLoading(btn, false); return; }
+    APP.currentFaculty = person;
+    setLoginLoading(btn, false);
+    clearLoginFields('r-login-user', 'r-login-pass');
+    renderRecordStats();
+    go('s-record-home');
+  }, 120);
+}
+
+function logout() {
+  APP.currentFaculty = null;
+  go('s-portal');
+}
+
+function clearLoginFields(...ids) {
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
