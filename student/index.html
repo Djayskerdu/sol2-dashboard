@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
   <html lang="en">
   <head>
   <meta charset="UTF-8">
@@ -138,14 +138,6 @@
           </div>
         </div>
 
-        <div class="stu-redeem-card" onclick="go('s-makeup')">
-          <div class="stu-redeem-top">
-            <div class="stu-redeem-title">🎬 Make-up Class</div>
-            <span id="stu-makeup-badge" class="notif-badge" style="display:none">0</span>
-          </div>
-          <div class="stu-progress-sub" id="stu-makeup-sub" style="margin-top:0">Checking your attendance…</div>
-        </div>
-
         <div class="stu-logout-link"><a onclick="studentLogout()">Log out</a></div>
       </div>
     </div>
@@ -222,20 +214,6 @@
             <button class="ob-primary" id="rd-confirm-yes-btn" onclick="confirmRedeem()">Yes, Redeem</button>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════
-        MAKE-UP CLASS
-    ══════════════════════════════════════════ -->
-    <div class="screen" id="s-makeup">
-      <div class="quest-topbar">
-        <button class="topbar-back" onclick="go('s-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-        <span class="topbar-title">MAKE-UP CLASS</span>
-      </div>
-      <div class="quest-body">
-        <div class="tg-note">📌 Weeks you were marked Absent show up here. Watch each video all the way through — no skipping ahead — to mark it complete.</div>
-        <div id="stu-makeup-list"></div>
       </div>
     </div>
 
