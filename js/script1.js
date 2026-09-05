@@ -251,6 +251,14 @@ function getTableLabel(tableNo) {
   return name ? `${name} | Table ${tableNo}` : `Table ${tableNo}`;
 }
 
+// "Raise Your Flag (N)" — the Director's preferred label for the table
+// cards on the Admin Tables screen (renderATables) and Table Detail
+// screen (showTableDetail), in place of the plain "Table N" wording.
+function getFlagLabel(tableNo) {
+  if (!tableNo && tableNo !== 0) return '—';
+  return `Raise Your Flag (${tableNo})`;
+}
+
 // ═══════════════════════════════════════════
 // ATTENDANCE TIME RULES
 // 1:00 PM - 1:44 PM = Present
@@ -2352,11 +2360,14 @@ function renderATables() {
     return;
   }
   grid.innerHTML = tables.map(t => {
-    const totalLC = getTableCredits(t);
+    const flagPts     = getTableCredits(t);
+    const studentPts  = getTableTotalStudentCredits(t);
+    const overallPts  = flagPts + studentPts;
     return `
       <div class="card" style="padding:14px;cursor:pointer" onclick="showTableDetail('${t}')">
-        <div style="font-family:var(--font-head);font-size:18px;font-weight:700">${getTableLabel(t)}</div>
-        <div style="font-size:12px;color:var(--gray);margin-top:4px">${totalLC} pts</div>
+        <div style="font-family:var(--font-head);font-size:18px;font-weight:700">${getFlagLabel(t)}</div>
+        <div style="font-size:12px;color:var(--gray);margin-top:4px">${flagPts} pts</div>
+        <div style="font-size:12px;color:var(--text1);margin-top:2px;font-weight:700">Overall: ${overallPts} pts</div>
       </div>
     `;
   }).join('');
@@ -2373,7 +2384,7 @@ function showTableDetail(tableNo) {
   const stats       = document.getElementById('a-td-stats');
   const presentStat = document.getElementById('a-td-present-stat');
   const list        = document.getElementById('a-td-list');
-  if (title) title.textContent = getTableLabel(tableNo);
+  if (title) title.textContent = getFlagLabel(tableNo);
 
   // Only active (non-dropped) students
   const students = APP.students.filter(s =>
@@ -2383,8 +2394,11 @@ function showTableDetail(tableNo) {
   const presentThisWeek = APP.attendance.filter(a =>
     String(a["Table No"]) === String(tableNo) && String(a["Week No"]) === String(APP.currentWeek)
   );
-  // Table-level credits only (not individual student sum)
-  const tableCredits = getTableCredits(tableNo);
+  // Table-level ("Raise Your Flag") credits, individual student credits,
+  // and the combined overall total.
+  const tableCredits   = getTableCredits(tableNo);
+  const studentCredits = getTableTotalStudentCredits(tableNo);
+  const overallCredits = tableCredits + studentCredits;
 
   if (presentStat) presentStat.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--green),var(--green-light));border-radius:12px;padding:14px 18px;margin-bottom:12px">
@@ -2395,7 +2409,8 @@ function showTableDetail(tableNo) {
 
   if (stats) stats.innerHTML = `
     <div class="stat-card"><div class="stat-val">${students.length}</div><div class="stat-label">Students</div></div>
-    <div class="stat-card"><div class="stat-val">${tableCredits}</div><div class="stat-label">Table Points</div></div>
+    <div class="stat-card"><div class="stat-val">${tableCredits}</div><div class="stat-label">Raise Your Flag Points</div></div>
+    <div class="stat-card"><div class="stat-val">${overallCredits}</div><div class="stat-label">Overall Points</div></div>
   `;
 
   const sorted = [...students].sort((a, b) => getStudentCredits(b["Student ID"]) - getStudentCredits(a["Student ID"]));
