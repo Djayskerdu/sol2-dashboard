@@ -218,8 +218,8 @@ let APP = {
 const POINT_CATEGORIES = [
   { key: 'attendance',    label: 'Attendance',    icon: '📋' },
   { key: 'participation', label: 'Participation', icon: '🙋' },
-  { key: 'homework',      label: 'Homework',      icon: '📝' },
-  { key: 'memoryVerse',   label: 'Memory Verse',  icon: '✝️' }
+  { key: 'homework',      label: 'Weekly Challenge',      icon: '📝' },
+  { key: 'memoryVerse',   label: 'Evangelism/Lifegroup',  icon: '✝️' }
 ];
 
 // ═══════════════════════════════════════════
