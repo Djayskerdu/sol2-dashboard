@@ -48,6 +48,7 @@ let APP = {
   questVideos: {},     // "levelNo-questNo" -> { title, url }  (director-assigned "watch" videos)
   videoSubmissions: {}, // "levelNo-questNo" -> url (this student's own uploaded testimony videos)
   photoSubmissions: {}, // "levelNo-questNo" -> url (this student's own uploaded quest photos)
+  worksheetAnswers: {}, // "levelNo-questNo" -> { blanks:[[...]], questions:[...] } (this student's own worksheet answers)
   credits: [],          // this student's LC_CREDITS rows (their earned points)
   lessonPoints: [],     // this student's STUDENT_LESSON_POINTS rows (Attendance/
                         // Participation/Homework/Memory Verse grid — same source
@@ -260,6 +261,7 @@ async function doStudentLogin() {
     await loadQuestProgress();
     await loadVideoSubmissions(student['Student ID']);
     await loadPhotoSubmissions(student['Student ID']);
+    await loadWorksheetAnswers(student['Student ID']);
     await loadPointsData(student['Student ID']);
     go('s-home');
   } catch (e) {
@@ -302,7 +304,8 @@ async function loadLevelQuests() {
       byLevel[lvl][qNo - 1] = {
         icon: r['Icon'] || '⭐',
         type: String(r['Type'] || '').trim() || undefined,
-        title: r['Title'] || ''
+        title: r['Title'] || '',
+        content: parseQuestContent(r['Content'])
       };
     });
     // Drop any gaps left by a skipped Quest No so the array is dense.
@@ -310,6 +313,42 @@ async function loadLevelQuests() {
     APP.levelQuests = byLevel;
   } catch (e) {
     console.warn('Failed to load custom level quests:', e);
+  }
+}
+
+// Parses the "Content" column used by the "worksheet" (fill-in-the-blank
+// & reflection questions) task type. Every other task type leaves this
+// column blank, so a missing/unparseable value just yields undefined.
+function parseQuestContent(raw) {
+  if (!raw) return undefined;
+  try {
+    const obj = JSON.parse(raw);
+    return {
+      sentences: Array.isArray(obj.sentences) ? obj.sentences : [],
+      questions: Array.isArray(obj.questions) ? obj.questions : []
+    };
+  } catch (e) {
+    return undefined;
+  }
+}
+
+// Pulls only THIS student's saved worksheet answers (server-side filtered
+// by studentId) so other students' answers never reach the device.
+async function loadWorksheetAnswers(studentId) {
+  try {
+    const res = await apiGet('worksheetAnswers', `&studentId=${encodeURIComponent(studentId)}`);
+    const rows = res?.data || [];
+    const map = {};
+    rows.forEach(r => {
+      const lvl = Number(r['Level No']), q = Number(r['Quest No']);
+      if (!lvl || !q) return;
+      let parsed = {};
+      try { parsed = JSON.parse(r['Answers'] || '{}'); } catch (e) { parsed = {}; }
+      map[questKey(lvl, q)] = { blanks: parsed.blanks || [], questions: parsed.questions || [] };
+    });
+    APP.worksheetAnswers = map;
+  } catch (e) {
+    console.warn('Failed to load worksheet answers:', e);
   }
 }
 
@@ -558,6 +597,7 @@ function renderQuestList() {
     if (q.type === 'watch')       return renderWatchQuestCard(q, idx, done, quests.length);
     if (q.type === 'upload')      return renderUploadQuestCard(q, idx, done, quests.length);
     if (q.type === 'photoUpload') return renderPhotoUploadQuestCard(q, idx, done, quests.length);
+    if (q.type === 'worksheet')   return renderWorksheetQuestCard(q, idx, done, quests.length);
     return `
       <div class="quest-card${done ? ' qc-done' : ''}">
         <div class="quest-icon">${q.icon}</div>
@@ -815,6 +855,193 @@ function renderPhotoUploadQuestCard(q, idx, done, totalInLevel) {
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/************************************************
+ * LEVEL CHALLENGE — FILL-IN-THE-BLANK / REFLECTION WORKSHEET
+ * (Director/Consultant-built via Faculty app → Level Challenge Tasks →
+ * "Fill-in-the-blanks & reflection questions". Each sentence uses plain
+ * underscores (___) to mark blanks; this renders one small inline text
+ * input per blank, plus a textarea per open reflection question. Once
+ * submitted the quest is marked complete and the student sees a
+ * read-only recap with an "Edit answers" link to reopen the form.)
+ ************************************************/
+
+let worksheetEditing = {}; // questKey -> true while a completed worksheet is being re-edited
+
+function renderWorksheetQuestCard(q, idx, done, totalInLevel) {
+  const key = questKey(currentLevel, idx + 1);
+  const content = q.content;
+  const header = `
+    <div class="qv-header">
+      <div class="quest-icon">${q.icon}</div>
+      <div class="quest-text">
+        <div class="quest-title">${q.title}</div>
+        <div class="quest-hint">Quest ${idx + 1} of ${totalInLevel}</div>
+      </div>
+    </div>`;
+
+  if (!content || (!(content.sentences || []).length && !(content.questions || []).length)) {
+    return `
+      <div class="quest-card qc-video">
+        ${header}
+        <div class="qv-watch-link qv-disabled">📝 Worksheet not set up yet — check back soon</div>
+      </div>`;
+  }
+
+  const saved = APP.worksheetAnswers && APP.worksheetAnswers[key];
+  const editing = !done || worksheetEditing[key];
+  const body = (!editing && saved)
+    ? renderWorksheetReadonly(content, saved, key)
+    : renderWorksheetForm(content, saved, idx);
+
+  return `
+    <div class="quest-card qc-video${done ? ' qc-done' : ''}">
+      ${header}
+      ${body}
+      <div id="ws-status-${idx}"></div>
+    </div>`;
+}
+
+function renderWorksheetSentenceHtml(text, savedBlanks, idx, si) {
+  const parts = String(text || '').split(/_{3,}/g);
+  let out = '';
+  parts.forEach((part, i) => {
+    out += escapeHtml(part);
+    if (i < parts.length - 1) {
+      const val = (savedBlanks && savedBlanks[i]) || '';
+      out += `<input type="text" class="qv-ws-blank" id="ws-blank-${idx}-${si}-${i}" value="${escapeHtml(val)}" placeholder="_____">`;
+    }
+  });
+  return out;
+}
+
+function renderWorksheetForm(content, saved, idx) {
+  let html = '';
+  const sentences = content.sentences || [];
+  const questions = content.questions || [];
+
+  if (sentences.length) {
+    html += `<div class="qv-note" style="margin:0 0 8px">Complete the following sentences:</div>`;
+    sentences.forEach((sentence, si) => {
+      const label = String.fromCharCode(65 + si);
+      const savedBlanks = (saved && saved.blanks && saved.blanks[si]) || [];
+      html += `<div class="qv-ws-sentence"><span class="qv-ws-label">${label}.</span> <span class="qv-ws-text">${renderWorksheetSentenceHtml(sentence, savedBlanks, idx, si)}</span></div>`;
+    });
+  }
+  if (questions.length) {
+    html += `<div class="qv-note">Question${questions.length > 1 ? 's' : ''}:</div>`;
+    questions.forEach((question, qi) => {
+      const savedAns = (saved && saved.questions && saved.questions[qi]) || '';
+      html += `
+        <div class="qv-ws-question">
+          <div class="qv-ws-qtext">${qi + 1}. ${escapeHtml(question)}</div>
+          <textarea class="qv-ws-answer" id="ws-q-${idx}-${qi}" rows="3" placeholder="Type your answer…">${escapeHtml(savedAns)}</textarea>
+        </div>`;
+    });
+  }
+  html += `<button class="qv-complete-btn" onclick="submitWorksheet(${idx})">Submit Worksheet</button>`;
+  return html;
+}
+
+function fillWorksheetSentence(text, blanks) {
+  const parts = String(text || '').split(/_{3,}/g);
+  let out = '';
+  parts.forEach((part, i) => {
+    out += escapeHtml(part);
+    if (i < parts.length - 1) {
+      out += `<strong class="qv-ws-filled">${escapeHtml((blanks && blanks[i]) || '____')}</strong>`;
+    }
+  });
+  return out;
+}
+
+function renderWorksheetReadonly(content, saved, key) {
+  let html = `<div class="qv-note" style="margin:0 0 8px">✓ Worksheet submitted</div>`;
+  (content.sentences || []).forEach((sentence, si) => {
+    const label = String.fromCharCode(65 + si);
+    const filled = fillWorksheetSentence(sentence, (saved.blanks && saved.blanks[si]) || []);
+    html += `<div class="qv-ws-sentence"><span class="qv-ws-label">${label}.</span> <span class="qv-ws-text">${filled}</span></div>`;
+  });
+  (content.questions || []).forEach((question, qi) => {
+    const ans = (saved.questions && saved.questions[qi]) || '';
+    html += `
+      <div class="qv-ws-question">
+        <div class="qv-ws-qtext">${qi + 1}. ${escapeHtml(question)}</div>
+        <div class="qv-ws-readanswer">${ans ? escapeHtml(ans) : '<em>(no answer)</em>'}</div>
+      </div>`;
+  });
+  html += `<div class="qv-replace-link" onclick="editWorksheet('${key}')">Edit answers</div>`;
+  return html;
+}
+
+function editWorksheet(key) {
+  worksheetEditing[key] = true;
+  renderQuestList();
+}
+
+async function submitWorksheet(idx) {
+  const s = APP.currentStudent;
+  if (!s) return;
+  const sid = s['Student ID'];
+  const questNo = idx + 1;
+  const key = questKey(currentLevel, questNo);
+  const quest = questsForLevel(currentLevel)[idx];
+  const content = (quest && quest.content) || { sentences: [], questions: [] };
+  const statusEl = document.getElementById(`ws-status-${idx}`);
+
+  const blanks = (content.sentences || []).map((sentence, si) => {
+    const count = (String(sentence || '').match(/_{3,}/g) || []).length;
+    const vals = [];
+    for (let bi = 0; bi < count; bi++) {
+      const el = document.getElementById(`ws-blank-${idx}-${si}-${bi}`);
+      vals.push(el ? el.value.trim() : '');
+    }
+    return vals;
+  });
+  const questions = (content.questions || []).map((q, qi) => {
+    const el = document.getElementById(`ws-q-${idx}-${qi}`);
+    return el ? el.value.trim() : '';
+  });
+
+  const allBlanksFilled = blanks.every(arr => arr.every(v => v));
+  const allQuestionsFilled = questions.every(v => v);
+  if (!allBlanksFilled || !allQuestionsFilled) {
+    if (statusEl) statusEl.innerHTML = `<div class="qv-error">Please fill in every blank and answer every question before submitting.</div>`;
+    return;
+  }
+
+  if (statusEl) statusEl.innerHTML = `<div class="qv-note">Submitting…</div>`;
+
+  try {
+    await apiPost({
+      action: 'submitWorksheetAnswers',
+      studentId: sid,
+      studentName: s['Full Name'] || '',
+      tableNo: s['Table No'] || '',
+      levelNo: currentLevel,
+      questNo: questNo,
+      questTitle: quest ? quest.title : 'Worksheet',
+      levelName: LEVEL_NAMES[currentLevel] || '',
+      blanks: blanks,
+      questions: questions,
+      markedBy: s['Full Name'] || ''
+    });
+
+    if (!APP.questProgress[sid]) APP.questProgress[sid] = {};
+    APP.questProgress[sid][key] = true;
+    if (!APP.worksheetAnswers) APP.worksheetAnswers = {};
+    APP.worksheetAnswers[key] = { blanks, questions };
+    delete worksheetEditing[key];
+
+    renderQuestList();
+    showSentToast();
+    if (isLevelDoneFor(sid, currentLevel)) setTimeout(finishLevel, 350);
+  } catch (e) {
+    console.warn('submitWorksheetAnswers failed:', e);
+    if (statusEl) statusEl.innerHTML = `<div class="qv-error">Could not submit — check your connection and try again.</div>
+      <button class="qv-complete-btn" onclick="submitWorksheet(${idx})">Try Again</button>`;
+  }
 }
 
 function updateQuestProgressBar() {
