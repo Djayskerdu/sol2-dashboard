@@ -423,11 +423,28 @@ function loadLevelQuestsFromSheet(rows) {
     byLevel[lvl][qNo - 1] = {
       icon: r['Icon'] || '⭐',
       type: String(r['Type'] || '').trim() || undefined,
-      title: r['Title'] || ''
+      title: r['Title'] || '',
+      content: parseQuestContent(r['Content'])
     };
   });
   Object.keys(byLevel).forEach(lvl => { byLevel[lvl] = byLevel[lvl].filter(Boolean); });
   APP.levelQuests = byLevel;
+}
+
+// Parses the "Content" column used by the "worksheet" (fill-in-the-blank
+// & reflection questions) task type. Every other task type leaves this
+// column blank, so a missing/unparseable value just yields undefined.
+function parseQuestContent(raw) {
+  if (!raw) return undefined;
+  try {
+    const obj = JSON.parse(raw);
+    return {
+      sentences: Array.isArray(obj.sentences) ? obj.sentences : [],
+      questions: Array.isArray(obj.questions) ? obj.questions : []
+    };
+  } catch (e) {
+    return undefined;
+  }
 }
 
 // ── Quest progress (synced to Google Sheets, same pattern as devotionals) ──
@@ -1652,11 +1669,18 @@ function openQuestsEditorLevel(lvl) {
   renderAQuests();
 }
 
+function cloneQuestContent(q) {
+  return {
+    sentences: (q.content && Array.isArray(q.content.sentences)) ? q.content.sentences.slice() : [],
+    questions: (q.content && Array.isArray(q.content.questions)) ? q.content.questions.slice() : []
+  };
+}
+
 function seedQuestsEditDraft() {
   const source = (APP.levelQuests[questsEditLevel] && APP.levelQuests[questsEditLevel].length)
     ? APP.levelQuests[questsEditLevel]
     : (QUESTS[questsEditLevel] || []);
-  questsEditDraft = source.map(q => ({ icon: q.icon || '⭐', type: q.type || '', title: q.title || '' }));
+  questsEditDraft = source.map(q => ({ icon: q.icon || '⭐', type: q.type || '', title: q.title || '', content: cloneQuestContent(q) }));
 }
 
 function renderAQuests() {
@@ -1681,11 +1705,12 @@ function renderQuestsEditorRows() {
   const list = document.getElementById('a-quests-list');
   if (!list) return;
   const typeSelect = (i, val) => `
-    <select onchange="questsEditDraft[${i}].type=this.value" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-top:6px">
+    <select onchange="questsEditDraft[${i}].type=this.value; if(!questsEditDraft[${i}].content) questsEditDraft[${i}].content={sentences:[],questions:[]}; renderQuestsEditorRows();" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-top:6px">
       <option value="" ${!val ? 'selected' : ''}>Normal task (student self check-off)</option>
       <option value="watch" ${val === 'watch' ? 'selected' : ''}>Watch video</option>
       <option value="upload" ${val === 'upload' ? 'selected' : ''}>Upload video testimony</option>
       <option value="photoUpload" ${val === 'photoUpload' ? 'selected' : ''}>Upload photo</option>
+      <option value="worksheet" ${val === 'worksheet' ? 'selected' : ''}>Fill-in-the-blanks & reflection questions</option>
     </select>`;
 
   list.innerHTML = questsEditDraft.map((q, i) => `
@@ -1701,8 +1726,58 @@ function renderQuestsEditorRows() {
           style="flex:0 0 auto;width:34px;height:34px;border:none;border-radius:8px;background:#fdecea;color:#e53935;font-weight:700;cursor:pointer">✕</button>
       </div>
       ${typeSelect(i, q.type)}
+      ${worksheetEditorHtml(i, q)}
     </div>`).join('') || '<p style="color:var(--gray);font-size:13px">No tasks yet — tap "+ Add Task" below.</p>';
 }
+
+// ── "Fill-in-the-blanks & reflection questions" (worksheet) sub-editor ──
+// Only shown for a task whose type is "worksheet". Sentences use plain
+// underscores (___) to mark where a blank goes — the Student app splits
+// on those automatically, so no special syntax to teach facilitators.
+function ensureWorksheetContent(i) {
+  if (!questsEditDraft[i].content) questsEditDraft[i].content = { sentences: [], questions: [] };
+  if (!Array.isArray(questsEditDraft[i].content.sentences)) questsEditDraft[i].content.sentences = [];
+  if (!Array.isArray(questsEditDraft[i].content.questions)) questsEditDraft[i].content.questions = [];
+  return questsEditDraft[i].content;
+}
+
+function worksheetEditorHtml(i, q) {
+  if (q.type !== 'worksheet') return '';
+  const content = ensureWorksheetContent(i);
+  const sentenceRows = content.sentences.map((s, si) => `
+    <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:6px">
+      <span style="flex:0 0 auto;padding-top:9px;font-weight:700;color:var(--gray);font-size:12px">${String.fromCharCode(65 + si)}.</span>
+      <textarea rows="2" placeholder="e.g. When we receive the ____ in our life, we become effective witnesses."
+        oninput="questsEditDraft[${i}].content.sentences[${si}]=this.value"
+        style="flex:1;padding:8px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;resize:vertical;font-family:var(--font)">${escapeHtmlAdmin(s)}</textarea>
+      <button onclick="removeWorksheetSentence(${i},${si})" title="Remove sentence"
+        style="flex:0 0 auto;width:30px;height:30px;border:none;border-radius:8px;background:#fdecea;color:#e53935;font-weight:700;cursor:pointer">✕</button>
+    </div>`).join('');
+  const questionRows = content.questions.map((qtext, qi) => `
+    <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:6px">
+      <span style="flex:0 0 auto;padding-top:9px;font-weight:700;color:var(--gray);font-size:12px">${qi + 1}.</span>
+      <textarea rows="2" placeholder="e.g. Why do we need to preach the Gospel to others?"
+        oninput="questsEditDraft[${i}].content.questions[${qi}]=this.value"
+        style="flex:1;padding:8px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;resize:vertical;font-family:var(--font)">${escapeHtmlAdmin(qtext)}</textarea>
+      <button onclick="removeWorksheetQuestion(${i},${qi})" title="Remove question"
+        style="flex:0 0 auto;width:30px;height:30px;border:none;border-radius:8px;background:#fdecea;color:#e53935;font-weight:700;cursor:pointer">✕</button>
+    </div>`).join('');
+
+  return `
+    <div style="margin-top:10px;padding:10px;border:1.5px dashed var(--border);border-radius:10px;background:#fafbfc">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">Fill-in-the-blank sentences <span style="font-weight:400;color:var(--gray)">— type ___ where the blank goes</span></div>
+      ${sentenceRows || '<p style="font-size:12px;color:var(--gray);margin:0 0 6px">No sentences yet.</p>'}
+      <button onclick="addWorksheetSentence(${i})" style="font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;margin-bottom:10px">+ Add Sentence</button>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">Reflection questions</div>
+      ${questionRows || '<p style="font-size:12px;color:var(--gray);margin:0 0 6px">No questions yet.</p>'}
+      <button onclick="addWorksheetQuestion(${i})" style="font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer">+ Add Question</button>
+    </div>`;
+}
+
+function addWorksheetSentence(i) { ensureWorksheetContent(i).sentences.push(''); renderQuestsEditorRows(); }
+function removeWorksheetSentence(i, si) { ensureWorksheetContent(i).sentences.splice(si, 1); renderQuestsEditorRows(); }
+function addWorksheetQuestion(i) { ensureWorksheetContent(i).questions.push(''); renderQuestsEditorRows(); }
+function removeWorksheetQuestion(i, qi) { ensureWorksheetContent(i).questions.splice(qi, 1); renderQuestsEditorRows(); }
 
 function escapeHtmlAdmin(str) {
   return String(str || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -1712,7 +1787,7 @@ function escapeAttr(str) {
 }
 
 function addQuestsEditorRow() {
-  questsEditDraft.push({ icon: '⭐', type: '', title: '' });
+  questsEditDraft.push({ icon: '⭐', type: '', title: '', content: { sentences: [], questions: [] } });
   renderQuestsEditorRows();
 }
 
@@ -1723,18 +1798,32 @@ function removeQuestsEditorRow(i) {
 
 function resetQuestsEditorToDefault() {
   const def = QUESTS[questsEditLevel] || [];
-  questsEditDraft = def.map(q => ({ icon: q.icon || '⭐', type: q.type || '', title: q.title || '' }));
+  questsEditDraft = def.map(q => ({ icon: q.icon || '⭐', type: q.type || '', title: q.title || '', content: cloneQuestContent(q) }));
   renderQuestsEditorRows();
   showToast('Reset to default — tap Save Changes to apply');
 }
 
 async function saveQuestsEditor() {
   const cleaned = questsEditDraft
-    .map(q => ({ icon: (q.icon || '⭐').trim(), type: (q.type || '').trim(), title: (q.title || '').trim() }))
+    .map(q => {
+      const type = (q.type || '').trim();
+      const base = { icon: (q.icon || '⭐').trim(), type, title: (q.title || '').trim() };
+      if (type === 'worksheet') {
+        const sentences = ((q.content && q.content.sentences) || []).map(s => (s || '').trim()).filter(Boolean);
+        const questions = ((q.content && q.content.questions) || []).map(s => (s || '').trim()).filter(Boolean);
+        base.content = { sentences, questions };
+      }
+      return base;
+    })
     .filter(q => q.title);
 
   if (!cleaned.length) {
     showToast('Add at least one task with a description first.');
+    return;
+  }
+  const badWorksheet = cleaned.find(q => q.type === 'worksheet' && !(q.content.sentences.length || q.content.questions.length));
+  if (badWorksheet) {
+    showToast('Add at least one sentence or question to the worksheet task before saving.');
     return;
   }
 
@@ -1747,7 +1836,7 @@ async function saveQuestsEditor() {
     });
     if (res && res.success) {
       APP.levelQuests[questsEditLevel] = cleaned;
-      questsEditDraft = cleaned.map(q => ({ ...q }));
+      questsEditDraft = cleaned.map(q => ({ ...q, content: cloneQuestContent(q) }));
       renderAQuests();
       showToast(res.message || 'Saved');
     } else {
