@@ -450,7 +450,8 @@ function parseQuestContent(raw) {
     const obj = JSON.parse(raw);
     return {
       sentences: Array.isArray(obj.sentences) ? obj.sentences : [],
-      questions: Array.isArray(obj.questions) ? obj.questions : []
+      questions: Array.isArray(obj.questions) ? obj.questions : [],
+      quiz: Array.isArray(obj.quiz) ? obj.quiz : []
     };
   } catch (e) {
     return undefined;
@@ -1682,7 +1683,10 @@ function openQuestsEditorLevel(lvl) {
 function cloneQuestContent(q) {
   return {
     sentences: (q.content && Array.isArray(q.content.sentences)) ? q.content.sentences.slice() : [],
-    questions: (q.content && Array.isArray(q.content.questions)) ? q.content.questions.slice() : []
+    questions: (q.content && Array.isArray(q.content.questions)) ? q.content.questions.slice() : [],
+    quiz: (q.content && Array.isArray(q.content.quiz))
+      ? q.content.quiz.map(z => ({ question: z.question || '', choices: (z.choices || []).slice(), answer: Number.isInteger(z.answer) ? z.answer : 0 }))
+      : []
   };
 }
 
@@ -1715,12 +1719,13 @@ function renderQuestsEditorRows() {
   const list = document.getElementById('a-quests-list');
   if (!list) return;
   const typeSelect = (i, val) => `
-    <select onchange="questsEditDraft[${i}].type=this.value; if(!questsEditDraft[${i}].content) questsEditDraft[${i}].content={sentences:[],questions:[]}; renderQuestsEditorRows();" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-top:6px">
+    <select onchange="questsEditDraft[${i}].type=this.value; if(!questsEditDraft[${i}].content) questsEditDraft[${i}].content={sentences:[],questions:[],quiz:[]}; renderQuestsEditorRows();" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-top:6px">
       <option value="" ${!val ? 'selected' : ''}>Normal task (student self check-off)</option>
       <option value="watch" ${val === 'watch' ? 'selected' : ''}>Watch video</option>
       <option value="upload" ${val === 'upload' ? 'selected' : ''}>Upload video testimony</option>
       <option value="photoUpload" ${val === 'photoUpload' ? 'selected' : ''}>Upload photo</option>
       <option value="worksheet" ${val === 'worksheet' ? 'selected' : ''}>Fill-in-the-blanks & reflection questions</option>
+      <option value="quiz" ${val === 'quiz' ? 'selected' : ''}>Multiple-choice quiz (one attempt only)</option>
     </select>`;
 
   list.innerHTML = questsEditDraft.map((q, i) => `
@@ -1737,6 +1742,7 @@ function renderQuestsEditorRows() {
       </div>
       ${typeSelect(i, q.type)}
       ${worksheetEditorHtml(i, q)}
+      ${quizEditorHtml(i, q)}
     </div>`).join('') || '<p style="color:var(--gray);font-size:13px">No tasks yet — tap "+ Add Task" below.</p>';
 }
 
@@ -1748,6 +1754,7 @@ function ensureWorksheetContent(i) {
   if (!questsEditDraft[i].content) questsEditDraft[i].content = { sentences: [], questions: [] };
   if (!Array.isArray(questsEditDraft[i].content.sentences)) questsEditDraft[i].content.sentences = [];
   if (!Array.isArray(questsEditDraft[i].content.questions)) questsEditDraft[i].content.questions = [];
+  if (!Array.isArray(questsEditDraft[i].content.quiz)) questsEditDraft[i].content.quiz = [];
   return questsEditDraft[i].content;
 }
 
@@ -1789,6 +1796,45 @@ function removeWorksheetSentence(i, si) { ensureWorksheetContent(i).sentences.sp
 function addWorksheetQuestion(i) { ensureWorksheetContent(i).questions.push(''); renderQuestsEditorRows(); }
 function removeWorksheetQuestion(i, qi) { ensureWorksheetContent(i).questions.splice(qi, 1); renderQuestsEditorRows(); }
 
+// ── "Multiple-choice quiz" sub-editor ──
+// Each question has 4 choices (A–D) and one correct answer. Students get
+// ONE attempt only — see submitQuizAnswers in the backend.
+function quizEditorHtml(i, q) {
+  if (q.type !== 'quiz') return '';
+  const quiz = ensureWorksheetContent(i).quiz;
+  const inp = 'padding:8px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:var(--font)';
+  const rows = quiz.map((z, zi) => {
+    const choices = [0,1,2,3].map(ci => `
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
+        <input type="radio" name="quiz-ans-${i}-${zi}" ${z.answer === ci ? 'checked' : ''}
+          onchange="questsEditDraft[${i}].content.quiz[${zi}].answer=${ci}" title="Mark as correct answer">
+        <span style="font-weight:700;color:var(--gray);font-size:12px;width:14px">${String.fromCharCode(65 + ci)}.</span>
+        <input type="text" value="${escapeAttr((z.choices || [])[ci] || '')}" placeholder="Choice ${String.fromCharCode(65 + ci)}"
+          oninput="questsEditDraft[${i}].content.quiz[${zi}].choices[${ci}]=this.value" style="flex:1;${inp}">
+      </div>`).join('');
+    return `
+    <div style="border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;background:#fff">
+      <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px">
+        <span style="flex:0 0 auto;padding-top:9px;font-weight:700;color:var(--gray);font-size:12px">${zi + 1}.</span>
+        <textarea rows="2" placeholder="Question…" oninput="questsEditDraft[${i}].content.quiz[${zi}].question=this.value"
+          style="flex:1;resize:vertical;${inp}">${escapeHtmlAdmin(z.question)}</textarea>
+        <button onclick="removeQuizQuestion(${i},${zi})" title="Remove question"
+          style="flex:0 0 auto;width:30px;height:30px;border:none;border-radius:8px;background:#fdecea;color:#e53935;font-weight:700;cursor:pointer">✕</button>
+      </div>
+      ${choices}
+      <div style="font-size:11px;color:var(--gray)">● Select the circle beside the correct answer.</div>
+    </div>`;
+  }).join('');
+  return `
+    <div style="margin-top:10px;padding:10px;border:1.5px dashed var(--border);border-radius:10px;background:#fafbfc">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">Quiz questions <span style="font-weight:400;color:var(--gray)">— students get one attempt, no retakes</span></div>
+      ${rows || '<p style="font-size:12px;color:var(--gray);margin:0 0 6px">No questions yet.</p>'}
+      <button onclick="addQuizQuestion(${i})" style="font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer">+ Add Question</button>
+    </div>`;
+}
+function addQuizQuestion(i) { ensureWorksheetContent(i).quiz.push({ question: '', choices: ['', '', '', ''], answer: 0 }); renderQuestsEditorRows(); }
+function removeQuizQuestion(i, zi) { ensureWorksheetContent(i).quiz.splice(zi, 1); renderQuestsEditorRows(); }
+
 function escapeHtmlAdmin(str) {
   return String(str || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 }
@@ -1797,7 +1843,7 @@ function escapeAttr(str) {
 }
 
 function addQuestsEditorRow() {
-  questsEditDraft.push({ icon: '⭐', type: '', title: '', content: { sentences: [], questions: [] } });
+  questsEditDraft.push({ icon: '⭐', type: '', title: '', content: { sentences: [], questions: [], quiz: [] } });
   renderQuestsEditorRows();
 }
 
@@ -1823,6 +1869,14 @@ async function saveQuestsEditor() {
         const questions = ((q.content && q.content.questions) || []).map(s => (s || '').trim()).filter(Boolean);
         base.content = { sentences, questions };
       }
+      if (type === 'quiz') {
+        const quiz = ((q.content && q.content.quiz) || []).map(z => ({
+          question: (z.question || '').trim(),
+          choices: [0,1,2,3].map(ci => ((z.choices || [])[ci] || '').trim()),
+          answer: Number.isInteger(z.answer) ? z.answer : 0
+        })).filter(z => z.question);
+        base.content = { quiz };
+      }
       return base;
     })
     .filter(q => q.title);
@@ -1834,6 +1888,15 @@ async function saveQuestsEditor() {
   const badWorksheet = cleaned.find(q => q.type === 'worksheet' && !(q.content.sentences.length || q.content.questions.length));
   if (badWorksheet) {
     showToast('Add at least one sentence or question to the worksheet task before saving.');
+    return;
+  }
+
+  const badQuiz = cleaned.find(q => q.type === 'quiz' && (
+    !q.content.quiz.length ||
+    q.content.quiz.some(z => z.choices.filter(Boolean).length < 2 || !z.choices[z.answer])
+  ));
+  if (badQuiz) {
+    showToast('Each quiz question needs at least 2 choices, and the correct answer must not be blank.');
     return;
   }
 
