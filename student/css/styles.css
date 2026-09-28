@@ -754,3 +754,11 @@ svg.map-svg { width:100%; display:block; }
 .ob-ghost { background:#f0f2f5; color:var(--text2); }
 .lc-confetti { position:absolute; top:-10px; border-radius:2px; opacity:0; animation:lc-fall 1.6s ease-in forwards; }
 @keyframes lc-fall { 0%{transform:translateY(0) rotate(0deg); opacity:1;} 100%{transform:translateY(520px) rotate(360deg); opacity:0;} }
+
+/* Multiple-choice quiz quest */
+.qv-quiz-choice { font-size:12.5px; line-height:1.5; color:rgba(255,255,255,.88); background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.14); border-radius:10px; padding:9px 11px; margin-bottom:7px; cursor:pointer; transition:background .15s ease, border-color .15s ease; }
+.qv-quiz-choice b { color:var(--gold); margin-right:4px; }
+.qv-quiz-picked { border-color:var(--gold); background:rgba(224,168,58,.16); }
+.qv-quiz-locked { cursor:default; }
+.qv-quiz-correct { border-color:#4caf7d; background:rgba(76,175,125,.18); }
+.qv-quiz-wrong { border-color:#ff6b6b; background:rgba(255,107,107,.16); }
