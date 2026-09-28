@@ -294,7 +294,7 @@ async function loadStaticData() {
 // so questsForLevel() falls back to the built-in QUESTS default for it.
 async function loadLevelQuests() {
   try {
-    const res = await apiGet('levelQuests');
+    const res = await apiGet('levelQuests', '&forStudent=1'); // server strips quiz answer keys
     const rows = res?.data || [];
     const byLevel = {};
     rows.forEach(r => {
@@ -325,7 +325,8 @@ function parseQuestContent(raw) {
     const obj = JSON.parse(raw);
     return {
       sentences: Array.isArray(obj.sentences) ? obj.sentences : [],
-      questions: Array.isArray(obj.questions) ? obj.questions : []
+      questions: Array.isArray(obj.questions) ? obj.questions : [],
+      quiz: Array.isArray(obj.quiz) ? obj.quiz : []
     };
   } catch (e) {
     return undefined;
@@ -344,7 +345,7 @@ async function loadWorksheetAnswers(studentId) {
       if (!lvl || !q) return;
       let parsed = {};
       try { parsed = JSON.parse(r['Answers'] || '{}'); } catch (e) { parsed = {}; }
-      map[questKey(lvl, q)] = { blanks: parsed.blanks || [], questions: parsed.questions || [] };
+      map[questKey(lvl, q)] = { blanks: parsed.blanks || [], questions: parsed.questions || [], quiz: parsed.quiz, results: parsed.results, score: parsed.score, total: parsed.total };
     });
     APP.worksheetAnswers = map;
   } catch (e) {
@@ -598,6 +599,7 @@ function renderQuestList() {
     if (q.type === 'upload')      return renderUploadQuestCard(q, idx, done, quests.length);
     if (q.type === 'photoUpload') return renderPhotoUploadQuestCard(q, idx, done, quests.length);
     if (q.type === 'worksheet')   return renderWorksheetQuestCard(q, idx, done, quests.length);
+    if (q.type === 'quiz')        return renderQuizQuestCard(q, idx, done, quests.length);
     return `
       <div class="quest-card${done ? ' qc-done' : ''}">
         <div class="quest-icon">${q.icon}</div>
@@ -1041,6 +1043,129 @@ async function submitWorksheet(idx) {
     console.warn('submitWorksheetAnswers failed:', e);
     if (statusEl) statusEl.innerHTML = `<div class="qv-error">Could not submit — check your connection and try again.</div>
       <button class="qv-complete-btn" onclick="submitWorksheet(${idx})">Try Again</button>`;
+  }
+}
+
+/************************************************
+ * LEVEL CHALLENGE — MULTIPLE-CHOICE QUIZ (ONE ATTEMPT ONLY)
+ * The student picks an answer for every question and submits once. The
+ * server grades it (answer keys never reach this device) and locks the
+ * result: a wrong answer can NOT be redone. The quest is marked complete
+ * on submit, regardless of score, so a level can never get stuck.
+ ************************************************/
+
+let quizDraft = {}; // questKey -> [chosenIndex|undefined, ...] while still answering
+
+function renderQuizQuestCard(q, idx, done, totalInLevel) {
+  const key = questKey(currentLevel, idx + 1);
+  const quiz = (q.content && q.content.quiz) || [];
+  const header = `
+    <div class="qv-header">
+      <div class="quest-icon">${q.icon}</div>
+      <div class="quest-text">
+        <div class="quest-title">${q.title}</div>
+        <div class="quest-hint">Quest ${idx + 1} of ${totalInLevel}</div>
+      </div>
+    </div>`;
+  if (!quiz.length) {
+    return `<div class="quest-card qc-video">${header}<div class="qv-watch-link qv-disabled">📝 Quiz not set up yet — check back soon</div></div>`;
+  }
+
+  const saved = APP.worksheetAnswers && APP.worksheetAnswers[key];
+  let body = '';
+
+  if (saved && saved.quiz) {
+    // Already submitted — read-only result, no retry.
+    body += `<div class="qv-note" style="margin:0 0 8px">✓ Quiz submitted — ${saved.score} / ${saved.total} correct. Answers are final and can't be retaken.</div>`;
+    quiz.forEach((z, zi) => {
+      const picked = saved.quiz[zi];
+      const r = (saved.results || [])[zi] || {};
+      body += `<div class="qv-ws-question"><div class="qv-ws-qtext">${zi + 1}. ${escapeHtml(z.question)}</div>`;
+      (z.choices || []).forEach((c, ci) => {
+        if (!c) return;
+        let cls = 'qv-quiz-choice qv-quiz-locked';
+        if (ci === r.correctIndex) cls += ' qv-quiz-correct';
+        else if (ci === picked) cls += ' qv-quiz-wrong';
+        const mark = ci === r.correctIndex ? ' ✓' : (ci === picked ? ' ✗' : '');
+        body += `<div class="${cls}"><b>${String.fromCharCode(65 + ci)}.</b> ${escapeHtml(c)}${mark}</div>`;
+      });
+      body += `</div>`;
+    });
+  } else {
+    const draft = quizDraft[key] || (quizDraft[key] = []);
+    body += `<div class="qv-note" style="margin:0 0 8px">Choose one answer per question. <b>You only get one attempt</b> — once you submit, you can't change or retake it.</div>`;
+    quiz.forEach((z, zi) => {
+      body += `<div class="qv-ws-question"><div class="qv-ws-qtext">${zi + 1}. ${escapeHtml(z.question)}</div>`;
+      (z.choices || []).forEach((c, ci) => {
+        if (!c) return;
+        body += `<div class="qv-quiz-choice${draft[zi] === ci ? ' qv-quiz-picked' : ''}" onclick="pickQuizChoice(${idx},${zi},${ci})"><b>${String.fromCharCode(65 + ci)}.</b> ${escapeHtml(c)}</div>`;
+      });
+      body += `</div>`;
+    });
+    body += `<button class="qv-complete-btn" onclick="submitQuiz(${idx})">Submit Final Answers</button>`;
+  }
+
+  return `
+    <div class="quest-card qc-video${done ? ' qc-done' : ''}">
+      ${header}
+      ${body}
+      <div id="quiz-status-${idx}"></div>
+    </div>`;
+}
+
+function pickQuizChoice(idx, zi, ci) {
+  const key = questKey(currentLevel, idx + 1);
+  if (APP.worksheetAnswers && APP.worksheetAnswers[key] && APP.worksheetAnswers[key].quiz) return; // already locked
+  (quizDraft[key] = quizDraft[key] || [])[zi] = ci;
+  renderQuestList();
+}
+
+async function submitQuiz(idx) {
+  const s = APP.currentStudent;
+  if (!s) return;
+  const sid = s['Student ID'];
+  const key = questKey(currentLevel, idx + 1);
+  const quest = questsForLevel(currentLevel)[idx];
+  const quiz = (quest && quest.content && quest.content.quiz) || [];
+  const statusEl = document.getElementById(`quiz-status-${idx}`);
+  const draft = quizDraft[key] || [];
+
+  for (let i = 0; i < quiz.length; i++) {
+    if (!Number.isInteger(draft[i])) {
+      if (statusEl) statusEl.innerHTML = `<div class="qv-error">Please answer every question before submitting.</div>`;
+      return;
+    }
+  }
+  if (!confirm('Submit your final answers? You will NOT be able to change or retake them.')) return;
+  if (statusEl) statusEl.innerHTML = `<div class="qv-note">Submitting…</div>`;
+
+  try {
+    const res = await apiPost({
+      action: 'submitQuizAnswers',
+      studentId: sid,
+      studentName: s['Full Name'] || '',
+      tableNo: s['Table No'] || '',
+      levelNo: currentLevel,
+      questNo: idx + 1,
+      questTitle: quest ? quest.title : 'Quiz',
+      levelName: LEVEL_NAMES[currentLevel] || '',
+      picks: quiz.map((_, i) => draft[i]),
+      markedBy: s['Full Name'] || ''
+    });
+    if (!res || !res.success) throw new Error((res && res.message) || 'Could not submit');
+
+    if (!APP.questProgress[sid]) APP.questProgress[sid] = {};
+    APP.questProgress[sid][key] = true;
+    if (!APP.worksheetAnswers) APP.worksheetAnswers = {};
+    APP.worksheetAnswers[key] = { quiz: res.picks, results: res.results, score: res.score, total: res.total };
+    delete quizDraft[key];
+
+    renderQuestList();
+    showSentToast();
+    if (isLevelDoneFor(sid, currentLevel)) setTimeout(finishLevel, 350);
+  } catch (e) {
+    console.warn('submitQuizAnswers failed:', e);
+    if (statusEl) statusEl.innerHTML = `<div class="qv-error">${escapeHtml(e.message || 'Could not submit — check your connection and try again.')}</div>`;
   }
 }
 
