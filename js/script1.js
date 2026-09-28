@@ -251,6 +251,16 @@ function getTableLabel(tableNo) {
   return name ? `${name} | Table ${tableNo}` : `Table ${tableNo}`;
 }
 
+// The Table Detail title now reads "Raise Your Flag (N)", so the real table
+// number must NOT be scraped from its text. It is stored in data-table-no.
+function getCurrentDetailTableNo() {
+  const el = document.getElementById('a-td-title');
+  if (!el) return '';
+  if (el.dataset.tableNo) return el.dataset.tableNo;
+  const m = String(el.textContent || '').match(/(\d+)\)?\s*$/);
+  return m ? m[1] : '';
+}
+
 // "Raise Your Flag (N)" — the Director's preferred label for the table
 // cards on the Admin Tables screen (renderATables) and Table Detail
 // screen (showTableDetail), in place of the plain "Table N" wording.
@@ -2473,7 +2483,7 @@ function showTableDetail(tableNo) {
   const stats       = document.getElementById('a-td-stats');
   const presentStat = document.getElementById('a-td-present-stat');
   const list        = document.getElementById('a-td-list');
-  if (title) title.textContent = getFlagLabel(tableNo);
+  if (title) { title.textContent = getFlagLabel(tableNo); title.dataset.tableNo = String(tableNo); }
 
   // Only active (non-dropped) students
   const students = APP.students.filter(s =>
@@ -3600,7 +3610,7 @@ function downloadQRCode() {
 function openTableAddCredit() {
   const modal = document.getElementById('modal-table-credit');
   if (!modal) return;
-  const tableNo    = document.getElementById('a-td-title')?.textContent?.replace('Table ','').trim();
+  const tableNo    = getCurrentDetailTableNo();
   const modalTitle = document.getElementById('modal-table-credit-title');
   if (modalTitle) modalTitle.textContent = `Add Points — ${getTableLabel(tableNo)}`;
   modal.style.display = 'flex';
@@ -3622,7 +3632,7 @@ function closeTableCreditModal() {
 }
 
 async function doTableAddCredit() {
-  const tableNo = document.getElementById('a-td-title')?.textContent?.replace('Table ','').trim();
+  const tableNo = getCurrentDetailTableNo();
   const amount  = Number(document.getElementById('modal-credit-amount')?.value || 5);
   const rawReason = APP.selectedReason || 'Attendance';
   const reason  = rawReason === '__other__'
