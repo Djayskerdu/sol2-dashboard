@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sol2-student-v1';
+const CACHE_NAME = 'sol2-student-v2';
 const ASSETS = [
   './',
   './index.html',
