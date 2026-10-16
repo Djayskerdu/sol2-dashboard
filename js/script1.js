@@ -199,7 +199,7 @@ let APP = {
   currentScreen: 's-portal',
   selectedReason: 'Attendance',
   currentWeek: 1,
-  totalFee: 500,
+  totalFee: 250,
   devotionals: {},   // studentId -> Set of completed day numbers (1-140)
   makeupStatus: {},  // attendanceId -> { status, notes }
   makeupWeekAssignments: {},  // weekNo -> assigned facilitator name (whole-week make-up assignment)
@@ -1102,7 +1102,7 @@ async function loadAllData() {
   if (settingsData.length) {
     settingsData.forEach(row => { APP.settings[row['Setting']] = row['Value']; });
     APP.currentWeek = Number(APP.settings['Current Week'] || 1);
-    APP.totalFee    = Number(APP.settings['Total Class Fee'] || 500);
+    APP.totalFee    = Number(APP.settings['Total Class Fee'] || 250);
   }
 
   const devotionalRows = safeData(results[10]);
